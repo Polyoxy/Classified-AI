@@ -7,15 +7,15 @@ A desktop terminal-style AI chat application built with **Next.js 14**, **TypeSc
 ## Screenshots 📸
 
 ### Main Interface
-![Main Interface](githubexamples/Interface.png)
+![Main Interface]([githubexamples/Interface.png](https://cdn.discordapp.com/attachments/1080199375982182463/1350114694509367366/Interface.png?ex=67d58fcb&is=67d43e4b&hm=312b6bfbc5c030f6e8c01989a42bdef6413be490cd67098067c5b81a7a03400d&))
 *The main interface combines a command-line aesthetic with modern AI capabilities.*
 
 ### Model Selection
-![Model Selection](githubexamples/Models.png)
+![Model Selection]([githubexamples/Models.png](https://cdn.discordapp.com/attachments/1080199375982182463/1350114694840713352/Models.png?ex=67d58fcb&is=67d43e4b&hm=a9ad6e91110730e0b1fa61b9f0ad44fb1739a3cca47e611661969ab4da7da896&))
 *Easily switch between different AI models including Llama3, Mistral, and CodeLlama.*
 
 ### Settings & Configuration
-![Settings](githubexamples/Settings.png)
+![Settings]([githubexamples/Settings.png](https://cdn.discordapp.com/attachments/1080199375982182463/1350114695117406208/Settings.png?ex=67d58fcb&is=67d43e4b&hm=a07199b9949e979607bb745bc4732be876a1b0241e8940ebe12e23a6434fd118&))
 *Configure your experience with adjustable parameters and user roles.*
 
 ---
