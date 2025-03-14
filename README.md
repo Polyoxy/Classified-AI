@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Classified AI - Terminal-Style Chat Application
 
 A desktop terminal-style AI chat application built with Next.js 14, TypeScript, Firebase, Tailwind CSS, and Electron. The application features a modern dark theme with JetBrains Mono font for a coder aesthetic.
@@ -96,3 +97,7 @@ MIT
 - React Syntax Highlighter
 - Heroicons
 - Headless UI
+=======
+# Classified-AI
+A secure terminal-style interface for AI interactions. This Electron desktop app combines a command-line aesthetic with modern AI capabilities, supporting multiple models (OpenAI, Ollama, Deepseek). Features offline operation, classified document processing, and conversation management with a clean, focused UI inspired by intelligence agencies.
+>>>>>>> 056df5a73bc7294a24e129fc0b4e4ccc58f1bf9f
