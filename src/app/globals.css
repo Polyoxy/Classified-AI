@@ -1,0 +1,106 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Dark theme (default) */
+  --bg-color: #1E1E1E;
+  --text-color: #CCCCCC;
+  --accent-color: #569CD6;
+  --user-prefix-color: #4EC9B0;
+  --ai-prefix-color: #CE9178;
+  --system-color: #D7BA7D;
+  --error-color: #F44747;
+  --input-bg: #2D2D2D;
+  --code-bg: #1E1E1E;
+  --border-color: #474747;
+}
+
+/* Green theme */
+.theme-green {
+  --bg-color: #0D1117;
+  --text-color: #4AF626;
+  --accent-color: #56D364;
+  --user-prefix-color: #39D353;
+  --ai-prefix-color: #26A641;
+  --system-color: #FFFF00;
+  --error-color: #FF0000;
+  --input-bg: #010409;
+  --code-bg: #0D1117;
+  --border-color: #26A641;
+}
+
+/* Amber theme */
+.theme-amber {
+  --bg-color: #2D1B00;
+  --text-color: #FFB000;
+  --accent-color: #FFC133;
+  --user-prefix-color: #FF9000;
+  --ai-prefix-color: #FFB000;
+  --system-color: #FFFF00;
+  --error-color: #FF5555;
+  --input-bg: #1F1200;
+  --code-bg: #2A1A00;
+  --border-color: #915900;
+}
+
+body {
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  font-family: var(--font-inter);
+  margin: 0;
+  padding: 0;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* Set JetBrains Mono as the monospace font */
+code, pre, .monospace {
+  font-family: var(--font-jetbrains-mono), monospace;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-color);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-color);
+}
+
+/* Terminal blinking cursor effect */
+.terminal-cursor {
+  display: inline-block;
+  width: 8px;
+  height: 16px;
+  background-color: var(--text-color);
+  animation: blink 1s step-end infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* Utility classes */
+.no-select {
+  user-select: none;
+}
+
+.draggable {
+  -webkit-app-region: drag;
+}
+
+.non-draggable {
+  -webkit-app-region: no-drag;
+}
