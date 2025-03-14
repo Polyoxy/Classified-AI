@@ -7,15 +7,15 @@ A desktop terminal-style AI chat application built with **Next.js 14**, **TypeSc
 ## Screenshots 📸
 
 ### Main Interface
-![Main Interface](githubexamples/Interface.png)
+![Main Interface](docs/images/Interface.png)
 *The main interface combines a command-line aesthetic with modern AI capabilities.*
 
 ### Model Selection
-![Models](githubexamples/Models.png)
+![Models](docs/images/Models.png)
 *Easily switch between different AI models including Llama3, Mistral, and CodeLlama.*
 
 ### Settings & Configuration
-![Settings ](githubexamples/Settings.png)
+![Settings ](docs/images/Settings.png)
 *Configure your experience with adjustable parameters and user roles.*
 
 ---
