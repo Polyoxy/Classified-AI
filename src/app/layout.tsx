@@ -24,7 +24,8 @@ const baseCSP = `
   img-src 'self' data: blob: https://*.firebaseapp.com https://*.firebase.com https://*.google-analytics.com;
   font-src 'self' data: https://fonts.gstatic.com;
   connect-src 'self' 
-              http://localhost:11434 
+              http://localhost:11434
+              http://127.0.0.1:11434
               https://*.openai.com
               https://*.google-analytics.com 
               https://*.googleapis.com 

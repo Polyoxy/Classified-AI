@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-// Default Ollama server URL
-const OLLAMA_SERVER = 'http://localhost:11434';
+// Default Ollama server URL - try both localhost and 127.0.0.1
+const OLLAMA_SERVERS = ['http://127.0.0.1:11434', 'http://localhost:11434'];
 
 /**
  * Ollama API proxy to bypass CORS restrictions
@@ -15,19 +15,35 @@ export async function GET(request: NextRequest) {
     
     console.log(`[Proxy] Forwarding GET request to Ollama: ${endpoint}`);
     
-    // Forward request to Ollama server
-    const response = await fetch(`${OLLAMA_SERVER}/${endpoint}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
+    // Try all server URLs
+    let response = null;
+    let lastError: Error | null = null;
     
-    if (!response.ok) {
-      console.error(`[Proxy] Ollama error on GET: ${response.status} ${response.statusText}`);
+    for (const server of OLLAMA_SERVERS) {
+      try {
+        console.log(`[Proxy] Attempting to connect to ${server}/${endpoint}`);
+        response = await fetch(`${server}/${endpoint}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        if (response.ok) {
+          console.log(`[Proxy] Successfully connected to ${server}/${endpoint}`);
+          break;
+        }
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+        console.warn(`[Proxy] Failed to connect to ${server}/${endpoint}:`, error);
+      }
+    }
+    
+    if (!response || !response.ok) {
+      console.error(`[Proxy] All connection attempts failed for GET ${endpoint}`);
       return NextResponse.json(
-        { error: `Ollama error: ${response.status} ${response.statusText}` },
-        { status: response.status }
+        { error: `Failed to connect to any Ollama server: ${lastError?.message || 'Unknown error'}` },
+        { status: 500 }
       );
     }
     
@@ -41,13 +57,13 @@ export async function GET(request: NextRequest) {
       headers: {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
       },
     });
   } catch (error) {
     console.error('[Proxy] Error forwarding GET request to Ollama:', error);
     return NextResponse.json(
-      { error: 'Failed to connect to Ollama server' },
+      { error: 'Failed to connect to Ollama server', details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     );
   }
@@ -80,22 +96,36 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Forward request to Ollama server
-    console.log(`[Proxy] Attempting to connect to Ollama at ${OLLAMA_SERVER}/${endpoint}`);
-    const response = await fetch(`${OLLAMA_SERVER}/${endpoint}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(body),
-    });
+    // Try all server URLs
+    let response = null;
+    let lastError: Error | null = null;
     
-    // Check if response is OK
-    if (!response.ok) {
-      console.error(`[Proxy] Ollama error: ${response.status} ${response.statusText}`);
+    for (const server of OLLAMA_SERVERS) {
+      try {
+        console.log(`[Proxy] Attempting to connect to ${server}/${endpoint}`);
+        response = await fetch(`${server}/${endpoint}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(body),
+        });
+        
+        if (response.ok) {
+          console.log(`[Proxy] Successfully connected to ${server}/${endpoint}`);
+          break;
+        }
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+        console.warn(`[Proxy] Failed to connect to ${server}/${endpoint}:`, error);
+      }
+    }
+    
+    if (!response || !response.ok) {
+      console.error(`[Proxy] All connection attempts failed for POST ${endpoint}`);
       return NextResponse.json(
-        { error: `Ollama error: ${response.status} ${response.statusText}` },
-        { status: response.status }
+        { error: `Failed to connect to any Ollama server: ${lastError?.message || 'Unknown error'}` },
+        { status: 500 }
       );
     }
     
@@ -137,7 +167,7 @@ export async function POST(request: NextRequest) {
           'Cache-Control': 'no-cache',
           'Access-Control-Allow-Origin': '*',
           'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
         },
       });
     } else {
@@ -148,7 +178,7 @@ export async function POST(request: NextRequest) {
         headers: {
           'Access-Control-Allow-Origin': '*',
           'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
         },
       });
     }
@@ -170,7 +200,7 @@ export async function OPTIONS() {
     headers: {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
       'Access-Control-Max-Age': '86400',
     },
   });

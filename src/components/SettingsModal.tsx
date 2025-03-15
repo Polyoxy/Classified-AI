@@ -188,24 +188,24 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                   <option value="ollama">Ollama (Local LLM)</option>
                 </select>
                 <p className="form-help-text">
-                  Currently focused on Ollama with llama2-uncensored:7b
+                  Currently focused on Ollama with deepseek-r1:7b
                 </p>
               </div>
               
-              {/* Ollama Quick Setup for llama2-uncensored:7b */}
+              {/* Ollama Quick Setup for deepseek-r1:7b */}
               <div className="info-box">
                 <h3 className="info-box-title">
                   Ollama Quick Setup
                 </h3>
                 <p className="info-box-content">
-                  Configure Ollama to use the locally running llama2-uncensored:7b model
+                  Configure Ollama to use the locally running deepseek-r1:7b model
                 </p>
                 <button
                   onClick={() => {
                     const newSettings = { ...settings };
                     newSettings.activeProvider = 'ollama';
                     newSettings.providers.ollama.baseUrl = 'http://localhost:11434';
-                    newSettings.providers.ollama.defaultModel = 'llama2-uncensored:7b';
+                    newSettings.providers.ollama.defaultModel = 'deepseek-r1:7b';
                     updateSettings(newSettings);
                   }}
                   className="btn btn-primary"
@@ -213,7 +213,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                   Set Ollama as Active Provider
                 </button>
                 <p className="info-box-footer">
-                  Note: Make sure Ollama is running with the command: <code>ollama run llama2-uncensored:7b</code>
+                  Note: Make sure Ollama is running with the command: <code>ollama run deepseek-r1:7b</code>
                 </p>
               </div>
               
@@ -319,14 +319,14 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                   Ollama Setup
                 </h3>
                 <p className="info-box-content">
-                  Configure Ollama to use the locally running llama2-uncensored:7b model
+                  Configure Ollama to use the locally running Deepseek model
                 </p>
                 <button
                   onClick={() => {
                     const newSettings = { ...settings };
                     newSettings.activeProvider = 'ollama';
                     newSettings.providers.ollama.baseUrl = 'http://localhost:11434';
-                    newSettings.providers.ollama.defaultModel = 'llama2-uncensored:7b';
+                    newSettings.providers.ollama.defaultModel = 'deepseek-r1:7b';
                     updateSettings(newSettings);
                   }}
                   className="btn btn-primary"
@@ -334,7 +334,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                   Set Ollama as Active Provider
                 </button>
                 <p className="info-box-footer">
-                  Note: Make sure Ollama is running with the command: <code>ollama run llama2-uncensored:7b</code>
+                  Note: Make sure Ollama is running with the command: <code>ollama run deepseek-r1:7b</code>
                 </p>
               </div>
             </div>

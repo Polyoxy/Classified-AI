@@ -1,18 +1,23 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAppContext } from '@/context/AppContext';
+import useChat from '@/hooks/useChat';
 
 const CommandInput: React.FC = () => {
   const [input, setInput] = useState('');
   const [showResetButton, setShowResetButton] = useState(false); // Set to false by default
   const { 
     addMessage, 
-    isProcessing, 
     resetConversations, 
     settings, 
     currentConversation,
     setConnectionStatus,
-    connectionStatus 
+    connectionStatus,
+    isProcessing
   } = useAppContext();
+  
+  // Use our new chat hook
+  const { sendMessage } = useChat();
+  
   const inputRef = useRef<HTMLTextAreaElement>(null);
   
   // Show connection status changes and notify user
@@ -29,7 +34,7 @@ const CommandInput: React.FC = () => {
     
     // Immediately set connection status to connected
     setConnectionStatus('connected');
-  }, [settings.activeProvider]);
+  }, [settings.activeProvider, setConnectionStatus]);
 
   // Also run connection check whenever the conversation changes
   useEffect(() => {
@@ -52,13 +57,7 @@ const CommandInput: React.FC = () => {
     }
     
     setPrevConnectionStatus(connectionStatus);
-  }, [connectionStatus]);
-
-  // Function to check if Ollama is running - simplified to just set connection status
-  const checkOllamaConnection = async () => {
-    // Simply set status to connected without any logging or actual checking
-    setConnectionStatus('connected');
-  };
+  }, [connectionStatus, prevConnectionStatus, settings.providers.ollama.defaultModel, addMessage]);
   
   // Handle input change and auto resize
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -79,10 +78,11 @@ const CommandInput: React.FC = () => {
     }
   };
   
-  // Handle send message
+  // Handle send message - now calls our new useChat hook
   const handleSendMessage = () => {
     if (input.trim() && !isProcessing) {
-      addMessage(input.trim(), 'user');
+      // Send message using our chat hook
+      sendMessage(input.trim());
       setInput('');
       
       // Reset textarea height

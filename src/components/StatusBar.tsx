@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAppContext } from '@/context/AppContext';
 import { auth } from '@/lib/firebase';
+// Import the interfaces for type assertions
+import type { ElectronStore, ElectronWindowControls } from '../types/electron-interfaces';
 
 interface StatusBarProps {
   onOpenSettings: () => void;
@@ -92,7 +94,7 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
   // Get the currently active model name
   const getActiveModelName = () => {
     if (settings.activeProvider === 'ollama') {
-      return settings.providers.ollama.defaultModel || 'llama2-uncensored:7b';
+      return settings.providers.ollama.defaultModel || 'deepseek-r1:7b';
     }
     return 'Unknown';
   };
@@ -221,34 +223,85 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
     return 'No models available';
   };
 
-  // Check if a model is llama2-uncensored:7b or deepseek-r1
+  // Check if a model is deepseek-r1:7b
   const isLocalModel = (model: string) => {
-    return model.toLowerCase().includes('llama2-uncensored') || 
-           model.toLowerCase().includes('deepseek-r1');
+    return model.toLowerCase().includes('deepseek-r1') ||
+           model.toLowerCase().includes('deepseek');
   };
 
   // Handle logout
   const handleLogout = async () => {
+    console.log('Logout button clicked');
+    
     try {
+      // Check if we're in Electron environment
+      const isElectron = typeof window !== 'undefined' && window.electron;
+      console.log('Is Electron environment:', isElectron);
+      console.log('Current user:', user);
+      
       // Store the current user's email before logging out
       if (user && user.email) {
         localStorage.setItem('lastLoginEmail', user.email);
       }
 
-      // Check if user is an offline user
-      const isOfflineUser = user && user.uid.startsWith('offline-');
+      // Clear the local storage first (important for Electron)
+      localStorage.removeItem('offlineUser');
       
-      if (isOfflineUser) {
-        // For offline users, just remove from localStorage and clear user state
-        localStorage.removeItem('offlineUser');
-        setUser(null);
-      } else {
-        // For Firebase users, sign out properly
+      // In Electron, also clear the electron-store
+      if (isElectron && window.electron?.store) {
+        try {
+          // Use type assertion to fix type checking
+          const electronStore = window.electron.store as ElectronStore;
+          await electronStore.clear();
+          console.log('Electron store cleared');
+        } catch (storeError) {
+          console.warn('Failed to clear electron store:', storeError);
+        }
+      }
+      
+      // Check if user is an offline user
+      const isOfflineUser = user && (user.uid.startsWith('offline-') || user.isAnonymous);
+      console.log('Is offline/anonymous user:', isOfflineUser);
+      
+      // Always try to sign out from Firebase
+      try {
+        console.log('Attempting Firebase signOut');
         await auth.signOut();
-        // The auth state observer will handle updating the user state
+      } catch (firebaseError) {
+        console.warn('Firebase sign out error:', firebaseError);
+      }
+      
+      // Also manually clear the user state (important for Electron)
+      setUser(null);
+      
+      console.log('Logout completed');
+      
+      // In Electron, reload the window to ensure clean state
+      if (isElectron && window.electron?.windowControls) {
+        console.log('Reloading Electron app after logout');
+        // Wait a moment before reloading to ensure state is cleared
+        setTimeout(() => {
+          try {
+            // Use type assertion to fix type checking
+            const windowControls = window.electron.windowControls as ElectronWindowControls;
+            windowControls.reload();
+          } catch (reloadError) {
+            console.warn('Failed to reload window:', reloadError);
+            window.location.reload(); // Fallback
+          }
+        }, 500);
+      } else {
+        // For non-Electron, reload the page after a delay
+        setTimeout(() => {
+          window.location.reload();
+        }, 500);
       }
     } catch (error) {
       console.error('Error during logout:', error);
+      // If all else fails, try forcing a hard logout
+      localStorage.removeItem('offlineUser');
+      setUser(null);
+      window.location.reload();
     }
   };
 

@@ -139,10 +139,17 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         // First check for offline/guest user
         const offlineUserJson = localStorage.getItem('offlineUser');
         if (offlineUserJson) {
-          const offlineUser = JSON.parse(offlineUserJson);
-          console.log('Restoring offline/guest user session:', offlineUser.uid);
-          setUser(offlineUser);
-          setIsLoading(false);
+          try {
+            const offlineUser = JSON.parse(offlineUserJson);
+            console.log('Restoring offline/guest user session:', offlineUser.uid);
+            setUser(offlineUser);
+            setIsLoading(false);
+          } catch (parseError) {
+            console.error('Error parsing offline user data:', parseError);
+            localStorage.removeItem('offlineUser'); // Remove invalid data
+            setUser(null);
+            setIsLoading(false);
+          }
           return () => {};
         }
         
@@ -155,7 +162,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             
             // Store user data in localStorage for Electron
             if (isElectron) {
-              localStorage.setItem('offlineUser', JSON.stringify(user));
+              try {
+                localStorage.setItem('offlineUser', JSON.stringify(user));
+              } catch (storageError) {
+                console.warn('Failed to store user data in localStorage:', storageError);
+              }
             }
             
             setIsLoading(false);

@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, shell, session } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, session, globalShortcut } = require('electron');
 const path = require('path');
 const isDev = require('electron-is-dev');
 const Store = require('electron-store');
@@ -19,6 +19,13 @@ async function createWindow() {
       console.log('Next.js server is ready!');
     } catch (err) {
       console.error('Error waiting for Next.js server:', err);
+      // Try port 3001 if 3000 failed
+      try {
+        await waitOn({ resources: ['http://localhost:3001'], timeout: 15000 });
+        console.log('Next.js server is ready on port 3001!');
+      } catch (err) {
+        console.error('Error waiting for Next.js server on both ports:', err);
+      }
     }
   }
 
@@ -35,8 +42,8 @@ async function createWindow() {
       preload: path.join(__dirname, 'preload.js'),
       // Add security options
       sandbox: true,
-      webSecurity: true,
-      allowRunningInsecureContent: false,
+      webSecurity: isDev ? false : true, // Disable web security in development
+      allowRunningInsecureContent: isDev ? true : false,
       enableRemoteModule: false,
       nativeWindowOpen: true, // Enable this for Firebase auth popups
     },
@@ -51,8 +58,8 @@ async function createWindow() {
         ...details.responseHeaders,
         'Content-Security-Policy': [
           isDev 
-            ? "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.firebaseapp.com https://*.googleapis.com https://*.google-analytics.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https://*.google-analytics.com; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' http://localhost:* ws://localhost:* https://*.openai.com https://*.deepseek.com https://*.firebaseio.com https://firestore.googleapis.com https://*.firebase.com https://*.googleapis.com https://*.google-analytics.com https://identitytoolkit.googleapis.com; frame-src 'self' https://*.firebaseapp.com https://*.firebase.com https://*.firebaseio.com https://identitytoolkit.googleapis.com"
-            : "default-src 'self'; script-src 'self' https://*.firebaseapp.com https://*.googleapis.com https://*.google-analytics.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https://*.google-analytics.com; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://*.openai.com https://*.deepseek.com https://*.firebaseio.com https://firestore.googleapis.com https://*.firebase.com https://*.googleapis.com https://*.google-analytics.com https://identitytoolkit.googleapis.com; frame-src 'self' https://*.firebaseapp.com https://*.firebase.com https://*.firebaseio.com https://identitytoolkit.googleapis.com"
+            ? "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.firebaseapp.com https://*.googleapis.com https://*.google-analytics.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https://*.google-analytics.com; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' http://localhost:11434 http://127.0.0.1:11434 ws://localhost:* wss://*.firebaseio.com https://*.firebaseio.com https://*.openai.com https://*.deepseek.com https://*.firebaseio.com https://firestore.googleapis.com https://*.firebase.com https://*.googleapis.com https://*.google-analytics.com https://identitytoolkit.googleapis.com; frame-src 'self' https://*.firebaseapp.com https://*.firebase.com https://*.firebaseio.com https://identitytoolkit.googleapis.com"
+            : "default-src 'self'; script-src 'self' https://*.firebaseapp.com https://*.googleapis.com https://*.google-analytics.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https://*.google-analytics.com; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' http://localhost:11434 http://127.0.0.1:11434 wss://*.firebaseio.com https://*.firebaseio.com https://*.openai.com https://*.deepseek.com https://*.firebaseio.com https://firestore.googleapis.com https://*.firebase.com https://*.googleapis.com https://*.google-analytics.com https://identitytoolkit.googleapis.com; frame-src 'self' https://*.firebaseapp.com https://*.firebase.com https://*.firebaseio.com https://identitytoolkit.googleapis.com"
         ],
         'X-Content-Type-Options': ['nosniff'],
         'X-Frame-Options': ['SAMEORIGIN'], // Changed from DENY to SAMEORIGIN for Firebase auth
@@ -64,9 +71,12 @@ async function createWindow() {
 
   // Load the app
   const startUrl = isDev
-    ? 'http://localhost:3000'
+    ? process.env.PORT === '3001' 
+      ? 'http://localhost:3001' 
+      : 'http://localhost:3000'
     : `file://${path.join(__dirname, '../out/index.html')}`;
   
+  console.log(`Loading URL: ${startUrl}`);
   mainWindow.loadURL(startUrl);
 
   // Set up permission handler
@@ -76,9 +86,14 @@ async function createWindow() {
     callback(allowedPermissions.includes(permission));
   });
 
-  // Open DevTools in development mode
+  // Always open DevTools in development mode
   if (isDev) {
     mainWindow.webContents.openDevTools();
+    
+    // Add keyboard shortcut for DevTools
+    globalShortcut.register('CommandOrControl+Shift+I', () => {
+      mainWindow.webContents.openDevTools();
+    });
   }
 
   // Handle window controls
@@ -96,6 +111,10 @@ async function createWindow() {
 
   ipcMain.on('window-close', () => {
     mainWindow.close();
+  });
+
+  ipcMain.on('window-reload', () => {
+    mainWindow.reload();
   });
 
   // Handle external links
@@ -131,6 +150,11 @@ app.whenReady().then(() => {
 
   ipcMain.handle('store-delete', (event, key) => {
     store.delete(key);
+    return true;
+  });
+
+  ipcMain.handle('store-clear', () => {
+    store.clear();
     return true;
   });
 

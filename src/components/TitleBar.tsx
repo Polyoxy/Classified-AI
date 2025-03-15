@@ -1,10 +1,19 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
 interface TitleBarProps {
   title: string;
 }
 
 const TitleBar: React.FC<TitleBarProps> = ({ title }) => {
+  const [hasMaximize, setHasMaximize] = useState(false);
+  
+  // Check if maximize function exists on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.electron?.windowControls) {
+      setHasMaximize(true);
+    }
+  }, []);
+  
   // Handle window controls
   const handleMinimize = () => {
     if (typeof window !== 'undefined' && window.electron) {
@@ -68,6 +77,8 @@ const TitleBar: React.FC<TitleBarProps> = ({ title }) => {
         backgroundColor: 'var(--header-bg)',
         height: '36px',
         boxSizing: 'border-box',
+        // @ts-ignore
+        WebkitAppRegion: 'drag', // Make the title bar draggable in Electron
       }}
     >
       <div className="terminal-title" style={{ 
@@ -101,8 +112,27 @@ const TitleBar: React.FC<TitleBarProps> = ({ title }) => {
             backgroundColor: '#f59e0b', // amber-500
             border: 'none',
             cursor: 'pointer',
+            // @ts-ignore
+            WebkitAppRegion: 'no-drag', // Don't drag when clicking buttons
           }}
         />
+        {hasMaximize && (
+          <div
+            onClick={handleMaximize}
+            className="window-control maximize non-draggable"
+            title="Maximize"
+            style={{
+              width: '12px',
+              height: '12px',
+              borderRadius: '50%',
+              backgroundColor: '#10b981', // green-500
+              border: 'none',
+              cursor: 'pointer',
+              // @ts-ignore
+              WebkitAppRegion: 'no-drag', // Don't drag when clicking buttons
+            }}
+          />
+        )}
         <div
           onClick={handleClose}
           className="window-control close non-draggable"
@@ -114,6 +144,8 @@ const TitleBar: React.FC<TitleBarProps> = ({ title }) => {
             backgroundColor: '#ef4444', // red-500
             border: 'none',
             cursor: 'pointer',
+            // @ts-ignore
+            WebkitAppRegion: 'no-drag', // Don't drag when clicking buttons
           }}
         />
       </div>
