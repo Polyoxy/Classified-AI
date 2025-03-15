@@ -273,7 +273,10 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
       
       <div style={{ display: 'flex', gap: '0.5rem' }}>
         <button
-          onClick={onOpenSettings}
+          onClick={() => {
+            console.log("Settings button clicked");
+            onOpenSettings();
+          }}
           style={{
             backgroundColor: 'transparent',
             border: 'none',
@@ -283,7 +286,6 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            transition: 'all 0.2s ease',
           }}
           onMouseOver={(e) => {
             e.currentTarget.style.color = 'var(--accent-color)';

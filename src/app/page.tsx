@@ -22,6 +22,18 @@ const globalStyles = `
   /* Font imports */
   @import url('https://fonts.googleapis.com/css2?family=VT323&family=Source+Code+Pro:wght@400;700&family=Courier+Prime:wght@400;700&display=swap');
   
+  /* Animation keyframes */
+  @keyframes modalFadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(-20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
   :root {
     /* Dark theme (default) */
     --bg-color: #1E1E1E;
@@ -30,11 +42,13 @@ const globalStyles = `
     --accent-color-dark: #3A7CB8;
     --user-prefix-color: #608B4E;
     --ai-prefix-color: #CE9178;
-    --input-bg: #2D2D2D;
+    --input-bg: #f0f0f0; /* Light grey for input */
     --scrollbar-thumb: #4D4D4D;
     --button-hover: #3E3E3E;
     --border-color: #222222;
     --header-bg: #1E1E1E;
+    --modal-bg: #2D2D2D;
+    --modal-border: #333333;
   }
   
   /* Dark theme */
@@ -50,6 +64,8 @@ const globalStyles = `
     --button-hover: #3E3E3E;
     --border-color: #222222;
     --header-bg: #1E1E1E;
+    --modal-bg: #2D2D2D;
+    --modal-border: #333333;
   }
   
   /* Light theme */
@@ -65,6 +81,8 @@ const globalStyles = `
     --button-hover: #F0F0F0;
     --border-color: #DDDDDD;
     --header-bg: #F5F5F5;
+    --modal-bg: #FFFFFF;
+    --modal-border: #DDDDDD;
   }
   
   body {
@@ -116,6 +134,68 @@ const globalStyles = `
     visibility: visible;
     display: inline-block;
   }
+
+  // Add button styles
+  .terminal-button {
+    padding: 0.5rem 1rem;
+    background-color: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    font-family: inherit;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .terminal-button:hover {
+    background-color: var(--button-hover);
+    border-color: var(--accent-color);
+  }
+
+  .terminal-button-primary {
+    padding: 0.5rem 1rem;
+    background-color: var(--accent-color);
+    border: 1px solid var(--accent-color);
+    color: var(--bg-color);
+    font-family: inherit;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .terminal-button-primary:hover {
+    background-color: var(--accent-color-dark);
+    border-color: var(--accent-color-dark);
+  }
+
+  // Add form input styles
+  .form-label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: bold;
+    color: var(--text-color);
+  }
+
+  .form-select, .form-input {
+    width: 100%;
+    padding: 0.5rem;
+    background-color: var(--bg-color);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    font-family: inherit;
+    font-size: 0.875rem;
+    border-radius: 0.25rem;
+    margin-bottom: 1rem;
+  }
+
+  .form-select:focus, .form-input:focus {
+    outline: none;
+    border-color: var(--accent-color);
+  }
+
+  .space-y-6 > * {
+    margin-bottom: 1.5rem;
+  }
 `;
 
 export default function Home() {
@@ -160,18 +240,33 @@ const App: React.FC<{ isElectron: boolean }> = ({ isElectron }) => {
     setupAnalytics();
   }, [isElectron]);
 
+  // Log when settings state changes
+  useEffect(() => {
+    console.log('Settings modal state changed to:', isSettingsOpen ? 'OPEN' : 'CLOSED');
+  }, [isSettingsOpen]);
+
+  // Handler for opening settings
+  const handleOpenSettings = () => {
+    console.log('Opening settings modal');
+    setIsSettingsOpen(true);
+  };
+
   return (
-    <div className="app-container" style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div className="app-container" style={{ 
+      height: '100vh', 
+      display: 'flex', 
+      flexDirection: 'column',
+    }}>
       {/* Title bar (only for Electron) */}
       {isElectron && <TitleBar title="CLASSIFIED AI" />}
       
       {/* Main content */}
       <AppContent 
         isSettingsOpen={isSettingsOpen} 
-        setIsSettingsOpen={setIsSettingsOpen} 
+        setIsSettingsOpen={handleOpenSettings} 
       />
       
-      {/* Settings modal */}
+      {/* Settings modal - ALWAYS render but with conditional visibility */}
       <SettingsModal 
         isOpen={isSettingsOpen} 
         onClose={() => setIsSettingsOpen(false)} 
@@ -182,7 +277,7 @@ const App: React.FC<{ isElectron: boolean }> = ({ isElectron }) => {
 
 const AppContent: React.FC<{ 
   isSettingsOpen: boolean; 
-  setIsSettingsOpen: React.Dispatch<React.SetStateAction<boolean>>; 
+  setIsSettingsOpen: () => void; 
 }> = ({ 
   isSettingsOpen, 
   setIsSettingsOpen 
@@ -203,6 +298,18 @@ const AppContent: React.FC<{
     // Apply the correct theme class based on the settings
     document.body.className = `theme-${settings.theme}`;
     console.log('Applied theme:', settings.theme);
+    
+    // Apply CSS variables to :root
+    const root = document.documentElement;
+    if (settings.theme === 'dark') {
+      root.style.setProperty('--input-bg', '#f0f0f0');
+      root.style.setProperty('--modal-bg', '#2D2D2D');
+      root.style.setProperty('--modal-border', '#333333');
+    } else {
+      root.style.setProperty('--input-bg', '#f0f0f0');
+      root.style.setProperty('--modal-bg', '#FFFFFF');
+      root.style.setProperty('--modal-border', '#DDDDDD');
+    }
   }, [settings.theme]);
   
   return (
@@ -226,7 +333,7 @@ const AppContent: React.FC<{
       <CommandInput />
       
       {/* Status bar */}
-      <StatusBar onOpenSettings={() => setIsSettingsOpen(true)} />
+      <StatusBar onOpenSettings={() => setIsSettingsOpen()} />
     </>
   );
 };
