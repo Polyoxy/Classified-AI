@@ -2,6 +2,7 @@ const { app, BrowserWindow, ipcMain, shell, session } = require('electron');
 const path = require('path');
 const isDev = require('electron-is-dev');
 const Store = require('electron-store');
+const waitOn = require('wait-on');
 
 // Initialize electron-store
 const store = new Store();
@@ -9,7 +10,18 @@ const store = new Store();
 // Keep a global reference of the window object to avoid garbage collection
 let mainWindow;
 
-function createWindow() {
+async function createWindow() {
+  // In development mode, wait for the Next.js server to be ready
+  if (isDev) {
+    try {
+      console.log('Waiting for Next.js server to be ready...');
+      await waitOn({ resources: ['http://localhost:3000'], timeout: 15000 });
+      console.log('Next.js server is ready!');
+    } catch (err) {
+      console.error('Error waiting for Next.js server:', err);
+    }
+  }
+
   // Create the browser window with a custom frame
   mainWindow = new BrowserWindow({
     width: 1200,

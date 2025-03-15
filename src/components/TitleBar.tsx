@@ -39,126 +39,98 @@ const TitleBar: React.FC<TitleBarProps> = ({ title }) => {
     }
   };
 
+  // Terminal icon SVG
+  const TerminalIcon = () => (
+    <svg 
+      width="18" 
+      height="18" 
+      viewBox="0 0 24 24" 
+      fill="none" 
+      stroke="currentColor" 
+      strokeWidth="2" 
+      strokeLinecap="round" 
+      strokeLinejoin="round"
+    >
+      <polyline points="4 17 10 11 4 5"></polyline>
+      <line x1="12" y1="19" x2="20" y2="19"></line>
+    </svg>
+  );
+
   return (
     <div 
       className="terminal-header draggable" 
       style={{
-        padding: '8px 16px',
-        borderBottom: '1px solid var(--border-color)',
+        padding: '0.5rem 1rem',
+        borderBottom: '2px solid var(--border-color)',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        backgroundColor: 'var(--bg-color)',
+        backgroundColor: 'var(--header-bg)',
         height: '36px',
         boxSizing: 'border-box',
       }}
     >
       <div className="terminal-title" style={{ 
-        fontWeight: 'bold',
-        letterSpacing: '1px',
-        color: 'var(--text-color)', 
-        fontSize: '16px',
-        fontFamily: "'JetBrains Mono', monospace",
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.5rem',
       }}>
-        {title}
+        <TerminalIcon />
+        <span style={{
+          fontWeight: 'bold',
+          letterSpacing: '1px',
+          fontSize: '0.875rem',
+          textTransform: 'uppercase',
+        }}>
+          {title}
+        </span>
       </div>
       
       <div className="window-controls non-draggable" style={{ 
         display: 'flex', 
-        gap: '12px',
-        alignItems: 'center',
-        height: '100%',
+        gap: '0.5rem',
       }}>
-        <button
+        <div
           onClick={handleMinimize}
           className="window-control minimize non-draggable"
           title="Minimize"
           style={{
-            width: '14px',
-            height: '14px',
+            width: '12px',
+            height: '12px',
             borderRadius: '50%',
-            backgroundColor: '#FFC107',
+            backgroundColor: '#f59e0b', // amber-500
             border: 'none',
             cursor: 'pointer',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            padding: 0,
-            transition: 'all 0.2s',
-            // @ts-ignore
-            WebkitAppRegion: 'no-drag',
           }}
-        >
-          <span style={{ 
-            fontSize: '12px', 
-            lineHeight: 1, 
-            color: '#333', 
-            display: 'inline-block',
-            marginTop: '-1px',
-          }}>
-            _
-          </span>
-        </button>
+        />
         
-        <button
+        <div
           onClick={handleMaximize}
           className="window-control maximize non-draggable"
           title="Maximize"
           style={{
-            width: '14px',
-            height: '14px',
+            width: '12px',
+            height: '12px',
             borderRadius: '50%',
-            backgroundColor: '#4CAF50',
+            backgroundColor: '#10b981', // green-500
             border: 'none',
             cursor: 'pointer',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            padding: 0,
-            transition: 'all 0.2s',
-            // @ts-ignore
-            WebkitAppRegion: 'no-drag',
           }}
-        >
-          <span style={{ 
-            fontSize: '10px', 
-            lineHeight: 1, 
-            color: '#333', 
-            display: 'inline-block',
-          }}>
-            □
-          </span>
-        </button>
+        />
         
-        <button
+        <div
           onClick={handleClose}
           className="window-control close non-draggable"
           title="Close"
           style={{
-            width: '14px',
-            height: '14px',
+            width: '12px',
+            height: '12px',
             borderRadius: '50%',
-            backgroundColor: '#F44336',
+            backgroundColor: '#ef4444', // red-500
             border: 'none',
             cursor: 'pointer',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            padding: 0,
-            transition: 'all 0.2s',
-            // @ts-ignore
-            WebkitAppRegion: 'no-drag',
           }}
-        >
-          <span style={{ 
-            fontSize: '12px', 
-            lineHeight: 1, 
-            color: '#333', 
-            display: 'inline-block',
-          }}>
-            ×
-          </span>
-        </button>
+        />
       </div>
     </div>
   );

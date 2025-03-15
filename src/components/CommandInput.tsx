@@ -1,206 +1,194 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAppContext } from '@/context/AppContext';
 
-interface CommandInputProps {
-  onSendMessage: (message: string) => void;
-  isProcessing: boolean;
-  onClearChat: () => void;
-  onOpenSettings: () => void;
-}
-
-const CommandInput: React.FC<CommandInputProps> = ({
-  onSendMessage,
-  isProcessing,
-  onClearChat,
-  onOpenSettings,
-}) => {
-  const { resetConversations } = useAppContext();
+const CommandInput: React.FC = () => {
   const [input, setInput] = useState('');
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [showResetButton, setShowResetButton] = useState(true); // Temporary button
-
-  // Auto-resize textarea as user types
+  const [showResetButton, setShowResetButton] = useState(false); // Set to false by default
+  const { addMessage, isProcessing, resetConversations } = useAppContext();
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  
   useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 150)}px`;
+    // Focus input on component mount
+    if (inputRef.current) {
+      inputRef.current.focus();
     }
-  }, [input]);
-
-  const handleSend = () => {
+  }, []);
+  
+  // Handle input change and auto resize
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInput(e.target.value);
+    
+    // Auto resize
+    if (inputRef.current) {
+      inputRef.current.style.height = 'auto';
+      inputRef.current.style.height = `${inputRef.current.scrollHeight}px`;
+    }
+  };
+  
+  // Handle key press
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
+  
+  // Handle send message
+  const handleSendMessage = () => {
     if (input.trim() && !isProcessing) {
-      onSendMessage(input.trim());
+      addMessage(input.trim(), 'user');
       setInput('');
       
       // Reset textarea height
-      if (textareaRef.current) {
-        textareaRef.current.style.height = 'auto';
+      if (inputRef.current) {
+        inputRef.current.style.height = 'auto';
       }
     }
   };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
+  
+  // Handle reset button click
+  const handleResetClick = () => {
+    resetConversations();
+    setShowResetButton(false);
   };
-
+  
   return (
-    <div className="input-container" style={{
-      display: 'flex',
-      padding: '12px 16px',
-      marginBottom: '0',
+    <div className="command-input-container" style={{
+      position: 'relative',
+      padding: '0.75rem 1rem',
       borderTop: '1px solid var(--border-color)',
-      backgroundColor: 'var(--bg-color)',
-      position: 'relative', // To position the reset button
+      borderBottom: '1px solid var(--border-color)',
+      backgroundColor: '#f0f0f0', // Light grey
+      display: 'flex',
+      alignItems: 'center',
     }}>
       {showResetButton && (
-        <button
-          onClick={() => {
-            resetConversations(); 
-            setShowResetButton(false);
-          }}
+        <button 
+          onClick={handleResetClick}
           style={{
             position: 'absolute',
-            top: '-40px', 
-            right: '16px',
-            backgroundColor: '#ff5555',
-            color: 'white',
+            top: '-40px',
+            right: '20px',
+            backgroundColor: 'var(--accent-color)',
+            color: 'var(--bg-color)',
             border: 'none',
+            padding: '5px 10px',
             borderRadius: '4px',
-            padding: '8px 12px',
-            fontFamily: 'inherit',
-            fontWeight: 'bold',
             cursor: 'pointer',
-            zIndex: 1000,
+            zIndex: 100
           }}
         >
-          Reset All (Remove Welcome Message)
+          Reset All
         </button>
       )}
       
-      <div style={{
+      <div className="command-prompt" style={{
+        color: '#000000', // Black color
+        marginRight: '0.5rem',
+        userSelect: 'none',
+        fontWeight: 'bold',
+        fontSize: '1rem',
         display: 'flex',
         alignItems: 'center',
-        flex: 1,
-        gap: '12px',
+        height: '24px', // Match the height of textarea
+        fontFamily: 'Courier Prime, Source Code Pro, VT323, Courier New, monospace',
       }}>
-        <div className="input-prompt" style={{
-          color: 'var(--accent-color)',
-          fontWeight: 'bold',
-          fontSize: '16px',
-          width: '15px',
-          textAlign: 'center',
-        }}>$</div>
-        
-        <div style={{
+        $
+      </div>
+      
+      <textarea
+        ref={inputRef}
+        value={input}
+        onChange={handleInputChange}
+        onKeyDown={handleKeyPress}
+        disabled={isProcessing}
+        placeholder={isProcessing ? "Processing request..." : "Enter command..."}
+        style={{
+          backgroundColor: 'transparent',
+          border: 'none',
+          color: 'var(--text-color)',
+          fontFamily: 'var(--font-mono)',
+          fontSize: '0.875rem',
+          resize: 'none',
+          height: 'auto',
+          minHeight: '24px',
           flex: 1,
+          outline: 'none',
+          padding: '0',
+          paddingTop: '4px', // Add padding to center text
+          overflow: 'hidden',
+          lineHeight: '1.5',
+          verticalAlign: 'middle',
+        }}
+        rows={1}
+      />
+      
+      <button
+        onClick={handleSendMessage}
+        disabled={!input.trim() || isProcessing}
+        style={{
+          backgroundColor: 'transparent',
+          border: 'none',
+          color: input.trim() && !isProcessing ? 'var(--accent-color)' : 'var(--disabled-color)',
+          cursor: input.trim() && !isProcessing ? 'pointer' : 'not-allowed',
+          padding: '0.25rem',
           display: 'flex',
           alignItems: 'center',
-          backgroundColor: 'var(--input-bg)',
-          borderRadius: '4px',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-          height: '36px',
-        }}>
-          <textarea
-            ref={textareaRef}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Type your message here..."
-            disabled={isProcessing}
-            style={{
-              flex: 1,
-              resize: 'none',
-              backgroundColor: 'transparent',
-              color: 'var(--text-color)',
-              border: 'none',
-              padding: '0 12px',
-              fontFamily: 'inherit',
-              fontSize: '14px',
-              height: '36px',
-              lineHeight: '36px',
-              outline: 'none',
-              overflow: 'hidden',
-            }}
-            rows={1}
-          />
-        </div>
-        
-        <button
-          onClick={() => {
-            // Upload file functionality would go here
-          }}
-          title="Upload Classified Document"
-          className="upload-btn"
-          style={{
-            backgroundColor: 'var(--input-bg)',
-            color: 'var(--text-color)',
-            border: '1px solid var(--border-color)',
-            borderRadius: '4px',
-            padding: '0 14px',
-            minWidth: '80px',
-            height: '36px',
-            fontFamily: 'inherit',
-            fontSize: '14px',
-            fontWeight: 'bold',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            transition: 'all 0.2s ease',
-            whiteSpace: 'nowrap',
-          }}
-          onMouseOver={(e) => {
-            e.currentTarget.style.backgroundColor = 'var(--button-hover)';
-            e.currentTarget.style.color = 'var(--accent-color)';
-          }}
-          onMouseOut={(e) => {
-            e.currentTarget.style.backgroundColor = 'var(--input-bg)';
-            e.currentTarget.style.color = 'var(--text-color)';
-          }}
+          justifyContent: 'center',
+          marginLeft: '0.5rem',
+          transition: 'all 0.2s ease',
+        }}
+      >
+        <svg 
+          width="16" 
+          height="16" 
+          viewBox="0 0 24 24" 
+          fill="none" 
+          stroke="currentColor" 
+          strokeWidth="2" 
+          strokeLinecap="round" 
+          strokeLinejoin="round"
         >
-          Upload
-        </button>
-        
-        <button
-          onClick={handleSend}
-          disabled={!input.trim() || isProcessing}
-          className="send-btn"
-          style={{
-            backgroundColor: !input.trim() || isProcessing ? 'var(--input-bg)' : 'var(--accent-color)',
-            color: !input.trim() || isProcessing ? 'var(--text-muted)' : '#ffffff',
-            border: '1px solid var(--border-color)',
-            borderRadius: '4px',
-            padding: '0 14px',
-            minWidth: '80px',
-            height: '36px',
-            fontFamily: 'inherit',
-            fontSize: '14px',
-            fontWeight: 'bold',
-            cursor: !input.trim() || isProcessing ? 'not-allowed' : 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            transition: 'all 0.2s ease',
-            opacity: !input.trim() || isProcessing ? 0.7 : 1,
-            whiteSpace: 'nowrap',
-          }}
-          onMouseOver={(e) => {
-            if (input.trim() && !isProcessing) {
-              e.currentTarget.style.backgroundColor = 'var(--accent-color-dark)';
-            }
-          }}
-          onMouseOut={(e) => {
-            if (input.trim() && !isProcessing) {
-              e.currentTarget.style.backgroundColor = 'var(--accent-color)';
-            }
-          }}
+          <line x1="22" y1="2" x2="11" y2="13"></line>
+          <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+        </svg>
+      </button>
+      
+      <button
+        style={{
+          backgroundColor: 'transparent',
+          border: 'none',
+          color: 'var(--text-color)',
+          cursor: 'pointer',
+          padding: '0.25rem',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginLeft: '0.5rem',
+          transition: 'all 0.2s ease',
+        }}
+        onMouseOver={(e) => {
+          e.currentTarget.style.color = 'var(--accent-color)';
+        }}
+        onMouseOut={(e) => {
+          e.currentTarget.style.color = 'var(--text-color)';
+        }}
+      >
+        <svg 
+          width="16" 
+          height="16" 
+          viewBox="0 0 24 24" 
+          fill="none" 
+          stroke="currentColor" 
+          strokeWidth="2" 
+          strokeLinecap="round" 
+          strokeLinejoin="round"
         >
-          Send
-        </button>
-      </div>
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="17 8 12 3 7 8"></polyline>
+          <line x1="12" y1="3" x2="12" y2="15"></line>
+        </svg>
+      </button>
     </div>
   );
 };
