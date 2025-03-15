@@ -1,6 +1,7 @@
 import React from 'react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus } from 'react-syntax-highlighter/dist/cjs/styles/prism';
+import { vscDarkPlus, vs } from 'react-syntax-highlighter/dist/cjs/styles/prism';
+import { useAppContext } from '@/context/AppContext';
 
 interface MessageItemProps {
   role: 'user' | 'assistant' | 'system';
@@ -8,6 +9,10 @@ interface MessageItemProps {
 }
 
 const MessageItem: React.FC<MessageItemProps> = ({ role, content }) => {
+  // Get theme from context to use appropriate syntax highlighting
+  const { settings } = useAppContext();
+  const isDarkTheme = settings?.theme === 'dark';
+  
   // Function to format the message content and handle code blocks
   const formatContent = (text: string) => {
     const codeBlockRegex = /```([a-zA-Z]*)\n([\s\S]*?)```/g;
@@ -31,25 +36,18 @@ const MessageItem: React.FC<MessageItemProps> = ({ role, content }) => {
       parts.push(
         <div 
           key={`code-${parts.length}`} 
-          style={{
-            display: 'block',
-            backgroundColor: 'var(--code-bg)',
-            padding: '0.75rem 1rem',
-            borderRadius: '0.25rem',
-            margin: '0.5rem 0',
-            border: '2px solid var(--border-color)',
-            whiteSpace: 'pre',
-            overflowX: 'auto'
-          }}
+          style={codeBlockStyle}
         >
           <SyntaxHighlighter
             language={language}
-            style={vscDarkPlus}
+            style={isDarkTheme ? vscDarkPlus : vs}
             customStyle={{
               backgroundColor: 'transparent',
               padding: 0,
               margin: 0,
-              border: 'none'
+              border: 'none',
+              fontSize: `${settings?.fontSize || 14}px`,
+              fontFamily: 'var(--font-mono)'
             }}
           >
             {code}
@@ -72,49 +70,117 @@ const MessageItem: React.FC<MessageItemProps> = ({ role, content }) => {
     return parts.length > 0 ? parts : text;
   };
 
-  // Determine message color based on role
-  const getMessageColor = () => {
-    if (role === 'user') return 'var(--user-prefix-color)';
-    if (role === 'assistant') return 'var(--ai-prefix-color)';
-    return 'var(--system-color)';
+  // Get appropriate colors based on role and theme
+  const getUserColors = () => {
+    if (isDarkTheme) {
+      return {
+        prefix: 'var(--accent-color, #E34234)', // Changed to vermillion orange
+        bg: '#1a1a1a'      // Slightly lighter than main bg
+      };
+    } else {
+      return {
+        prefix: 'var(--accent-color, #E34234)', // Changed to vermillion orange
+        bg: '#f8f8f8'      // Light gray
+      };
+    }
+  };
+  
+  const getAIColors = () => {
+    if (isDarkTheme) {
+      return {
+        prefix: 'var(--accent-color, #E34234)', // Changed to vermillion orange
+        bg: '#121212'      // Dark bg
+      };
+    } else {
+      return {
+        prefix: 'var(--accent-color, #E34234)', // Changed to vermillion orange
+        bg: '#ffffff'      // White
+      };
+    }
+  };
+
+  // Get colors for current role
+  const colors = role === 'user' ? getUserColors() : getAIColors();
+
+  // Create message style based on role
+  const messageStyle = {
+    marginBottom: '1rem',
+    padding: '0.75rem',
+    backgroundColor: colors.bg,
+    color: 'var(--text-color)',
+    fontFamily: 'var(--font-mono, "JetBrains Mono", monospace)',
+    fontSize: `${settings?.fontSize || 14}px`,
+    lineHeight: '1.6',
+    transition: 'all 0.2s ease',
+    borderRadius: '4px',
+    width: '100%',
+    boxSizing: 'border-box' as const,
+    boxShadow: isDarkTheme 
+      ? '0 1px 2px rgba(0, 0, 0, 0.2)' 
+      : '0 1px 2px rgba(0, 0, 0, 0.05)'
+  };
+
+  // Style for the role prefix
+  const prefixStyle = {
+    fontWeight: 'bold' as const,
+    color: colors.prefix,
+    userSelect: 'none' as const,
+    display: 'inline-block',
+    marginBottom: '0.5rem',
+    fontSize: `${(settings?.fontSize || 14)}px`,
+    fontFamily: 'var(--font-mono, "JetBrains Mono", monospace)'
+  };
+
+  // Style for the message content
+  const contentStyle = {
+    whiteSpace: 'pre-wrap' as const,
+    lineHeight: '1.6',
+    color: 'var(--text-color)',
+    fontFamily: 'var(--font-mono, "JetBrains Mono", monospace)'
+  };
+
+  // Add code block syntax highlighting
+  const codeBlockStyle = {
+    display: 'block',
+    backgroundColor: isDarkTheme ? '#1e1e1e' : '#f5f5f5',
+    padding: '0.75rem 1rem',
+    borderRadius: '4px',
+    margin: '0.75rem 0',
+    border: `1px solid ${isDarkTheme ? '#2a2a2a' : '#e0e0e0'}`,
+    whiteSpace: 'pre' as const,
+    overflowX: 'auto' as const,
+    boxShadow: isDarkTheme ? '0 2px 6px rgba(0, 0, 0, 0.2)' : '0 2px 6px rgba(0, 0, 0, 0.05)',
+    fontFamily: 'var(--font-mono, "JetBrains Mono", monospace)'
+  };
+
+  // Style for system messages
+  const systemStyle = {
+    ...messageStyle,
+    fontStyle: 'italic' as const,
+    opacity: 0.8,
+    color: 'var(--system-color)',
+    backgroundColor: isDarkTheme ? 'rgba(0, 0, 0, 0.2)' : 'rgba(0, 0, 0, 0.05)',
+    padding: '0.5rem 0.75rem',
   };
 
   return (
     <div 
       className={`message ${role}-message`}
-      style={{ 
-        marginBottom: '0.75rem',
-        color: getMessageColor(),
-        padding: '0.5rem 0.75rem',
-        borderBottom: '2px solid var(--border-color)',
-        fontFamily: 'var(--font-mono)',
-      }}
+      style={role === 'system' ? systemStyle : messageStyle}
     >
       {role !== 'system' ? (
         <>
-          <span 
-            className="prefix" 
-            style={{ 
-              fontWeight: 'bold',
-              userSelect: 'none',
-              color: role === 'user' ? '#33ff33' : 'var(--ai-prefix-color)',
-            }}
-          >
-            {role === 'user' ? '$ USER: ' : '$ SYSTEM: '}
+          <span className="prefix" style={prefixStyle}>
+            {role === 'user' ? '$ USER:' : '$ AI:'}
           </span>
-          <span style={{ 
-            whiteSpace: 'pre-wrap',
-            lineHeight: '1.5',
-          }}>
+          <div style={contentStyle}>
             {formatContent(content)}
-          </span>
+          </div>
         </>
       ) : (
         <span style={{ 
           whiteSpace: 'pre-wrap',
           lineHeight: '1.5',
-          color: 'var(--system-color)',
-          opacity: 0.8,
           fontStyle: 'italic'
         }}>
           {content}

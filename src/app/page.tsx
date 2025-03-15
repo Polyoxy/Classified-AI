@@ -7,14 +7,22 @@ import ChatContainer from '@/components/ChatContainer';
 import CommandInput from '@/components/CommandInput';
 import StatusBar from '@/components/StatusBar';
 import SettingsModal from '@/components/SettingsModal';
+import AuthPage from '@/components/AuthPage';
 
 // Font imports
 import { Inter } from 'next/font/google';
+import { JetBrains_Mono } from 'next/font/google';
 
 // Define fonts
 const inter = Inter({
   subsets: ['latin'],
   variable: '--font-inter',
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ['latin'],
+  variable: '--font-mono',
+  display: 'swap',
 });
 
 // Add CSS variables
@@ -34,55 +42,92 @@ const globalStyles = `
     }
   }
   
+  /* Font variables */
+  :root {
+    --font-mono: 'JetBrains Mono', monospace;
+    --font-sans: 'Inter', sans-serif;
+  }
+  
   :root {
     /* Dark theme (default) */
     --bg-color: #1E1E1E;
     --text-color: #CCCCCC;
-    --accent-color: #569CD6;
-    --accent-color-dark: #3A7CB8;
+    --accent-color: #333333;
+    --accent-color-dark: #252525;
     --user-prefix-color: #608B4E;
     --ai-prefix-color: #CE9178;
     --input-bg: #f0f0f0; /* Light grey for input */
+    --input-border: #2A2A2A;
     --scrollbar-thumb: #4D4D4D;
     --button-hover: #3E3E3E;
     --border-color: #222222;
     --header-bg: #1E1E1E;
     --modal-bg: #2D2D2D;
     --modal-border: #333333;
+    --slider-handle: #474747;
+    --system-color: #999999;
+    --link-color: #474747; /* Dark grey links */
+    --button-bg: #474747; /* Dark grey button */
+    --button-text: #FFFFFF; /* White text on buttons */
+    --divider-color: #333333; /* Divider color */
   }
   
   /* Dark theme */
   .theme-dark {
-    --bg-color: #1E1E1E;
-    --text-color: #CCCCCC;
-    --accent-color: #569CD6;
-    --accent-color-dark: #3A7CB8;
-    --user-prefix-color: #608B4E;
-    --ai-prefix-color: #CE9178;
-    --input-bg: #f0f0f0; /* Light grey for input */
+    --bg-color: #121212; /* Dark black background */
+    --text-color: #e9ecef; /* Light text */
+    --accent-color: #1e88e5; /* Blue accent color */
+    --accent-rgb: 30, 136, 229; /* RGB value of accent color */
+    --user-prefix-color: #1e88e5; /* Blue for user prefix */
+    --ai-prefix-color: #1e88e5; /* Blue for AI prefix */
+    --input-bg: #1a1a1a; /* Darker input background */
+    --input-border: #343a40; /* Dark border for inputs */
     --scrollbar-thumb: #4D4D4D;
-    --button-hover: #3E3E3E;
-    --border-color: #222222;
-    --header-bg: #1E1E1E;
-    --modal-bg: #2D2D2D;
-    --modal-border: #333333;
+    --button-hover: #212529;
+    --border-color: #343a40; /* Slightly lighter border */
+    --header-bg: #1a1a1a;
+    --modal-bg: #1a1a1a;
+    --modal-border: #343a40;
+    --slider-handle: #1e88e5; /* Accent color for slider */
+    --system-color: #b0bec5;
+    --link-color: #90caf9; /* Light blue links */
+    --button-bg: #1e88e5; /* Blue button */
+    --button-text: #ffffff; /* White text on buttons */
+    --divider-color: #343a40; /* Divider color */
+    --success-color: #10b981; /* Green for success status */
+    --error-color: #ef5350; /* Red for error status */
+    --warning-color: #f59e0b; /* Orange for warning status */
+    --secondary-bg: #1a1a1a;
+    --code-bg: #1e1e1e;
   }
   
-  /* Light theme */
+  /* Light theme (default) */
   .theme-light {
-    --bg-color: #FFFFFF;
-    --text-color: #333333;
-    --accent-color: #0078D4;
-    --accent-color-dark: #005A9E;
-    --user-prefix-color: #107C10;
-    --ai-prefix-color: #D83B01;
-    --input-bg: #f0f0f0; /* Light grey for input */
+    --bg-color: #f8f9fa;
+    --text-color: #212529;
+    --accent-color: #1e88e5; /* Blue accent color */
+    --accent-rgb: 30, 136, 229; /* RGB value of accent color */
+    --user-prefix-color: #1e88e5; /* Blue for user prefix */
+    --ai-prefix-color: #1e88e5; /* Blue for AI prefix */
+    --input-bg: #ffffff; /* White input background */
+    --input-border: #ced4da; /* Light grey border for inputs */
     --scrollbar-thumb: #CCCCCC;
-    --button-hover: #F0F0F0;
-    --border-color: #DDDDDD;
-    --header-bg: #F5F5F5;
-    --modal-bg: #FFFFFF;
-    --modal-border: #DDDDDD;
+    --button-hover: #e9ecef;
+    --border-color: #dee2e6;
+    --header-bg: #ffffff;
+    --modal-bg: #ffffff;
+    --modal-border: #dee2e6;
+    --slider-handle: #1e88e5; /* Blue accent */
+    --system-color: #607d8b;
+    --link-color: #1e88e5; /* Blue links */
+    --button-bg: #1e88e5; /* Blue button */
+    --button-text: #ffffff; /* White text on buttons */
+    --divider-color: #e9ecef; /* Divider color */
+    --success-color: #10b981; /* Green for success status */
+    --error-color: #ef4444; /* Red for error status */
+    --warning-color: #f59e0b; /* Orange for warning status */
+    --secondary-bg: #f5f5f5;
+    --code-bg: #f5f5f5;
   }
   
   body {
@@ -90,7 +135,7 @@ const globalStyles = `
     padding: 0;
     background-color: var(--bg-color);
     color: var(--text-color);
-    font-family: 'Courier Prime', 'Source Code Pro', 'VT323', 'Courier New', monospace !important;
+    font-family: var(--font-mono);
     font-size: 14px;
     line-height: 1.6;
     height: 100vh;
@@ -100,7 +145,11 @@ const globalStyles = `
   }
   
   * {
-    font-family: 'Courier Prime', 'Source Code Pro', 'VT323', 'Courier New', monospace;
+    font-family: var(--font-mono);
+  }
+
+  p, div.description, .help-text {
+    font-family: var(--font-sans);
   }
   
   .chat-container::-webkit-scrollbar {
@@ -174,6 +223,7 @@ const globalStyles = `
     margin-bottom: 0.5rem;
     font-weight: bold;
     color: var(--text-color);
+    font-family: var(--font-mono);
   }
 
   .form-select, .form-input {
@@ -182,7 +232,7 @@ const globalStyles = `
     background-color: var(--bg-color);
     border: 1px solid var(--border-color);
     color: var(--text-color);
-    font-family: inherit;
+    font-family: var(--font-mono);
     font-size: 0.875rem;
     border-radius: 0.25rem;
     margin-bottom: 1rem;
@@ -207,7 +257,8 @@ export default function Home() {
   }, []);
 
   return (
-    <main className={inter.variable}>
+    <main className={`${inter.variable} ${jetbrainsMono.variable}`}>
+      <style jsx global>{globalStyles}</style>
       <AppProvider>
         <App isElectron={isElectron} />
       </AppProvider>
@@ -217,6 +268,7 @@ export default function Home() {
 
 const App: React.FC<{ isElectron: boolean }> = ({ isElectron }) => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const { user, isLoading, setUser } = useAppContext();
 
   // Set up analytics
   useEffect(() => {
@@ -224,14 +276,20 @@ const App: React.FC<{ isElectron: boolean }> = ({ isElectron }) => {
       try {
         // Skip analytics in Electron
         if (isElectron) {
-          console.log('Skipping analytics in Electron environment');
+          // Only log in development
+          if (process.env.NODE_ENV === 'development') {
+            console.log('Skipping analytics in Electron environment');
+          }
           return;
         }
         
         // Initialize analytics
         const { initAnalytics } = await import('@/lib/firebase');
         initAnalytics();
-        console.log('Analytics initialized');
+        // Only log in development
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Analytics initialized');
+        }
       } catch (error) {
         console.error('Error setting up analytics:', error);
       }
@@ -240,17 +298,65 @@ const App: React.FC<{ isElectron: boolean }> = ({ isElectron }) => {
     setupAnalytics();
   }, [isElectron]);
 
-  // Log when settings state changes
+  // Check for offline user
   useEffect(() => {
-    console.log('Settings modal state changed to:', isSettingsOpen ? 'OPEN' : 'CLOSED');
+    if (!user && !isLoading) {
+      try {
+        const offlineUserJson = localStorage.getItem('offlineUser');
+        if (offlineUserJson) {
+          const offlineUser = JSON.parse(offlineUserJson);
+          // Only log when actually restoring a user
+          console.log('Restoring offline user session:', offlineUser.uid);
+          setUser(offlineUser);
+        }
+      } catch (error) {
+        console.error('Error checking for offline user:', error);
+      }
+    }
+  }, [user, isLoading, setUser]);
+
+  // We don't need to log every time the settings modal state changes
+  useEffect(() => {
+    // Removing console log to prevent console spam
   }, [isSettingsOpen]);
+
+  // We don't need to log authentication state on every render
+  useEffect(() => {
+    // Removing console logs to prevent console spam
+  }, [user, isLoading]);
 
   // Handler for opening settings
   const handleOpenSettings = () => {
-    console.log('Opening settings modal');
+    // Removed console log
     setIsSettingsOpen(true);
   };
 
+  // While authentication is loading, show a loading state
+  if (isLoading) {
+    return (
+      <div style={{ 
+        height: '100vh', 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center',
+        backgroundColor: 'var(--bg-color)',
+        color: 'var(--text-color)',
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ marginBottom: '20px', fontSize: '24px' }}>Loading...</div>
+          <div style={{ fontSize: '14px', opacity: 0.7 }}>Checking authentication state...</div>
+        </div>
+      </div>
+    );
+  }
+
+  // If no user, show the auth page
+  if (!user) {
+    // Only log on first render or during actual state changes
+    return <AuthPage />;
+  }
+
+  // User is authenticated, show the main app
   return (
     <div className="app-container" style={{ 
       height: '100vh', 
@@ -266,11 +372,16 @@ const App: React.FC<{ isElectron: boolean }> = ({ isElectron }) => {
         setIsSettingsOpen={handleOpenSettings} 
       />
       
-      {/* Settings modal - ALWAYS render but with conditional visibility */}
-      <SettingsModal 
-        isOpen={isSettingsOpen} 
-        onClose={() => setIsSettingsOpen(false)} 
-      />
+      {/* Settings modal */}
+      {isSettingsOpen && (
+        <SettingsModal 
+          isOpen={true}
+          onClose={() => {
+            // Removed console log
+            setIsSettingsOpen(false);
+          }} 
+        />
+      )}
     </div>
   );
 };
@@ -297,18 +408,17 @@ const AppContent: React.FC<{
   useEffect(() => {
     // Apply the correct theme class based on the settings
     document.body.className = `theme-${settings.theme}`;
-    console.log('Applied theme:', settings.theme);
     
-    // Apply CSS variables to :root
-    const root = document.documentElement;
-    if (settings.theme === 'dark') {
-      root.style.setProperty('--input-bg', '#f0f0f0');
-      root.style.setProperty('--modal-bg', '#2D2D2D');
-      root.style.setProperty('--modal-border', '#333333');
-    } else {
-      root.style.setProperty('--input-bg', '#f0f0f0');
-      root.style.setProperty('--modal-bg', '#FFFFFF');
-      root.style.setProperty('--modal-border', '#DDDDDD');
+    // No need to set individual CSS variables as they're defined in the theme classes
+    // This ensures consistent theme application across the application
+    
+    // Force a re-render of the UI when theme changes
+    const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+    if (metaThemeColor) {
+      metaThemeColor.setAttribute(
+        'content',
+        settings.theme === 'dark' ? '#121212' : '#f8f9fa'
+      );
     }
   }, [settings.theme]);
   

@@ -17,7 +17,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   const [userRole, setUserRole] = useState<UserRole>(settings.userRole);
   const [customPrompts, setCustomPrompts] = useState<Record<UserRole, string>>(settings.customSystemPrompts);
   const [theme, setTheme] = useState<'dark' | 'light'>(settings.theme === 'dark' ? 'dark' : 'light');
-  const [activeTab, setActiveTab] = useState<'General' | 'API Settings' | 'Appearance'>('General');
+  const [activeTab, setActiveTab] = useState<'appearance' | 'api' | 'prompts' | 'about'>('appearance');
 
   // Update state when settings change
   useEffect(() => {
@@ -58,93 +58,302 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
     onClose();
   };
 
-  if (!isOpen) {
-    return null;
-  }
+  // Handle custom prompt changes
+  const handlePromptChange = (role: UserRole, value: string) => {
+    setCustomPrompts(prev => ({
+      ...prev,
+      [role]: value
+    }));
+  };
 
-  console.log("⚠️ RENDERING SETTINGS MODAL ⚠️");
-
-  // Simple version to ensure it shows
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: 'rgba(0, 0, 0, 0.8)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 10000
+    <div className="modal-overlay" onClick={(e) => {
+      if (e.target === e.currentTarget) onClose();
     }}>
-      <div style={{
-        width: '500px',
-        backgroundColor: theme === 'dark' ? '#1E1E1E' : '#FFFFFF',
-        color: theme === 'dark' ? '#FFFFFF' : '#000000',
-        padding: '20px',
-        borderRadius: '5px',
-        boxShadow: '0 5px 15px rgba(0, 0, 0, 0.5)'
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-          <h2 style={{ margin: 0 }}>Settings</h2>
+      <div className="modal-container" onClick={(e) => e.stopPropagation()}>
+        {/* Header */}
+        <div className="modal-header">
+          <h2 className="modal-title">Settings</h2>
           <button 
             onClick={onClose}
-            style={{ 
-              background: 'none', 
-              border: 'none', 
-              fontSize: '20px',
-              cursor: 'pointer',
-              color: theme === 'dark' ? '#FFFFFF' : '#000000'
-            }}
+            className="modal-close"
           >
             ×
           </button>
         </div>
 
-        <div style={{ marginBottom: '20px' }}>
-          <label style={{ display: 'block', marginBottom: '5px' }}>Theme</label>
-          <select 
-            value={theme}
-            onChange={(e) => setTheme(e.target.value as 'dark' | 'light')}
-            style={{ 
-              width: '100%', 
-              padding: '8px',
-              backgroundColor: theme === 'dark' ? '#333333' : '#F5F5F5',
-              color: theme === 'dark' ? '#FFFFFF' : '#000000',
-              border: '1px solid #444'
-            }}
+        {/* Tabs */}
+        <div className="tabs-container">
+          <button 
+            onClick={() => setActiveTab('appearance')}
+            className={`tab-button ${activeTab === 'appearance' ? 'active' : ''}`}
           >
-            <option value="dark">Dark</option>
-            <option value="light">Light</option>
-          </select>
+            Appearance
+          </button>
+          <button 
+            onClick={() => setActiveTab('api')}
+            className={`tab-button ${activeTab === 'api' ? 'active' : ''}`}
+          >
+            API Settings
+          </button>
+          <button 
+            onClick={() => setActiveTab('prompts')}
+            className={`tab-button ${activeTab === 'prompts' ? 'active' : ''}`}
+          >
+            System Prompts
+          </button>
+          <button 
+            onClick={() => setActiveTab('about')}
+            className={`tab-button ${activeTab === 'about' ? 'active' : ''}`}
+          >
+            About
+          </button>
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+        {/* Content */}
+        <div className="modal-content">
+          {/* Appearance Tab */}
+          {activeTab === 'appearance' && (
+            <div>
+              <div className="form-group">
+                <label className="form-label">Theme</label>
+                <select 
+                  value={theme}
+                  onChange={(e) => setTheme(e.target.value as 'dark' | 'light')}
+                  className="form-select"
+                >
+                  <option value="dark">Dark</option>
+                  <option value="light">Light</option>
+                </select>
+              </div>
+              
+              <div className="form-group">
+                <label className="form-label">Font Size</label>
+                <div className="slider-container">
+                  <input 
+                    type="range" 
+                    min="10" 
+                    max="20" 
+                    value={fontSize} 
+                    onChange={(e) => setFontSize(parseInt(e.target.value))}
+                  />
+                  <span className="slider-value">{fontSize}px</span>
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Model Temperature</label>
+                <div className="slider-container">
+                  <input 
+                    type="range" 
+                    min="0" 
+                    max="1" 
+                    step="0.1" 
+                    value={temperature} 
+                    onChange={(e) => setTemperature(parseFloat(e.target.value))}
+                  />
+                  <span className="slider-value">{temperature}</span>
+                </div>
+                <p className="form-help-text">
+                  Lower values make responses more deterministic, higher values make responses more random.
+                </p>
+              </div>
+              
+              <div className="form-group">
+                <label className="form-label">User Role</label>
+                <select 
+                  value={userRole}
+                  onChange={(e) => setUserRole(e.target.value as UserRole)}
+                  className="form-select"
+                >
+                  <option value="developer">Developer</option>
+                  <option value="casual">Casual User</option>
+                  <option value="code-helper">Code Helper</option>
+                </select>
+              </div>
+            </div>
+          )}
+
+          {/* API Settings Tab */}
+          {activeTab === 'api' && (
+            <div>
+              <div className="form-group">
+                <label className="form-label">Active Provider</label>
+                <select 
+                  value={activeProvider}
+                  onChange={(e) => setActiveProvider(e.target.value as AIProvider)}
+                  className="form-select"
+                  disabled={true}
+                >
+                  <option value="ollama">Ollama (Local LLM)</option>
+                </select>
+                <p className="form-help-text">
+                  Currently focused on Ollama with llama2-uncensored:7b
+                </p>
+              </div>
+              
+              {/* Ollama Quick Setup for llama2-uncensored:7b */}
+              <div className="info-box">
+                <h3 className="info-box-title">
+                  Ollama Quick Setup
+                </h3>
+                <p className="info-box-content">
+                  Configure Ollama to use the locally running llama2-uncensored:7b model
+                </p>
+                <button
+                  onClick={() => {
+                    const newSettings = { ...settings };
+                    newSettings.activeProvider = 'ollama';
+                    newSettings.providers.ollama.baseUrl = 'http://localhost:11434';
+                    newSettings.providers.ollama.defaultModel = 'llama2-uncensored:7b';
+                    updateSettings(newSettings);
+                  }}
+                  className="btn btn-primary"
+                >
+                  Set Ollama as Active Provider
+                </button>
+                <p className="info-box-footer">
+                  Note: Make sure Ollama is running with the command: <code>ollama run llama2-uncensored:7b</code>
+                </p>
+              </div>
+              
+              <div className="form-group">
+                <label className="form-label">API Key</label>
+                <input 
+                  type="password"
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  placeholder="Enter your API key"
+                  className="form-input"
+                />
+                {activeProvider === 'ollama' && (
+                  <p className="form-help-text">
+                    Ollama doesn't require an API key
+                  </p>
+                )}
+              </div>
+              
+              <div className="form-group">
+                <label className="form-label">Base URL</label>
+                <input 
+                  type="text"
+                  value={baseUrl}
+                  onChange={(e) => setBaseUrl(e.target.value)}
+                  placeholder="Enter base URL (optional)"
+                  className="form-input"
+                />
+                {activeProvider === 'ollama' && (
+                  <p className="form-help-text">
+                    Default: http://localhost:11434
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* System Prompts Tab */}
+          {activeTab === 'prompts' && (
+            <div>
+              <div className="form-group">
+                <p className="form-help-text">
+                  Customize the system prompts for each user role to control how the AI responds.
+                </p>
+              </div>
+              
+              <div className="form-group">
+                <label className="form-label">Developer Prompt</label>
+                <textarea 
+                  value={customPrompts.developer}
+                  onChange={(e) => handlePromptChange('developer', e.target.value)}
+                  className="form-textarea"
+                  style={{ minHeight: '100px', fontFamily: 'monospace' }}
+                />
+              </div>
+              
+              <div className="form-group">
+                <label className="form-label">Casual User Prompt</label>
+                <textarea 
+                  value={customPrompts.casual}
+                  onChange={(e) => handlePromptChange('casual', e.target.value)}
+                  className="form-textarea"
+                  style={{ minHeight: '100px', fontFamily: 'monospace' }}
+                />
+              </div>
+              
+              <div className="form-group">
+                <label className="form-label">Code Helper Prompt</label>
+                <textarea 
+                  value={customPrompts['code-helper']}
+                  onChange={(e) => handlePromptChange('code-helper', e.target.value)}
+                  className="form-textarea"
+                  style={{ minHeight: '100px', fontFamily: 'monospace' }}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* About Tab */}
+          {activeTab === 'about' && (
+            <div className="about-section">
+              <h3>Classified AI</h3>
+              <p>A terminal-inspired chat application for interacting with AI models.</p>
+              
+              <div className="about-features">
+                <h4>Features</h4>
+                <ul>
+                  <li>Multiple AI provider support</li>
+                  <li>Customizable system prompts</li>
+                  <li>Dark and light themes</li>
+                  <li>Offline mode support</li>
+                  <li>Firebase integration for account management</li>
+                </ul>
+              </div>
+              
+              <div className="about-version">
+                <p>Version</p>
+                <p>1.0.0</p>
+              </div>
+
+              <div className="info-box">
+                <h3 className="info-box-title">
+                  Ollama Setup
+                </h3>
+                <p className="info-box-content">
+                  Configure Ollama to use the locally running llama2-uncensored:7b model
+                </p>
+                <button
+                  onClick={() => {
+                    const newSettings = { ...settings };
+                    newSettings.activeProvider = 'ollama';
+                    newSettings.providers.ollama.baseUrl = 'http://localhost:11434';
+                    newSettings.providers.ollama.defaultModel = 'llama2-uncensored:7b';
+                    updateSettings(newSettings);
+                  }}
+                  className="btn btn-primary"
+                >
+                  Set Ollama as Active Provider
+                </button>
+                <p className="info-box-footer">
+                  Note: Make sure Ollama is running with the command: <code>ollama run llama2-uncensored:7b</code>
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="modal-footer">
           <button 
             onClick={onClose}
-            style={{ 
-              padding: '8px 15px', 
-              marginRight: '10px',
-              backgroundColor: 'transparent',
-              color: theme === 'dark' ? '#FFFFFF' : '#000000',
-              border: '1px solid #444',
-              cursor: 'pointer'
-            }}
+            className="btn btn-default"
           >
             Cancel
           </button>
           <button 
             onClick={handleSave}
-            style={{ 
-              padding: '8px 15px',
-              backgroundColor: '#007BFF',
-              color: '#FFFFFF',
-              border: 'none',
-              cursor: 'pointer'
-            }}
+            className="btn btn-primary"
           >
-            Save
+            Save Changes
           </button>
         </div>
       </div>

@@ -3,8 +3,9 @@ import { useAppContext } from '@/context/AppContext';
 import MessageItem from './MessageItem';
 
 const ChatContainer: React.FC = () => {
-  const { currentConversation } = useAppContext();
+  const { currentConversation, settings } = useAppContext();
   const containerRef = useRef<HTMLDivElement>(null);
+  const isDarkTheme = settings?.theme === 'dark';
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -23,7 +24,7 @@ const ChatContainer: React.FC = () => {
           flex: 1,
           overflowY: 'auto',
           padding: '1rem',
-          backgroundColor: 'var(--bg-color)',
+          backgroundColor: isDarkTheme ? '#121212' : '#f8f9fa',
           scrollBehavior: 'smooth',
           display: 'flex',
           flexDirection: 'column',
@@ -40,17 +41,28 @@ const ChatContainer: React.FC = () => {
       style={{
         flex: 1,
         overflowY: 'auto',
-        padding: '0.75rem',
-        backgroundColor: 'var(--bg-color)',
+        padding: '1rem',
+        backgroundColor: isDarkTheme ? '#121212' : '#f8f9fa',
         scrollBehavior: 'smooth',
         display: 'flex',
         flexDirection: 'column',
-        border: '1.5px solid var(--border-color)',
-        borderTop: 'none',
-        borderLeft: 'none',
-        borderRight: 'none',
+        gap: '0.5rem',
       }}
     >
+      {/* Welcome message if no messages yet */}
+      {currentConversation.messages.length === 0 && (
+        <div style={{
+          padding: '2rem',
+          textAlign: 'center',
+          color: 'var(--text-color)',
+          opacity: 0.7,
+          fontStyle: 'italic'
+        }}>
+          Start a new conversation with the AI...
+        </div>
+      )}
+
+      {/* Display messages */}
       {currentConversation.messages.map((message, index) => (
         // Only skip system messages that are not error messages
         (message.role !== 'system' || message.content.startsWith('Error')) ? (
@@ -61,6 +73,9 @@ const ChatContainer: React.FC = () => {
           />
         ) : null
       ))}
+
+      {/* Scrolling spacer */}
+      <div style={{ height: '1rem' }} />
     </div>
   );
 };

@@ -168,27 +168,43 @@ export const callOllama = async (
     const promptText = messages.map(msg => msg.content).join(' ');
     const promptTokens = estimateTokens(promptText);
     
-    // Call Ollama API with streaming
-    const response = await fetch(`${baseUrl}/api/chat`, {
+    // For debugging
+    console.log(`Sending to Ollama API via proxy: model=${model}, numMessages=${messages.length}`);
+    
+    // Use the proxy API route instead of direct connection
+    const response = await fetch(`/api/ollama?endpoint=api/chat`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model,
+        model: "deepseek-r1:7b", // Use the correct model name
         messages: ollamaMessages,
         stream: true,
         options: {
           temperature,
         },
       }),
+    }).catch(err => {
+      console.error("Error in fetch to Ollama proxy:", err);
+      throw new Error(`Failed to connect to Ollama: ${err.message}`);
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Error calling Ollama API');
+      let errorMsg = 'Error calling Ollama API';
+      try {
+        const error = await response.json();
+        console.error("Error response from Ollama:", error);
+        errorMsg = error.error || errorMsg;
+      } catch (e) {
+        // If we can't parse the error, use the status text
+        console.error("Failed to parse error response:", e);
+        errorMsg = `Ollama error: ${response.status} ${response.statusText}`;
+      }
+      throw new Error(errorMsg);
     }
 
+    console.log("Successfully connected to Ollama, processing response stream");
     const reader = response.body?.getReader();
     if (!reader) throw new Error('Failed to get response reader');
 
@@ -218,13 +234,53 @@ export const callOllama = async (
 
       // Decode the chunk
       const chunk = new TextDecoder().decode(value);
+      
+      // Split by newlines and filter out empty lines
       const lines = chunk.split('\n').filter(line => line.trim() !== '');
-
+      
       for (const line of lines) {
         try {
-          const json = JSON.parse(line);
-          if (json.message?.content) {
-            const content = json.message.content;
+          if (line.trim() === '') continue;
+          
+          // Try to parse the line as JSON
+          let parsedLine;
+          try {
+            parsedLine = JSON.parse(line);
+          } catch (parseError) {
+            // If line is not valid JSON, try to extract content directly
+            if (line.includes('content":')) {
+              const contentMatch = line.match(/"content":"([^"]*)"/);
+              if (contentMatch && contentMatch[1]) {
+                accumulatedContent += contentMatch[1];
+                onUpdate({
+                  content: accumulatedContent,
+                  done: false,
+                });
+              }
+            }
+            continue;
+          }
+          
+          // Handle different response formats
+          if (parsedLine.message?.content) {
+            // Standard Ollama format
+            const content = parsedLine.message.content;
+            accumulatedContent += content;
+            onUpdate({
+              content: accumulatedContent,
+              done: false,
+            });
+          } else if (parsedLine.response) {
+            // Alternative format that might be returned
+            const content = parsedLine.response;
+            accumulatedContent += content;
+            onUpdate({
+              content: accumulatedContent,
+              done: false,
+            });
+          } else if (parsedLine.content) {
+            // Another possible format
+            const content = parsedLine.content;
             accumulatedContent += content;
             onUpdate({
               content: accumulatedContent,
@@ -232,7 +288,7 @@ export const callOllama = async (
             });
           }
         } catch (e) {
-          console.error('Error parsing JSON from Ollama stream:', e);
+          // Silently ignore errors parsing lines
         }
       }
 
@@ -253,7 +309,6 @@ export const callOllama = async (
       estimatedCost: 0,
     };
   } catch (error) {
-    console.error('Error calling Ollama:', error);
     throw error;
   }
 };

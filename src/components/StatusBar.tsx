@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAppContext } from '@/context/AppContext';
+import { auth } from '@/lib/firebase';
 
 interface StatusBarProps {
   onOpenSettings: () => void;
@@ -12,7 +13,10 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
     currentConversation, 
     isProcessing,
     settings,
-    changeModel 
+    changeModel,
+    user,
+    setUser,
+    conversations
   } = useAppContext();
   
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
@@ -85,31 +89,39 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
     return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   };
 
-  // Get connection status color
+  // Get the currently active model name
+  const getActiveModelName = () => {
+    if (settings.activeProvider === 'ollama') {
+      return settings.providers.ollama.defaultModel || 'llama2-uncensored:7b';
+    }
+    return 'Unknown';
+  };
+
+  // Get status indicator color based on connection status
   const getStatusColor = () => {
     switch (connectionStatus) {
       case 'connected':
         return 'var(--success-color)';
-      case 'error':
-        return 'var(--error-color)';
       case 'disconnected':
         return 'var(--error-color)';
-      default:
+      case 'error':
         return 'var(--warning-color)';
+      default:
+        return '#999';
     }
   };
 
-  // Get connection status tooltip
-  const getStatusTooltip = () => {
+  // Get status message
+  const getStatusMessage = () => {
     switch (connectionStatus) {
       case 'connected':
-        return 'Connected to AI provider';
+        return `Connected - ${getActiveModelName()}`;
       case 'disconnected':
-        return 'Disconnected from AI provider';
+        return 'Disconnected - Check local server';
       case 'error':
-        return 'Error connecting to AI provider';
+        return 'Error connecting to model server';
       default:
-        return 'Connecting to AI provider...';
+        return 'Status unknown';
     }
   };
 
@@ -124,6 +136,7 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
       strokeWidth="2" 
       strokeLinecap="round" 
       strokeLinejoin="round"
+      style={{ pointerEvents: 'none' }}
     >
       <circle cx="12" cy="12" r="3"></circle>
       <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
@@ -141,6 +154,7 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
       strokeWidth="2" 
       strokeLinecap="round" 
       strokeLinejoin="round"
+      style={{ pointerEvents: 'none' }}
     >
       <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
       <polyline points="17 21 17 13 7 13 7 21"></polyline>
@@ -159,10 +173,30 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
       strokeWidth="2" 
       strokeLinecap="round" 
       strokeLinejoin="round"
+      style={{ pointerEvents: 'none' }}
     >
       <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
       <line x1="8" y1="21" x2="16" y2="21"></line>
       <line x1="12" y1="17" x2="12" y2="21"></line>
+    </svg>
+  );
+
+  // Logout icon SVG
+  const LogoutIcon = () => (
+    <svg 
+      width="14" 
+      height="14" 
+      viewBox="0 0 24 24" 
+      fill="none" 
+      stroke="currentColor" 
+      strokeWidth="2" 
+      strokeLinecap="round" 
+      strokeLinejoin="round"
+      style={{ pointerEvents: 'none' }}
+    >
+      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+      <polyline points="16 17 21 12 16 7"></polyline>
+      <line x1="21" y1="12" x2="9" y2="12"></line>
     </svg>
   );
 
@@ -187,76 +221,166 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
     return 'No models available';
   };
 
+  // Check if a model is llama2-uncensored:7b or deepseek-r1
+  const isLocalModel = (model: string) => {
+    return model.toLowerCase().includes('llama2-uncensored') || 
+           model.toLowerCase().includes('deepseek-r1');
+  };
+
+  // Handle logout
+  const handleLogout = async () => {
+    try {
+      // Check if user is an offline user
+      const isOfflineUser = user && user.uid.startsWith('offline-');
+      
+      if (isOfflineUser) {
+        // For offline users, just remove from localStorage and clear user state
+        localStorage.removeItem('offlineUser');
+        setUser(null);
+      } else {
+        // For Firebase users, sign out properly
+        await auth.signOut();
+        // The auth state observer will handle updating the user state
+      }
+      
+      // Removed unnecessary console.log for successful logout
+    } catch (error) {
+      console.error('Error during logout:', error);
+    }
+  };
+
   return (
-    <div 
-      className="status-bar"
-      style={{
-        padding: '0.25rem 1rem',
-        borderTop: '1px solid var(--border-color)',
-        borderBottom: '1px solid var(--border-color)',
-        backgroundColor: 'var(--input-bg)',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        fontSize: '0.75rem',
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+    <div className="status-bar" style={{
+      height: '40px',
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: '0 12px',
+      borderTop: '1px solid var(--border-color)',
+      backgroundColor: 'var(--input-bg)',
+      color: 'var(--text-color)',
+      fontSize: '0.75rem',
+      fontFamily: 'var(--font-mono)',
+      boxSizing: 'border-box',
+    }}>
+      <div style={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        gap: '0.75rem',
+        height: '100%'
+      }}>
         {/* Model selector */}
-        <div style={{ position: 'relative' }} ref={dropdownRef}>
-          <div style={{ display: 'flex', alignItems: 'center' }}>
-            <span style={{ marginRight: '0.25rem' }}>Model:</span>
-            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-              <select 
-                value={getCurrentModel()}
-                onChange={(e) => handleModelChange(e.target.value)}
-                className="form-select"
-                style={{
-                  backgroundColor: '#f0f0f0',
-                  border: '1px solid var(--border-color)',
-                  color: '#000000',
-                  padding: '0.125rem 0.25rem',
-                  paddingRight: '1.5rem', // Make room for the arrows
-                  fontSize: '0.75rem',
-                  borderRadius: '0.25rem',
-                  cursor: 'pointer',
-                  fontFamily: 'var(--font-mono)',
-                  fontWeight: 'bold',
-                  appearance: 'none', // Remove default arrow
-                }}
-              >
-                {getModelsForProvider().map((model) => (
-                  <option key={model} value={model}>{model}</option>
-                ))}
-              </select>
-              <div style={{ 
-                position: 'absolute', 
-                right: '0.25rem', 
-                pointerEvents: 'none',
-                display: 'flex',
-                flexDirection: 'column',
+        <div style={{ 
+          position: 'relative', 
+          display: 'flex', 
+          alignItems: 'center',
+          height: '100%',
+          marginRight: '2px',
+        }} ref={dropdownRef}>
+          <span style={{ 
+            marginRight: '0.25rem',
+            display: 'flex',
+            alignItems: 'center',
+            height: '100%' 
+          }}>Model:</span>
+          <div style={{ 
+            position: 'relative', 
+            display: 'flex', 
+            alignItems: 'center',
+            height: '100%'
+          }}>
+            <select 
+              value={getCurrentModel()}
+              onChange={(e) => handleModelChange(e.target.value)}
+              className="form-select"
+              style={{
+                backgroundColor: 'var(--input-bg)',
+                border: '1px solid var(--border-color)',
+                color: 'var(--text-color)',
+                padding: '0 0.5rem',
+                paddingRight: '1.75rem',
+                fontSize: '0.75rem',
+                borderRadius: '0.25rem',
+                cursor: 'pointer',
+                fontFamily: 'var(--font-mono)',
+                fontWeight: 'bold',
+                appearance: 'none',
+                height: '26px',
+                display: 'inline-flex',
                 alignItems: 'center',
-                justifyContent: 'center',
-                height: '100%'
-              }}>
-                <span style={{ fontSize: '8px', lineHeight: '8px' }}>▲</span>
-                <span style={{ fontSize: '8px', lineHeight: '8px' }}>▼</span>
-              </div>
+                position: 'relative',
+                boxSizing: 'border-box',
+                verticalAlign: 'middle',
+                top: '0',
+                width: 'auto',
+                minWidth: '130px',
+                lineHeight: '26px',
+                textAlign: 'center',
+              }}
+            >
+              {getModelsForProvider().map((model) => (
+                <option 
+                  key={model} 
+                  value={model}
+                  style={{
+                    color: 'var(--text-color)',
+                    fontWeight: 'normal',
+                  }}
+                >
+                  {model}
+                </option>
+              ))}
+            </select>
+            <div style={{ 
+              position: 'absolute', 
+              right: '0.25rem', 
+              pointerEvents: 'none',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              height: '100%',
+              top: '0',
+              bottom: '0',
+              margin: 'auto',
+              width: '12px',
+            }}>
+              <span style={{ fontSize: '8px', lineHeight: '1', height: '8px', display: 'block', marginBottom: '1px' }}>▲</span>
+              <span style={{ fontSize: '8px', lineHeight: '1', height: '8px', display: 'block', marginTop: '1px' }}>▼</span>
             </div>
           </div>
         </div>
         
-        {/* Connection status light */}
-        <div
-          title={getStatusTooltip()}
-          style={{
-            width: '8px',
-            height: '8px',
-            borderRadius: '50%',
-            backgroundColor: getStatusColor(),
-            display: 'inline-block',
-          }}
-        />
+        {/* Connection status display */}
+        {connectionStatus === 'connected' && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '12px',
+            color: 'var(--text-color)',
+            fontFamily: 'var(--font-mono)',
+            fontWeight: 'bold',
+            padding: '2px 8px',
+            borderRadius: '4px',
+            backgroundColor: 'rgba(0, 0, 0, 0.1)',
+            border: '1px solid rgba(0, 0, 0, 0.3)',
+            height: '26px',
+            marginLeft: '10px',
+            boxSizing: 'border-box',
+            position: 'relative',
+            top: '0',
+          }}>
+            <div style={{
+              width: '8px',
+              height: '8px',
+              borderRadius: '50%',
+              backgroundColor: 'var(--text-color)',
+              marginRight: '6px',
+            }}></div>
+            Connected
+          </div>
+        )}
         
         {/* Token usage */}
         {tokenUsage && tokenUsage.totalTokens > 0 && (
@@ -271,10 +395,11 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
         )}
       </div>
       
-      <div style={{ display: 'flex', gap: '0.5rem' }}>
+      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+        {/* Active model info - REMOVED as requested */}
+        
         <button
           onClick={() => {
-            console.log("Settings button clicked");
             onOpenSettings();
           }}
           style={{
@@ -288,16 +413,20 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
             justifyContent: 'center',
           }}
           onMouseOver={(e) => {
-            e.currentTarget.style.color = 'var(--accent-color)';
+            e.currentTarget.style.color = 'var(--accent-color, #E34234)';
           }}
           onMouseOut={(e) => {
             e.currentTarget.style.color = 'var(--text-color)';
           }}
+          aria-label="Open settings"
+          id="settings-button"
+          title="Settings"
         >
           <SettingsIcon />
         </button>
         
         <button
+          title="Save"
           style={{
             backgroundColor: 'transparent',
             border: 'none',
@@ -310,7 +439,7 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
             transition: 'all 0.2s ease',
           }}
           onMouseOver={(e) => {
-            e.currentTarget.style.color = 'var(--accent-color)';
+            e.currentTarget.style.color = 'var(--accent-color, #E34234)';
           }}
           onMouseOut={(e) => {
             e.currentTarget.style.color = 'var(--text-color)';
@@ -320,6 +449,7 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
         </button>
         
         <button
+          title="Output"
           style={{
             backgroundColor: 'transparent',
             border: 'none',
@@ -332,13 +462,37 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
             transition: 'all 0.2s ease',
           }}
           onMouseOver={(e) => {
-            e.currentTarget.style.color = 'var(--accent-color)';
+            e.currentTarget.style.color = 'var(--accent-color, #E34234)';
           }}
           onMouseOut={(e) => {
             e.currentTarget.style.color = 'var(--text-color)';
           }}
         >
           <MonitorIcon />
+        </button>
+        
+        <button
+          onClick={handleLogout}
+          title="Logout"
+          style={{
+            backgroundColor: 'transparent',
+            border: 'none',
+            color: 'var(--text-color)',
+            cursor: 'pointer',
+            padding: '0.25rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transition: 'all 0.2s ease',
+          }}
+          onMouseOver={(e) => {
+            e.currentTarget.style.color = 'var(--accent-color, #E34234)';
+          }}
+          onMouseOut={(e) => {
+            e.currentTarget.style.color = 'var(--text-color)';
+          }}
+        >
+          <LogoutIcon />
         </button>
       </div>
     </div>

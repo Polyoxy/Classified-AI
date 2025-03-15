@@ -5,6 +5,17 @@ const path = require('path');
 const PORT = process.env.PORT || 3000;
 const DEV_MODE = process.env.NODE_ENV !== 'production';
 
+// Define CSP directives
+const cspDirectives = `
+  default-src 'self';
+  script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://*.google-analytics.com https://*.firebaseio.com https://*.firebase.com https://*.firebaseapp.com https://*.gstatic.com;
+  style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+  img-src 'self' data: https://*.google-analytics.com https://*.googletagmanager.com;
+  font-src 'self' https://fonts.gstatic.com;
+  connect-src 'self' https://*.google-analytics.com https://*.googleapis.com https://*.firebaseio.com https://*.firebase.com https://*.firebaseapp.com;
+  frame-src 'self' https://*.firebaseapp.com https://*.firebase.com;
+`.replace(/\s+/g, ' ').trim();
+
 // Simple logging middleware
 const logger = (req, res, next) => {
   const timestamp = new Date().toISOString();
@@ -61,7 +72,15 @@ const server = http.createServer((req, res) => {
               res.end('Error loading index.html');
               return;
             }
-            res.writeHead(200, { 'Content-Type': 'text/html' });
+            // Add security headers to the response
+            res.writeHead(200, { 
+              'Content-Type': 'text/html',
+              'Content-Security-Policy': cspDirectives,
+              'X-Content-Type-Options': 'nosniff',
+              'X-Frame-Options': 'DENY',
+              'X-XSS-Protection': '1; mode=block',
+              'Referrer-Policy': 'strict-origin-when-cross-origin'
+            });
             res.end(data);
           });
         } else {
@@ -77,8 +96,15 @@ const server = http.createServer((req, res) => {
       return;
     }
     
-    // Success
-    res.writeHead(200, { 'Content-Type': contentType });
+    // Success - Add security headers to the response
+    res.writeHead(200, { 
+      'Content-Type': contentType,
+      'Content-Security-Policy': cspDirectives,
+      'X-Content-Type-Options': 'nosniff',
+      'X-Frame-Options': 'DENY',
+      'X-XSS-Protection': '1; mode=block',
+      'Referrer-Policy': 'strict-origin-when-cross-origin'
+    });
     res.end(data);
   });
 });

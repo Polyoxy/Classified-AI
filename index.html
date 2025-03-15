@@ -3,12 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://*.google-analytics.com https://*.firebaseio.com https://*.firebase.com https://*.firebaseapp.com https://*.gstatic.com https://www.google.com https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https://*.google-analytics.com https://*.googletagmanager.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://*.google-analytics.com https://*.googleapis.com https://*.firebaseio.com https://*.firebase.com https://*.firebaseapp.com wss://*.firebaseio.com; frame-src 'self' https://*.firebaseapp.com https://*.firebase.com;">
   <title>Classified AI - Terminal-Style Chat</title>
   <style>
     :root {
       --bg-color: #1E1E1E;
       --text-color: #CCCCCC;
-      --accent-color: #569CD6;
+      --accent-color: #474747;
       --user-prefix-color: #4EC9B0;
       --ai-prefix-color: #CE9178;
       --system-color: #D7BA7D;
@@ -16,6 +17,66 @@
       --input-bg: #2D2D2D;
       --code-bg: #1E1E1E;
       --border-color: #474747;
+    }
+    
+    /* More specific focus overrides */
+    *:focus {
+      outline-color: var(--accent-color) !important;
+      outline-width: 2px !important;
+      box-shadow: none !important;
+    }
+    
+    /* Firefox specific */
+    *:focus-visible {
+      outline-color: var(--accent-color) !important;
+      outline-width: 2px !important;
+    }
+    
+    /* WebKit specific */
+    *:focus-visible {
+      outline-color: var(--accent-color) !important;
+      outline-width: 2px !important;
+      -webkit-focus-ring-color: var(--accent-color) !important;
+    }
+    
+    /* Remove blue button color */
+    button, input[type="submit"] {
+      background-color: var(--accent-color);
+    }
+    
+    /* Override for login form buttons */
+    form button[type="submit"] {
+      background-color: var(--accent-color) !important;
+    }
+    
+    /* Style for auth inputs */
+    .auth-input:focus {
+      outline: 2px solid var(--accent-color) !important;
+      box-shadow: none !important;
+      border-color: var(--accent-color) !important;
+    }
+    
+    /* Style for input focus */
+    input:focus, textarea:focus {
+      outline: 2px solid var(--accent-color) !important;
+      outline-offset: 0;
+      box-shadow: none !important;
+    }
+    
+    /* Override for blue login button - more specific selectors */
+    [style*="background-color: rgb(0, 120, 212)"],
+    [style*="background-color: rgb(0, 120, 212);"],
+    [style*="background-color:#0078D4"],
+    [style*="background-color:#007bff"],
+    [style*="backgroundColor: '#0078D4'"],
+    [style*="backgroundColor: '#007bff'"],
+    [style*="background-color: #2196f3"],
+    [style*="background-color:#2196f3"],
+    [style*="background-color: rgb(33, 150, 243)"],
+    button[style*="background-color:"],
+    button[type="submit"],
+    input[type="submit"] {
+      background-color: var(--accent-color) !important;
     }
     
     body {
@@ -320,6 +381,91 @@
     
     .status-model {
       color: var(--accent-color);
+    }
+    
+    /* Additional overrides for blue elements - highest specificity */
+    .login-button,
+    button.login-button,
+    button[type="submit"],
+    form button[type="submit"],
+    input[type="submit"],
+    .btn-primary,
+    button.btn-primary,
+    .primary-button,
+    button.primary-button {
+      background-color: var(--accent-color) !important;
+      border-color: var(--accent-color) !important;
+      color: white !important;
+    }
+    
+    input[type="email"]:focus,
+    input[type="password"]:focus,
+    input[type="text"]:focus {
+      border-color: var(--accent-color) !important;
+      box-shadow: 0 0 0 2px var(--accent-color) !important;
+      outline: none !important;
+    }
+    
+    /* Additional specific login screen overrides */
+    .login-button, 
+    form button[type="submit"],
+    button[type="submit"], 
+    input[type="submit"],
+    [style*="backgroundColor:"],
+    button[style*="backgroundColor:"] {
+      background-color: #474747 !important;
+      border-color: #474747 !important;
+    }
+    
+    a, a:visited, a:hover, a:active,
+    [style*="color:"],
+    button[style*="color:"] {
+      color: #474747 !important;
+    }
+    
+    /* Style to remove blue from links and buttons */
+    a, button {
+      color: #474747 !important;
+    }
+    
+    /* WebKit browsers (Chrome, Safari) */
+    input:-webkit-autofill,
+    input:-webkit-autofill:hover,
+    input:-webkit-autofill:focus {
+      -webkit-text-fill-color: var(--text-color) !important;
+      -webkit-box-shadow: 0 0 0px 1000px var(--input-bg) inset !important;
+      transition: background-color 5000s ease-in-out 0s !important;
+      caret-color: var(--text-color) !important;
+    }
+    
+    input[type="email"]:focus,
+    input[type="password"]:focus,
+    input[type="text"]:focus {
+      border-color: var(--accent-color) !important;
+      box-shadow: 0 0 0 2px var(--accent-color) !important;
+      outline: none !important;
+    }
+    
+    /* Direct override for #2196f3 blue login button */
+    button[style*="background-color: rgb(33, 150, 243)"],
+    button[style*="backgroundColor: rgb(33, 150, 243)"],
+    button[style*="background-color:#2196f3"],
+    button[style*="backgroundColor:'#2196f3'"],
+    button[style*="background-color: #2196f3"],
+    [style*="background-color: #2196f3"] {
+      background-color: #474747 !important;
+    }
+    
+    /* Ensure login button is gray */
+    form button[type="submit"] {
+      background-color: #474747 !important;
+    }
+    
+    /* Direct styling for any element with style containing 2196f3 */
+    [style*="2196f3"] {
+      background-color: #474747 !important;
+      color: #474747 !important;
+      border-color: #474747 !important;
     }
   </style>
 </head>

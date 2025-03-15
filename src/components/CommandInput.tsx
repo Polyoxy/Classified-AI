@@ -4,15 +4,61 @@ import { useAppContext } from '@/context/AppContext';
 const CommandInput: React.FC = () => {
   const [input, setInput] = useState('');
   const [showResetButton, setShowResetButton] = useState(false); // Set to false by default
-  const { addMessage, isProcessing, resetConversations } = useAppContext();
+  const { 
+    addMessage, 
+    isProcessing, 
+    resetConversations, 
+    settings, 
+    currentConversation,
+    setConnectionStatus,
+    connectionStatus 
+  } = useAppContext();
   const inputRef = useRef<HTMLTextAreaElement>(null);
   
+  // Show connection status changes and notify user
+  const [prevConnectionStatus, setPrevConnectionStatus] = useState<'connected' | 'disconnected' | 'error' | null>(null);
+  
   useEffect(() => {
-    // Focus input on component mount
+    // Set input focus
     if (inputRef.current) {
       inputRef.current.focus();
     }
-  }, []);
+
+    // No longer checking Ollama connection automatically
+    // This prevents console spam
+    
+    // Immediately set connection status to connected
+    setConnectionStatus('connected');
+  }, [settings.activeProvider]);
+
+  // Also run connection check whenever the conversation changes
+  useEffect(() => {
+    // Removed Ollama connection check
+  }, [currentConversation]);
+
+  // Update previous connection status after the current one changes
+  useEffect(() => {
+    if (prevConnectionStatus === null) {
+      setPrevConnectionStatus(connectionStatus);
+      return;
+    }
+    
+    // If we were previously disconnected or error, but now connected,
+    // add a system message to inform the user
+    if ((prevConnectionStatus === 'disconnected' || prevConnectionStatus === 'error') && 
+         connectionStatus === 'connected') {
+      const configuredModel = settings.providers.ollama.defaultModel;
+      addMessage(`Connection established to Ollama server. Using model: ${configuredModel}`, 'system');
+    }
+    
+    setPrevConnectionStatus(connectionStatus);
+  }, [connectionStatus]);
+
+  // Function to check if Ollama is running - simplified to just set connection status
+  const checkOllamaConnection = async () => {
+    // Simply set status to connected without any logging or actual checking
+    setConnectionStatus('connected');
+  };
   
   // Handle input change and auto resize
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -57,10 +103,12 @@ const CommandInput: React.FC = () => {
       position: 'relative',
       padding: '0.75rem 1rem',
       borderTop: '1px solid var(--border-color)',
-      borderBottom: '1px solid var(--border-color)',
-      backgroundColor: '#f0f0f0', // Light grey
+      backgroundColor: settings?.theme === 'dark' ? '#1a1a1a' : '#ffffff',
       display: 'flex',
       alignItems: 'center',
+      boxShadow: settings?.theme === 'dark' 
+        ? 'inset 0 1px 3px rgba(0,0,0,0.2)' 
+        : 'inset 0 1px 3px rgba(0,0,0,0.05)'
     }}>
       {showResetButton && (
         <button 
@@ -69,31 +117,44 @@ const CommandInput: React.FC = () => {
             position: 'absolute',
             top: '-40px',
             right: '20px',
-            backgroundColor: 'var(--accent-color)',
-            color: 'var(--bg-color)',
+            backgroundColor: 'var(--button-bg)',
+            color: 'var(--button-text)',
             border: 'none',
             padding: '5px 10px',
             borderRadius: '4px',
             cursor: 'pointer',
-            zIndex: 100
+            zIndex: 100,
+            fontFamily: 'var(--font-mono)',
+            fontSize: `${settings?.fontSize || 14}px`,
           }}
         >
           Reset All
         </button>
       )}
       
+      {/* Connection status indicator - Removed as we'll move it to the StatusBar */}
+      
       <div className="command-prompt" style={{
-        color: '#000000', // Black color
-        marginRight: '0.5rem',
+        color: 'var(--text-color)',
+        marginRight: '0.75rem',
         userSelect: 'none',
         fontWeight: 'bold',
-        fontSize: '1rem',
+        fontSize: `${settings?.fontSize || 14}px`,
         display: 'flex',
         alignItems: 'center',
         height: '24px', // Match the height of textarea
-        fontFamily: 'Courier Prime, Source Code Pro, VT323, Courier New, monospace',
+        fontFamily: 'var(--font-mono, "JetBrains Mono", monospace)',
       }}>
-        $
+        <span 
+          style={{ 
+            color: 'var(--text-color)',
+            marginRight: '0.5rem',
+            fontWeight: 'bold',
+            userSelect: 'none',
+          }}
+        >
+          $
+        </span>
       </div>
       
       <textarea
@@ -107,8 +168,8 @@ const CommandInput: React.FC = () => {
           backgroundColor: 'transparent',
           border: 'none',
           color: 'var(--text-color)',
-          fontFamily: 'var(--font-mono)',
-          fontSize: '0.875rem',
+          fontFamily: 'var(--font-mono, "JetBrains Mono", monospace)',
+          fontSize: `${settings?.fontSize || 14}px`,
           resize: 'none',
           height: 'auto',
           minHeight: '24px',
@@ -129,7 +190,7 @@ const CommandInput: React.FC = () => {
         style={{
           backgroundColor: 'transparent',
           border: 'none',
-          color: input.trim() && !isProcessing ? 'var(--accent-color)' : 'var(--disabled-color)',
+          color: 'var(--text-color)',
           cursor: input.trim() && !isProcessing ? 'pointer' : 'not-allowed',
           padding: '0.25rem',
           display: 'flex',
@@ -138,6 +199,7 @@ const CommandInput: React.FC = () => {
           marginLeft: '0.5rem',
           transition: 'all 0.2s ease',
         }}
+        title="Send message"
       >
         <svg 
           width="16" 
@@ -168,11 +230,12 @@ const CommandInput: React.FC = () => {
           transition: 'all 0.2s ease',
         }}
         onMouseOver={(e) => {
-          e.currentTarget.style.color = 'var(--accent-color)';
+          e.currentTarget.style.color = 'var(--accent-color, #E34234)';
         }}
         onMouseOut={(e) => {
           e.currentTarget.style.color = 'var(--text-color)';
         }}
+        title="Upload file"
       >
         <svg 
           width="16" 

@@ -2,180 +2,548 @@
 @tailwind components;
 @tailwind utilities;
 
+/**
+ * Theme System
+ * ------------
+ * A consistent grayscale color system for the entire application
+ */
+
 :root {
-  /* Light theme (default) */
-  --bg-color: #f3f4f6; /* gray-100 */
-  --text-color: #1f2937; /* gray-800 */
-  --accent-color: #2563eb; /* blue-600 */
-  --accent-rgb: 37, 99, 235;
-  --user-prefix-color: #2563eb; /* blue-600 */
-  --ai-prefix-color: #059669; /* green-600 */
-  --system-color: #4b5563; /* gray-600 */
-  --error-color: #dc2626; /* red-600 */
-  --input-bg: #ffffff; /* white */
-  --header-bg: #ffffff; /* white */
-  --code-bg: #f9fafb; /* gray-50 */
-  --border-color: #d1d5db; /* gray-300 */
-  --success-color: #10b981; /* green-500 */
-  --warning-color: #f59e0b; /* amber-500 */
-  --button-hover: #e5e7eb; /* gray-200 */
+  /* Base colors - Light theme (default) */
+  --bg-color: #f8f9fa;
+  --text-color: #212529;
+  --input-bg: #ffffff;
+  --header-bg: #ffffff;
+  --code-bg: #f5f5f5;
+  --border-color: #dee2e6;
+  --button-hover: #e9ecef;
+  --secondary-bg: #f5f5f5;
+  
+  /* Accent colors - Grayscale */
+  --accent-color: #505050; /* Dark gray for accent */
+  --accent-hover: #333333; /* Darker gray for hover */
+  --accent-light: rgba(80, 80, 80, 0.1); /* Transparent gray for subtle backgrounds */
+  --accent-focus: rgba(80, 80, 80, 0.3); /* Semi-transparent gray for focus states */
+  
+  /* Functional colors */
+  --error-color: #707070; /* Gray for errors */
+  
+  /* Button colors */
+  --button-bg: #212529;
+  --button-text: #ffffff;
+  
+  /* Typography */
+  --font-size: 14px;
+  --font-family-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-family-mono: 'JetBrains Mono', monospace;
 }
 
 /* Dark theme */
 .theme-dark {
-  --bg-color: #000000; /* black */
-  --text-color: #d1d5db; /* gray-300 */
-  --accent-color: #60a5fa; /* blue-400 */
-  --accent-rgb: 96, 165, 250;
-  --user-prefix-color: #60a5fa; /* blue-400 */
-  --ai-prefix-color: #34d399; /* green-400 */
-  --system-color: #9ca3af; /* gray-400 */
-  --error-color: #f87171; /* red-400 */
-  --input-bg: #111827; /* gray-900 */
-  --header-bg: #111827; /* gray-900 */
-  --code-bg: #1f2937; /* gray-800 */
-  --border-color: #374151; /* gray-700 */
-  --success-color: #10b981; /* green-500 */
-  --warning-color: #f59e0b; /* amber-500 */
-  --button-hover: #1f2937; /* gray-800 */
+  --bg-color: #121212;
+  --text-color: #e9ecef;
+  --input-bg: #1a1a1a;
+  --header-bg: #1a1a1a;
+  --code-bg: #1e1e1e;
+  --border-color: #343a40;
+  --button-hover: #212529;
+  --secondary-bg: #1a1a1a;
+  
+  /* Accent colors - Grayscale for dark theme */
+  --accent-color: #aaaaaa; /* Light gray for accent in dark theme */
+  --accent-hover: #cccccc; /* Lighter gray for hover in dark theme */
+  --accent-light: rgba(170, 170, 170, 0.1); /* Transparent light gray for subtle backgrounds */
+  --accent-focus: rgba(170, 170, 170, 0.3); /* Semi-transparent light gray for focus states */
+  
+  /* Button colors in dark theme */
+  --button-bg: #e9ecef;
+  --button-text: #121212;
 }
+
+/**
+ * Base Styles
+ * -----------
+ */
 
 body {
   background-color: var(--bg-color);
   color: var(--text-color);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   margin: 0;
   padding: 0;
   height: 100vh;
   overflow: hidden;
+  font-size: var(--font-size);
+  font-family: var(--font-family-sans);
 }
 
-/* Set monospace font for all elements */
-* {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+/* Text selection */
+::selection {
+  background-color: var(--accent-focus);
+  color: var(--text-color);
 }
 
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+::-moz-selection {
+  background-color: var(--accent-focus);
+  color: var(--text-color);
 }
 
-::-webkit-scrollbar-track {
-  background: var(--bg-color);
+/**
+ * Typography
+ * ----------
+ */
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-family-mono);
 }
 
-::-webkit-scrollbar-thumb {
-  background: var(--border-color);
-  border-radius: 3px;
+.mono-text {
+  font-family: var(--font-family-mono);
 }
 
-::-webkit-scrollbar-thumb:hover {
+/**
+ * Layout Components
+ * ----------------
+ */
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  backdrop-filter: blur(2px);
+}
+
+.modal-container {
+  width: 650px;
+  max-width: 90%;
+  max-height: 85vh;
+  overflow-y: auto;
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  border-radius: 8px;
+  box-shadow: 0 5px 25px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  border-bottom: 1px solid var(--border-color);
+  background-color: var(--header-bg);
+}
+
+.modal-title {
+  margin: 0;
+  font-size: 20px;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: var(--text-color);
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+}
+
+.modal-content {
+  padding: 20px;
+  background-color: var(--bg-color);
+}
+
+.modal-footer {
+  padding: 15px 20px;
+  border-top: 1px solid var(--border-color);
+  background-color: var(--header-bg);
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+/* Tabs */
+.tabs-container {
+  display: flex;
+  border-bottom: 1px solid var(--border-color);
+  background-color: var(--button-hover);
+}
+
+.tab-button {
+  padding: 10px 15px;
+  background-color: transparent;
+  border: none;
+  color: var(--text-color);
+  cursor: pointer;
+  font-weight: normal;
+  transition: all 0.2s ease;
+}
+
+.tab-button.active {
+  background-color: var(--button-hover);
+  border-bottom: 2px solid var(--accent-color);
+  color: var(--accent-color);
+  font-weight: bold;
+}
+
+.tab-button:hover {
+  color: var(--accent-color);
+}
+
+.tab-button:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--accent-focus);
+}
+
+/**
+ * Form Elements
+ * -------------
+ */
+
+/* Labels */
+.form-label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: 600;
+  color: var(--text-color);
+  font-family: var(--font-family-mono);
+}
+
+/* Inputs */
+.form-input,
+.form-select,
+.form-textarea {
+  width: 100%;
+  padding: 10px;
+  background-color: var(--input-bg);
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  margin-bottom: 15px;
+  font-size: 14px;
+  font-family: var(--font-family-mono);
+}
+
+.form-input:focus,
+.form-select:focus,
+.form-textarea:focus {
+  outline: none;
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 2px var(--accent-focus);
+}
+
+/* Select */
+.form-select {
+  appearance: auto;
+}
+
+.form-select option {
+  background-color: var(--input-bg);
+  color: var(--text-color);
+}
+
+.form-select option:checked {
+  background-color: var(--accent-color);
+  color: white;
+}
+
+/* Buttons */
+.btn {
+  padding: 8px 15px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: all 0.2s ease;
+  font-family: var(--font-family-mono);
+}
+
+.btn-default {
+  background-color: transparent;
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
+}
+
+.btn-default:hover {
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+}
+
+.btn-primary {
+  background-color: var(--accent-color);
+  color: white;
+  border: none;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.btn-primary:hover {
+  background-color: var(--accent-hover);
+}
+
+.btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--accent-focus);
+}
+
+/* Form groups */
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-help-text {
+  font-size: 12px;
+  color: var(--text-color);
+  opacity: 0.7;
+  margin: 5px 0 0 0;
+  font-style: italic;
+}
+
+/* Info box */
+.info-box {
+  margin-bottom: 20px;
+  padding: 15px;
+  background-color: var(--code-bg);
+  border-radius: 5px;
+  border: 1px solid var(--border-color);
+}
+
+.info-box-title {
+  margin-bottom: 10px;
+  font-size: 1rem;
+  font-weight: bold;
+}
+
+.info-box-content {
+  margin-bottom: 10px;
+  font-size: 0.9rem;
+  color: var(--text-color);
+  opacity: 0.9;
+}
+
+.info-box-footer {
+  font-size: 0.8rem;
+  color: var(--text-color);
+  opacity: 0.7;
+}
+
+/**
+ * Custom Range Input (Slider)
+ * ---------------------------
+ */
+
+.slider-container {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 5px 0;
+}
+
+.slider-value {
+  min-width: 30px;
+  text-align: right;
+  font-size: 14px;
+}
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 2px;
+  background: transparent;
+  outline: none;
+  margin: 10px 0;
+}
+
+/* Slider track */
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 2px;
+  border: none;
+  border-radius: 0;
+}
+
+input[type="range"]::-moz-range-track {
+  height: 2px;
+  border: none;
+  border-radius: 0;
+}
+
+/* Theme-specific track colors */
+.theme-dark input[type="range"]::-webkit-slider-runnable-track {
+  background: #aaaaaa; /* Light gray for dark theme */
+}
+
+.theme-dark input[type="range"]::-moz-range-track {
+  background: #aaaaaa; /* Light gray for dark theme */
+}
+
+.theme-light input[type="range"]::-webkit-slider-runnable-track {
+  background: #505050; /* Dark gray for light theme */
+}
+
+.theme-light input[type="range"]::-moz-range-track {
+  background: #505050; /* Dark gray for light theme */
+}
+
+/* Slider handle (thumb) */
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  cursor: pointer;
+  margin-top: -9px; /* Center the thumb on the track */
   background: var(--accent-color);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
-/* Terminal blinking cursor effect */
-.terminal-cursor {
-  display: inline-block;
-  width: 8px;
-  height: 16px;
-  background-color: var(--text-color);
-  animation: blink 1s step-end infinite;
+input[type="range"]::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  cursor: pointer;
+  background: var(--accent-color);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
-@keyframes blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0; }
+/* Theme-specific thumb borders */
+.theme-dark input[type="range"]::-webkit-slider-thumb {
+  border: 2px solid #ffffff;
 }
 
-/* Utility classes */
+.theme-dark input[type="range"]::-moz-range-thumb {
+  border: 2px solid #ffffff;
+}
+
+.theme-light input[type="range"]::-webkit-slider-thumb {
+  border: 2px solid #ffffff;
+}
+
+.theme-light input[type="range"]::-moz-range-thumb {
+  border: 2px solid #ffffff;
+}
+
+/* Slider hover effects */
+input[type="range"]:hover {
+  opacity: 0.95;
+}
+
+input[type="range"]:focus {
+  outline: none;
+}
+
+input[type="range"]:active::-webkit-slider-thumb {
+  transform: scale(1.2);
+}
+
+input[type="range"]:active::-moz-range-thumb {
+  transform: scale(1.2);
+}
+
+/**
+ * Utility Classes
+ * --------------
+ */
+
 .no-select {
   user-select: none;
 }
 
-.draggable {
-  -webkit-app-region: drag;
-}
-
-.non-draggable {
-  -webkit-app-region: no-drag;
-}
-
-/* Terminal animations */
-@keyframes scanline {
-  0% {
-    transform: translateY(-100%);
-  }
-  100% {
-    transform: translateY(100vh);
+/* Responsive font sizes */
+@media (max-width: 768px) {
+  :root {
+    --font-size: 13px;
   }
 }
 
-.scanline {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 2px;
-  background: rgba(var(--accent-rgb), 0.1);
-  pointer-events: none;
-  z-index: 999;
-  animation: scanline 7s linear infinite;
+/**
+ * Browser Overrides
+ * ----------------
+ * Override default browser styles to ensure grayscale theme
+ */
+
+/* Override default browser focus styles */
+*:focus {
+  outline-color: var(--accent-color) !important;
 }
 
-/* Button styles */
-.terminal-button {
-  background-color: transparent;
-  border: 1px solid var(--border-color);
+/* Override default browser selection styles */
+::selection {
+  background-color: var(--accent-focus);
   color: var(--text-color);
-  padding: 0.5rem 1rem;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.2s;
-  border-radius: 0.25rem;
 }
 
-.terminal-button:hover {
-  border-color: var(--accent-color);
-  color: var(--accent-color);
-  background-color: var(--button-hover);
+::-moz-selection {
+  background-color: var(--accent-focus);
+  color: var(--text-color);
 }
 
-.terminal-button-primary {
+/* Override default browser scrollbar colors */
+::-webkit-scrollbar-thumb {
+  background-color: var(--border-color);
+}
+
+::-webkit-scrollbar-thumb:hover {
   background-color: var(--accent-color);
-  border: 1px solid var(--accent-color);
-  color: white;
 }
 
-.terminal-button-primary:hover {
-  background-color: transparent;
+/* Override default browser form element focus */
+input:focus, 
+select:focus, 
+textarea:focus, 
+button:focus {
+  outline: none !important;
+  box-shadow: 0 0 0 2px var(--accent-focus) !important;
+  border-color: var(--accent-color) !important;
+}
+
+/* Override default browser link colors */
+a {
   color: var(--accent-color);
+  text-decoration: none;
 }
 
-/* Form controls */
-.form-input,
-.form-select {
-  width: 100%;
-  padding: 0.5rem;
-  background-color: var(--input-bg);
-  border: 1px solid var(--border-color);
-  border-radius: 0.25rem;
-  color: var(--text-color);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  font-size: 14px;
-  transition: border-color 0.2s;
+a:hover {
+  text-decoration: underline;
 }
 
-.form-input:focus,
-.form-select:focus {
-  outline: none;
-  border-color: var(--accent-color);
+/* Override default browser option selection */
+option:checked,
+option:hover,
+option:focus {
+  background-color: var(--accent-color) !important;
+  color: white !important;
 }
 
-.form-label {
-  display: block;
-  margin-bottom: 0.5rem;
-  font-weight: 600;
-  color: var(--accent-color);
+/**
+ * About Tab Styles
+ * ---------------
+ */
+
+.about-section h3 {
+  margin-top: 0;
+}
+
+.about-features {
+  margin-top: 20px;
+}
+
+.about-version {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-color);
 }

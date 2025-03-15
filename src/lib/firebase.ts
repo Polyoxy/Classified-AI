@@ -1,5 +1,5 @@
 import { initializeApp, getApps } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
+import { getDatabase } from "firebase/database";
 import { getAuth } from "firebase/auth";
 // Analytics is typically not used in Electron apps, but included for completeness
 import { getAnalytics, isSupported } from "firebase/analytics";
@@ -10,6 +10,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyCNOiqkEgmEo7CIJ2LUS6wO8fAmPwhLTgQ",
   authDomain: "classified-ai.firebaseapp.com",
   projectId: "classified-ai",
+  databaseURL: "https://classified-ai-default-rtdb.firebaseio.com",
   storageBucket: "classified-ai.firebasestorage.app",
   messagingSenderId: "470759227763",
   appId: "1:470759227763:web:f62c50762a220b49f2c506",
@@ -19,8 +20,8 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
 
-// Initialize Firestore
-export const db = getFirestore(app);
+// Initialize Realtime Database
+export const rtdb = getDatabase(app);
 
 // Initialize Auth
 export const auth = getAuth(app);

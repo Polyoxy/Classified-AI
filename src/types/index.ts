@@ -1,5 +1,5 @@
 // AI Provider Types
-export type AIProvider = 'openai' | 'ollama' | 'deepseek';
+export type AIProvider = 'ollama' | 'openai' | 'deepseek';
 
 export interface AIProviderConfig {
   provider: AIProvider;
@@ -41,6 +41,11 @@ export interface AppSettings {
   customSystemPrompts: Record<UserRole, string>;
   providers: Record<AIProvider, AIProviderConfig>;
   activeProvider: AIProvider;
+  showLineNumbers?: boolean;
+  showTimestamps?: boolean;
+  autoScroll?: boolean;
+  codeHighlighting?: boolean;
+  showSystemMessages?: boolean;
 }
 
 // Token Usage
