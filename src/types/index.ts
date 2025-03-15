@@ -34,7 +34,7 @@ export interface Conversation {
 export type UserRole = 'developer' | 'casual' | 'code-helper';
 
 export interface AppSettings {
-  theme: 'dark' | 'green' | 'amber';
+  theme: 'dark' | 'light';
   fontSize: number;
   userRole: UserRole;
   temperature: number;

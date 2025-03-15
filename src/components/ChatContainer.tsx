@@ -22,7 +22,7 @@ const ChatContainer: React.FC = () => {
         style={{
           flex: 1,
           overflowY: 'auto',
-          padding: '24px 20px',
+          padding: '1rem',
           backgroundColor: 'var(--bg-color)',
           scrollBehavior: 'smooth',
           display: 'flex',
@@ -40,7 +40,7 @@ const ChatContainer: React.FC = () => {
       style={{
         flex: 1,
         overflowY: 'auto',
-        padding: '24px 20px',
+        padding: '1rem',
         backgroundColor: 'var(--bg-color)',
         scrollBehavior: 'smooth',
         display: 'flex',

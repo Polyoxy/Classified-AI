@@ -29,15 +29,15 @@ const MessageItem: React.FC<MessageItemProps> = ({ role, content }) => {
       const language = match[1] || 'text';
       const code = match[2];
       parts.push(
-        <code 
+        <div 
           key={`code-${parts.length}`} 
           style={{
             display: 'block',
-            backgroundColor: '#2A2A2A',
-            padding: '8px 12px',
-            borderRadius: '4px',
-            margin: '8px 0',
-            borderLeft: '3px solid var(--accent-color)',
+            backgroundColor: 'var(--code-bg)',
+            padding: '0.75rem 1rem',
+            borderRadius: '0.25rem',
+            margin: '0.5rem 0',
+            border: '1px solid var(--border-color)',
             whiteSpace: 'pre',
             overflowX: 'auto'
           }}
@@ -54,7 +54,7 @@ const MessageItem: React.FC<MessageItemProps> = ({ role, content }) => {
           >
             {code}
           </SyntaxHighlighter>
-        </code>
+        </div>
       );
 
       lastIndex = match.index + match[0].length;
@@ -72,37 +72,50 @@ const MessageItem: React.FC<MessageItemProps> = ({ role, content }) => {
     return parts.length > 0 ? parts : text;
   };
 
+  // Determine message color based on role
+  const getMessageColor = () => {
+    if (role === 'user') return 'var(--user-prefix-color)';
+    if (role === 'assistant') return 'var(--ai-prefix-color)';
+    return 'var(--system-color)';
+  };
+
   return (
     <div 
-      className={`message ${role === 'user' ? 'user-message' : 'ai-message'}`}
+      className={`message ${role}-message`}
       style={{ 
-        marginBottom: '16px', 
-        display: 'flex',
-        alignItems: 'flex-start'
+        marginBottom: '0.5rem',
+        color: getMessageColor(),
       }}
     >
       {role !== 'system' ? (
-        <span 
-          className="prefix" 
-          style={{ 
-            color: role === 'user' ? 'var(--user-prefix-color)' : 'var(--ai-prefix-color)',
-            fontWeight: 'bold',
-            userSelect: 'none',
-            marginRight: '8px',
-            display: 'inline-block',
-            minWidth: '45px'
-          }}
-        >
-          {role === 'user' ? 'USER>' : 'AI>'}
+        <>
+          <span 
+            className="prefix" 
+            style={{ 
+              fontWeight: 'bold',
+              userSelect: 'none',
+            }}
+          >
+            {role === 'user' ? '> USER: ' : '> AI: '}
+          </span>
+          <span style={{ 
+            whiteSpace: 'pre-wrap',
+            lineHeight: '1.5',
+          }}>
+            {formatContent(content)}
+          </span>
+        </>
+      ) : (
+        <span style={{ 
+          whiteSpace: 'pre-wrap',
+          lineHeight: '1.5',
+          color: 'var(--system-color)',
+          opacity: 0.8,
+          fontStyle: 'italic'
+        }}>
+          {content}
         </span>
-      ) : null}
-      <span style={{ 
-        flex: 1, 
-        whiteSpace: 'pre-wrap',
-        lineHeight: '1.6'
-      }}>
-        {formatContent(content)}
-      </span>
+      )}
     </div>
   );
 };

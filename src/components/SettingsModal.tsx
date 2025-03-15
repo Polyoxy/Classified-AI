@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAppContext } from '@/context/AppContext';
 import { AIProvider, UserRole } from '@/types';
 
@@ -16,8 +16,20 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   const [fontSize, setFontSize] = useState<number>(settings.fontSize);
   const [userRole, setUserRole] = useState<UserRole>(settings.userRole);
   const [customPrompts, setCustomPrompts] = useState<Record<UserRole, string>>(settings.customSystemPrompts);
-  const [theme, setTheme] = useState<'dark' | 'green' | 'amber'>(settings.theme);
-  const [activeTab, setActiveTab] = useState<'general' | 'api' | 'appearance'>('general');
+  const [theme, setTheme] = useState<'dark' | 'light'>(settings.theme === 'dark' ? 'dark' : 'light');
+  const [activeTab, setActiveTab] = useState<'General' | 'API Settings' | 'Appearance'>('General');
+
+  // Update state when settings change
+  useEffect(() => {
+    setActiveProvider(settings.activeProvider);
+    setApiKey(settings.providers[settings.activeProvider].apiKey || '');
+    setBaseUrl(settings.providers[settings.activeProvider].baseUrl || '');
+    setTemperature(settings.temperature);
+    setFontSize(settings.fontSize);
+    setUserRole(settings.userRole);
+    setCustomPrompts(settings.customSystemPrompts);
+    setTheme(settings.theme === 'dark' ? 'dark' : 'light');
+  }, [settings]);
 
   // Save settings and close modal
   const handleSave = () => {
@@ -37,224 +49,153 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
       userRole,
       customSystemPrompts: customPrompts,
       providers: updatedProviders,
-      theme,
+      theme: theme === 'dark' ? 'dark' : 'light',
     });
 
     // Apply theme class to body
-    document.body.className = `theme-${theme}`;
+    document.body.className = theme === 'dark' ? 'theme-dark' : '';
 
     onClose();
   };
 
-  // Handle theme change
-  const handleThemeChange = (newTheme: 'dark' | 'green' | 'amber') => {
-    setTheme(newTheme);
-  };
+  // Close icon SVG
+  const CloseIcon = () => (
+    <svg 
+      width="18" 
+      height="18" 
+      viewBox="0 0 24 24" 
+      fill="none" 
+      stroke="currentColor" 
+      strokeWidth="2" 
+      strokeLinecap="round" 
+      strokeLinejoin="round"
+    >
+      <line x1="18" y1="6" x2="6" y2="18"></line>
+      <line x1="6" y1="6" x2="18" y2="18"></line>
+    </svg>
+  );
 
   if (!isOpen) return null;
 
   return (
     <div 
-      className="modal monospace" 
+      className="fixed inset-0 flex items-center justify-center z-50"
       style={{
-        display: 'flex',
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        width: '100%',
-        height: '100%',
-        backgroundColor: 'rgba(0,0,0,0.7)',
-        zIndex: 100,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backdropFilter: 'blur(3px)',
+        backgroundColor: theme === 'dark' ? 'rgba(0, 0, 0, 0.8)' : 'rgba(0, 0, 0, 0.5)',
+        backdropFilter: 'blur(4px)',
       }}
     >
       <div 
         className="modal-content"
         style={{
-          backgroundColor: 'var(--bg-color)',
-          border: '1px solid var(--border-color)',
-          borderRadius: '8px',
-          padding: '0',
-          width: '90%',
+          width: '100%',
           maxWidth: '600px',
-          maxHeight: '80vh',
+          backgroundColor: theme === 'dark' ? 'var(--input-bg)' : 'white',
+          border: `1px solid ${theme === 'dark' ? 'var(--border-color)' : 'var(--border-color)'}`,
+          borderRadius: '0.5rem',
           overflow: 'hidden',
-          boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
         }}
       >
+        {/* Header */}
         <div 
           className="modal-header"
           style={{
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            padding: '16px 20px',
-            borderBottom: '1px solid var(--border-color)',
-            backgroundColor: 'rgba(0,0,0,0.2)',
+            padding: '1rem',
+            borderBottom: `1px solid ${theme === 'dark' ? 'var(--border-color)' : 'var(--border-color)'}`,
           }}
         >
-          <div 
-            className="modal-title"
+          <h2 
             style={{
+              fontSize: '1.25rem',
               fontWeight: 'bold',
-              fontSize: '18px',
               color: 'var(--accent-color)',
+              margin: 0,
             }}
           >
             Classified AI Settings
-          </div>
+          </h2>
           <button
-            className="close-modal"
             onClick={onClose}
             style={{
               background: 'none',
               border: 'none',
-              color: 'var(--text-color)',
-              fontSize: '24px',
+              color: theme === 'dark' ? 'var(--text-color)' : 'var(--text-color)',
               cursor: 'pointer',
-              padding: '0',
-              lineHeight: '1',
-              opacity: '0.7',
-              transition: 'opacity 0.2s',
+              padding: '0.25rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'color 0.2s',
             }}
-            onMouseOver={(e) => (e.currentTarget.style.opacity = '1')}
-            onMouseOut={(e) => (e.currentTarget.style.opacity = '0.7')}
+            onMouseOver={(e) => (e.currentTarget.style.color = 'var(--accent-color)')}
+            onMouseOut={(e) => (e.currentTarget.style.color = theme === 'dark' ? 'var(--text-color)' : 'var(--text-color)')}
           >
-            &times;
+            <CloseIcon />
           </button>
         </div>
         
+        {/* Tabs */}
         <div
           className="modal-tabs"
           style={{
             display: 'flex',
-            borderBottom: '1px solid var(--border-color)',
-            backgroundColor: 'rgba(0,0,0,0.1)',
+            borderBottom: `1px solid ${theme === 'dark' ? 'var(--border-color)' : 'var(--border-color)'}`,
           }}
         >
-          <button
-            className={`tab ${activeTab === 'general' ? 'active' : ''}`}
-            onClick={() => setActiveTab('general')}
-            style={{
-              padding: '10px 20px',
-              background: activeTab === 'general' ? 'var(--bg-color)' : 'transparent',
-              border: 'none',
-              borderBottom: activeTab === 'general' ? `2px solid var(--accent-color)` : 'none',
-              color: activeTab === 'general' ? 'var(--accent-color)' : 'var(--text-color)',
-              cursor: 'pointer',
-              fontFamily: 'inherit',
-              fontSize: '14px',
-              fontWeight: activeTab === 'general' ? 'bold' : 'normal',
-              transition: 'all 0.2s',
-            }}
-          >
-            General
-          </button>
-          <button
-            className={`tab ${activeTab === 'api' ? 'active' : ''}`}
-            onClick={() => setActiveTab('api')}
-            style={{
-              padding: '10px 20px',
-              background: activeTab === 'api' ? 'var(--bg-color)' : 'transparent',
-              border: 'none',
-              borderBottom: activeTab === 'api' ? `2px solid var(--accent-color)` : 'none',
-              color: activeTab === 'api' ? 'var(--accent-color)' : 'var(--text-color)',
-              cursor: 'pointer',
-              fontFamily: 'inherit',
-              fontSize: '14px',
-              fontWeight: activeTab === 'api' ? 'bold' : 'normal',
-              transition: 'all 0.2s',
-            }}
-          >
-            API Settings
-          </button>
-          <button
-            className={`tab ${activeTab === 'appearance' ? 'active' : ''}`}
-            onClick={() => setActiveTab('appearance')}
-            style={{
-              padding: '10px 20px',
-              background: activeTab === 'appearance' ? 'var(--bg-color)' : 'transparent',
-              border: 'none',
-              borderBottom: activeTab === 'appearance' ? `2px solid var(--accent-color)` : 'none',
-              color: activeTab === 'appearance' ? 'var(--accent-color)' : 'var(--text-color)',
-              cursor: 'pointer',
-              fontFamily: 'inherit',
-              fontSize: '14px',
-              fontWeight: activeTab === 'appearance' ? 'bold' : 'normal',
-              transition: 'all 0.2s',
-            }}
-          >
-            Appearance
-          </button>
+          {(['General', 'API Settings', 'Appearance'] as const).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              style={{
+                padding: '0.75rem 1rem',
+                background: 'transparent',
+                border: 'none',
+                borderBottom: activeTab === tab ? `2px solid var(--accent-color)` : 'none',
+                color: activeTab === tab ? 'var(--accent-color)' : 'var(--text-color)',
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                fontSize: '0.875rem',
+                fontWeight: activeTab === tab ? 'bold' : 'normal',
+                transition: 'all 0.2s',
+              }}
+            >
+              {tab}
+            </button>
+          ))}
         </div>
         
+        {/* Tab Content */}
         <div 
           className="modal-body"
           style={{
-            padding: '20px',
+            padding: '1.5rem',
             color: 'var(--text-color)',
             maxHeight: 'calc(80vh - 130px)',
             overflowY: 'auto',
+            backgroundColor: theme === 'dark' ? 'var(--input-bg)' : 'white',
           }}
         >
-          {activeTab === 'general' && (
-            <>
-              <div 
-                className="form-group"
-                style={{
-                  marginBottom: '20px',
-                }}
-              >
-                <label 
-                  className="form-label"
-                  style={{
-                    display: 'block',
-                    marginBottom: '8px',
-                    fontWeight: 'bold',
-                    color: 'var(--accent-color)',
-                  }}
-                >
-                  User Role
-                </label>
+          {activeTab === 'General' && (
+            <div className="space-y-6">
+              <div>
+                <label className="form-label">User Role</label>
                 <select
                   value={userRole}
                   onChange={(e) => setUserRole(e.target.value as UserRole)}
-                  className="form-input monospace"
-                  style={{
-                    width: '100%',
-                    padding: '10px',
-                    backgroundColor: 'var(--input-bg)',
-                    border: '1px solid var(--border-color)',
-                    borderRadius: '4px',
-                    color: 'var(--text-color)',
-                    fontFamily: 'inherit',
-                  }}
+                  className="form-select"
                 >
                   <option value="developer">Developer</option>
-                  <option value="casual">Casual User</option>
+                  <option value="casual">Casual Chat</option>
                   <option value="code-helper">Code Helper</option>
                 </select>
               </div>
               
-              <div 
-                className="form-group"
-                style={{
-                  marginBottom: '20px',
-                }}
-              >
-                <label 
-                  className="form-label"
-                  style={{
-                    display: 'block',
-                    marginBottom: '8px',
-                    fontWeight: 'bold',
-                    color: 'var(--accent-color)',
-                  }}
-                >
-                  Temperature
-                </label>
+              <div>
+                <label className="form-label">Temperature</label>
                 <input
                   type="range"
                   min="0"
@@ -264,56 +205,35 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                   onChange={(e) => setTemperature(parseFloat(e.target.value))}
                   style={{
                     width: '100%',
-                    backgroundColor: 'var(--input-bg)',
                     accentColor: 'var(--accent-color)',
+                    height: '0.5rem',
+                    borderRadius: '0.25rem',
                   }}
                 />
                 <div style={{ 
                   display: 'flex', 
                   justifyContent: 'space-between', 
-                  fontSize: '12px',
-                  marginTop: '5px',
+                  fontSize: '0.75rem',
+                  marginTop: '0.5rem',
+                  color: 'var(--text-color)',
+                  opacity: 0.8,
                 }}>
                   <span>0 - Precise</span>
                   <span>{temperature}</span>
                   <span>1 - Creative</span>
                 </div>
               </div>
-            </>
+            </div>
           )}
-          
-          {activeTab === 'api' && (
-            <>
-              <div 
-                className="form-group"
-                style={{
-                  marginBottom: '20px',
-                }}
-              >
-                <label 
-                  className="form-label"
-                  style={{
-                    display: 'block',
-                    marginBottom: '8px',
-                    fontWeight: 'bold',
-                    color: 'var(--accent-color)',
-                  }}
-                >
-                  API Provider
-                </label>
+
+          {activeTab === 'API Settings' && (
+            <div className="space-y-6">
+              <div>
+                <label className="form-label">API Provider</label>
                 <select
                   value={activeProvider}
                   onChange={(e) => setActiveProvider(e.target.value as AIProvider)}
-                  className="form-input monospace"
-                  style={{
-                    width: '100%',
-                    padding: '10px',
-                    backgroundColor: 'var(--input-bg)',
-                    border: '1px solid var(--border-color)',
-                    borderRadius: '4px',
-                    color: 'var(--text-color)',
-                    fontFamily: 'inherit',
-                  }}
+                  className="form-select"
                 >
                   <option value="openai">OpenAI</option>
                   <option value="ollama">Ollama</option>
@@ -321,222 +241,68 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                 </select>
               </div>
               
-              <div 
-                className="form-group"
-                style={{
-                  marginBottom: '20px',
-                }}
-              >
-                <label 
-                  className="form-label"
-                  style={{
-                    display: 'block',
-                    marginBottom: '8px',
-                    fontWeight: 'bold',
-                    color: 'var(--accent-color)',
-                  }}
-                >
-                  API Key
-                </label>
+              <div>
+                <label className="form-label">API Key</label>
                 <input
                   type="password"
                   value={apiKey}
                   onChange={(e) => setApiKey(e.target.value)}
-                  className="form-input monospace"
-                  style={{
-                    width: '100%',
-                    padding: '10px',
-                    backgroundColor: 'var(--input-bg)',
-                    border: '1px solid var(--border-color)',
-                    borderRadius: '4px',
-                    color: 'var(--text-color)',
-                    fontFamily: 'inherit',
-                    boxSizing: 'border-box',
-                  }}
+                  className="form-input"
                   placeholder={`Enter your ${activeProvider} API key`}
                 />
               </div>
               
-              {activeProvider === 'ollama' && (
-                <div 
-                  className="form-group"
-                  style={{
-                    marginBottom: '20px',
+              <div>
+                <label className="form-label">Default Model</label>
+                <select
+                  value={settings.providers[activeProvider].defaultModel}
+                  onChange={(e) => {
+                    const updatedProviders = { ...settings.providers };
+                    updatedProviders[activeProvider] = {
+                      ...updatedProviders[activeProvider],
+                      defaultModel: e.target.value,
+                    };
+                    updateSettings({ providers: updatedProviders });
                   }}
+                  className="form-select"
                 >
-                  <label 
-                    className="form-label"
-                    style={{
-                      display: 'block',
-                      marginBottom: '8px',
-                      fontWeight: 'bold',
-                      color: 'var(--accent-color)',
-                    }}
-                  >
-                    Base URL
-                  </label>
+                  {settings.providers[activeProvider].models.map((model) => (
+                    <option key={model} value={model}>{model}</option>
+                  ))}
+                </select>
+              </div>
+              
+              {activeProvider === 'ollama' && (
+                <div>
+                  <label className="form-label">Base URL</label>
                   <input
                     type="text"
                     value={baseUrl}
                     onChange={(e) => setBaseUrl(e.target.value)}
-                    className="form-input monospace"
-                    style={{
-                      width: '100%',
-                      padding: '10px',
-                      backgroundColor: 'var(--input-bg)',
-                      border: '1px solid var(--border-color)',
-                      borderRadius: '4px',
-                      color: 'var(--text-color)',
-                      fontFamily: 'inherit',
-                      boxSizing: 'border-box',
-                    }}
+                    className="form-input"
                     placeholder="http://localhost:11434"
                   />
                 </div>
               )}
-            </>
+            </div>
           )}
           
-          {activeTab === 'appearance' && (
-            <>
-              <div 
-                className="form-group"
-                style={{
-                  marginBottom: '20px',
-                }}
-              >
-                <label 
-                  className="form-label"
-                  style={{
-                    display: 'block',
-                    marginBottom: '8px',
-                    fontWeight: 'bold',
-                    color: 'var(--accent-color)',
-                  }}
+          {activeTab === 'Appearance' && (
+            <div className="space-y-6">
+              <div>
+                <label className="form-label">Theme</label>
+                <select
+                  value={theme}
+                  onChange={(e) => setTheme(e.target.value as 'dark' | 'light')}
+                  className="form-select"
                 >
-                  Theme
-                </label>
-                <div style={{ 
-                  display: 'flex', 
-                  gap: '15px',
-                  marginBottom: '15px',
-                }}>
-                  <div
-                    className="theme-option theme-dark"
-                    title="Modern Dark"
-                    onClick={() => handleThemeChange('dark')}
-                    style={{
-                      width: '80px',
-                      height: '60px',
-                      borderRadius: '6px',
-                      backgroundColor: '#1E1E1E',
-                      border: theme === 'dark' 
-                        ? '2px solid var(--accent-color)' 
-                        : '1px solid #474747',
-                      cursor: 'pointer',
-                      transition: 'transform 0.2s, border 0.2s',
-                      position: 'relative',
-                      overflow: 'hidden',
-                    }}
-                    onMouseOver={(e) => (e.currentTarget.style.transform = 'scale(1.05)')}
-                    onMouseOut={(e) => (e.currentTarget.style.transform = 'scale(1)')}
-                  >
-                    <div style={{
-                      position: 'absolute',
-                      bottom: '5px',
-                      left: '0',
-                      right: '0',
-                      textAlign: 'center',
-                      fontSize: '12px',
-                      color: theme === 'dark' ? 'var(--accent-color)' : '#CCCCCC',
-                    }}>
-                      Dark
-                    </div>
-                  </div>
-                  <div
-                    className="theme-option theme-green"
-                    title="Classic Green"
-                    onClick={() => handleThemeChange('green')}
-                    style={{
-                      width: '80px',
-                      height: '60px',
-                      borderRadius: '6px',
-                      backgroundColor: '#000000',
-                      border: theme === 'green' 
-                        ? '2px solid #33FF33' 
-                        : '1px solid #33FF33',
-                      cursor: 'pointer',
-                      transition: 'transform 0.2s, border 0.2s',
-                      position: 'relative',
-                      overflow: 'hidden',
-                    }}
-                    onMouseOver={(e) => (e.currentTarget.style.transform = 'scale(1.05)')}
-                    onMouseOut={(e) => (e.currentTarget.style.transform = 'scale(1)')}
-                  >
-                    <div style={{
-                      position: 'absolute',
-                      bottom: '5px',
-                      left: '0',
-                      right: '0',
-                      textAlign: 'center',
-                      fontSize: '12px',
-                      color: '#33FF33',
-                    }}>
-                      Green
-                    </div>
-                  </div>
-                  <div
-                    className="theme-option theme-amber"
-                    title="Retro Amber"
-                    onClick={() => handleThemeChange('amber')}
-                    style={{
-                      width: '80px',
-                      height: '60px',
-                      borderRadius: '6px',
-                      backgroundColor: '#2D1B00',
-                      border: theme === 'amber' 
-                        ? '2px solid #FFC133' 
-                        : '1px solid #915900',
-                      cursor: 'pointer',
-                      transition: 'transform 0.2s, border 0.2s',
-                      position: 'relative',
-                      overflow: 'hidden',
-                    }}
-                    onMouseOver={(e) => (e.currentTarget.style.transform = 'scale(1.05)')}
-                    onMouseOut={(e) => (e.currentTarget.style.transform = 'scale(1)')}
-                  >
-                    <div style={{
-                      position: 'absolute',
-                      bottom: '5px',
-                      left: '0',
-                      right: '0',
-                      textAlign: 'center',
-                      fontSize: '12px',
-                      color: '#FFB000',
-                    }}>
-                      Amber
-                    </div>
-                  </div>
-                </div>
+                  <option value="dark">Dark</option>
+                  <option value="light">Light</option>
+                </select>
               </div>
               
-              <div 
-                className="form-group"
-                style={{
-                  marginBottom: '20px',
-                }}
-              >
-                <label 
-                  className="form-label"
-                  style={{
-                    display: 'block',
-                    marginBottom: '8px',
-                    fontWeight: 'bold',
-                    color: 'var(--accent-color)',
-                  }}
-                >
-                  Font Size: {fontSize}px
-                </label>
+              <div>
+                <label className="form-label">Font Size: {fontSize}px</label>
                 <input
                   type="range"
                   min="12"
@@ -546,70 +312,49 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                   onChange={(e) => setFontSize(parseInt(e.target.value))}
                   style={{
                     width: '100%',
-                    backgroundColor: 'var(--input-bg)',
                     accentColor: 'var(--accent-color)',
+                    height: '0.5rem',
+                    borderRadius: '0.25rem',
                   }}
                 />
                 <div style={{ 
                   display: 'flex', 
                   justifyContent: 'space-between', 
-                  fontSize: '12px',
-                  marginTop: '5px',
+                  fontSize: '0.75rem',
+                  marginTop: '0.5rem',
+                  color: 'var(--text-color)',
+                  opacity: 0.8,
                 }}>
                   <span>12px</span>
                   <span>16px</span>
                   <span>20px</span>
                 </div>
               </div>
-            </>
+            </div>
           )}
         </div>
-        
+
+        {/* Footer */}
         <div
           className="modal-footer"
           style={{
-            padding: '15px 20px',
-            borderTop: '1px solid var(--border-color)',
             display: 'flex',
             justifyContent: 'flex-end',
-            backgroundColor: 'rgba(0,0,0,0.2)',
+            gap: '0.75rem',
+            padding: '1rem',
+            borderTop: `1px solid ${theme === 'dark' ? 'var(--border-color)' : 'var(--border-color)'}`,
+            backgroundColor: theme === 'dark' ? 'var(--input-bg)' : 'var(--code-bg)',
           }}
         >
           <button
             onClick={onClose}
-            className="cancel-btn monospace"
-            style={{
-              backgroundColor: 'transparent',
-              color: 'var(--text-color)',
-              border: '1px solid var(--border-color)',
-              padding: '8px 16px',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              marginRight: '10px',
-              fontFamily: 'inherit',
-              transition: 'background-color 0.2s',
-            }}
-            onMouseOver={(e) => (e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)')}
-            onMouseOut={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+            className="terminal-button"
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
-            className="save-btn monospace"
-            style={{
-              backgroundColor: 'var(--accent-color)',
-              color: '#111',
-              border: 'none',
-              padding: '8px 16px',
-              borderRadius: '4px',
-              fontWeight: 'bold',
-              cursor: 'pointer',
-              fontFamily: 'inherit',
-              transition: 'opacity 0.2s',
-            }}
-            onMouseOver={(e) => (e.currentTarget.style.opacity = '0.9')}
-            onMouseOut={(e) => (e.currentTarget.style.opacity = '1')}
+            className="terminal-button-primary"
           >
             Save Changes
           </button>
