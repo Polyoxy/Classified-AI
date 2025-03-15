@@ -33,35 +33,38 @@ const globalStyles = `
     --input-bg: #2D2D2D;
     --scrollbar-thumb: #4D4D4D;
     --button-hover: #3E3E3E;
-    --border-color: #333;
+    --border-color: #222222;
+    --header-bg: #1E1E1E;
   }
   
-  /* Green theme */
-  .theme-green {
-    --bg-color: #000000;
-    --text-color: #33FF33;
-    --accent-color: #00CC00;
-    --accent-color-dark: #00AA00;
-    --user-prefix-color: #00FF00;
-    --ai-prefix-color: #33FF33;
-    --input-bg: #0A1A0A;
-    --scrollbar-thumb: #1A5A1A;
-    --button-hover: #0F2F0F;
-    --border-color: #33FF33;
+  /* Dark theme */
+  .theme-dark {
+    --bg-color: #1E1E1E;
+    --text-color: #CCCCCC;
+    --accent-color: #569CD6;
+    --accent-color-dark: #3A7CB8;
+    --user-prefix-color: #608B4E;
+    --ai-prefix-color: #CE9178;
+    --input-bg: #f0f0f0; /* Light grey for input */
+    --scrollbar-thumb: #4D4D4D;
+    --button-hover: #3E3E3E;
+    --border-color: #222222;
+    --header-bg: #1E1E1E;
   }
   
-  /* Amber theme */
-  .theme-amber {
-    --bg-color: #2D1B00;
-    --text-color: #FFB000;
-    --accent-color: #FFC133;
-    --accent-color-dark: #EAA700;
-    --user-prefix-color: #FF9000;
-    --ai-prefix-color: #FFB000;
-    --input-bg: #3D2B10;
-    --scrollbar-thumb: #5D3B20;
-    --button-hover: #4D2B10;
-    --border-color: #915900;
+  /* Light theme */
+  .theme-light {
+    --bg-color: #FFFFFF;
+    --text-color: #333333;
+    --accent-color: #0078D4;
+    --accent-color-dark: #005A9E;
+    --user-prefix-color: #107C10;
+    --ai-prefix-color: #D83B01;
+    --input-bg: #f0f0f0; /* Light grey for input */
+    --scrollbar-thumb: #CCCCCC;
+    --button-hover: #F0F0F0;
+    --border-color: #DDDDDD;
+    --header-bg: #F5F5F5;
   }
   
   body {
@@ -159,9 +162,6 @@ const App: React.FC<{ isElectron: boolean }> = ({ isElectron }) => {
 
   return (
     <div className="app-container" style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
-      {/* Scanline effect */}
-      <div className="scanline"></div>
-      
       {/* Title bar (only for Electron) */}
       {isElectron && <TitleBar title="CLASSIFIED AI" />}
       
@@ -188,17 +188,37 @@ const AppContent: React.FC<{
   setIsSettingsOpen 
 }) => {
   const { settings } = useAppContext();
+  // Check if we're in Electron environment
+  const [isElectron, setIsElectron] = useState(false);
+  
+  // Detect Electron environment
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.electron) {
+      setIsElectron(true);
+    }
+  }, []);
   
   // Apply theme class to body
   useEffect(() => {
-    document.body.className = settings.theme === 'dark' ? 'theme-dark' : '';
+    // Apply the correct theme class based on the settings
+    document.body.className = `theme-${settings.theme}`;
     console.log('Applied theme:', settings.theme);
   }, [settings.theme]);
   
   return (
     <>
       {/* Chat container */}
-      <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ 
+        flex: 1, 
+        overflow: 'hidden', 
+        display: 'flex', 
+        flexDirection: 'column',
+        border: '1px solid var(--border-color)',
+        borderTop: isElectron ? '1px solid var(--border-color)' : 'none',
+        borderBottom: 'none',
+        borderLeft: 'none',
+        borderRight: 'none'
+      }}>
         <ChatContainer />
       </div>
       

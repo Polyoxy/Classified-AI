@@ -40,11 +40,15 @@ const ChatContainer: React.FC = () => {
       style={{
         flex: 1,
         overflowY: 'auto',
-        padding: '1rem',
+        padding: '0.75rem',
         backgroundColor: 'var(--bg-color)',
         scrollBehavior: 'smooth',
         display: 'flex',
         flexDirection: 'column',
+        border: '1.5px solid var(--border-color)',
+        borderTop: 'none',
+        borderLeft: 'none',
+        borderRight: 'none',
       }}
     >
       {currentConversation.messages.map((message, index) => (

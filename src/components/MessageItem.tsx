@@ -37,7 +37,7 @@ const MessageItem: React.FC<MessageItemProps> = ({ role, content }) => {
             padding: '0.75rem 1rem',
             borderRadius: '0.25rem',
             margin: '0.5rem 0',
-            border: '1px solid var(--border-color)',
+            border: '2px solid var(--border-color)',
             whiteSpace: 'pre',
             overflowX: 'auto'
           }}
@@ -83,8 +83,11 @@ const MessageItem: React.FC<MessageItemProps> = ({ role, content }) => {
     <div 
       className={`message ${role}-message`}
       style={{ 
-        marginBottom: '0.5rem',
+        marginBottom: '0.75rem',
         color: getMessageColor(),
+        padding: '0.5rem 0.75rem',
+        borderBottom: '2px solid var(--border-color)',
+        fontFamily: 'var(--font-mono)',
       }}
     >
       {role !== 'system' ? (
@@ -94,9 +97,10 @@ const MessageItem: React.FC<MessageItemProps> = ({ role, content }) => {
             style={{ 
               fontWeight: 'bold',
               userSelect: 'none',
+              color: role === 'user' ? '#33ff33' : 'var(--ai-prefix-color)',
             }}
           >
-            {role === 'user' ? '> USER: ' : '> AI: '}
+            {role === 'user' ? '$ USER: ' : '$ SYSTEM: '}
           </span>
           <span style={{ 
             whiteSpace: 'pre-wrap',

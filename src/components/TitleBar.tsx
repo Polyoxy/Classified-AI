@@ -61,7 +61,7 @@ const TitleBar: React.FC<TitleBarProps> = ({ title }) => {
       className="terminal-header draggable" 
       style={{
         padding: '0.5rem 1rem',
-        borderBottom: '1px solid var(--border-color)',
+        borderBottom: '2px solid var(--border-color)',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',

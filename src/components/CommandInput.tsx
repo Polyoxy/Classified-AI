@@ -57,7 +57,8 @@ const CommandInput: React.FC = () => {
       position: 'relative',
       padding: '0.75rem 1rem',
       borderTop: '1px solid var(--border-color)',
-      backgroundColor: 'var(--input-bg)',
+      borderBottom: '1px solid var(--border-color)',
+      backgroundColor: '#f0f0f0', // Light grey
       display: 'flex',
       alignItems: 'center',
     }}>
@@ -82,11 +83,17 @@ const CommandInput: React.FC = () => {
       )}
       
       <div className="command-prompt" style={{
-        color: 'var(--accent-color)',
+        color: '#000000', // Black color
         marginRight: '0.5rem',
         userSelect: 'none',
+        fontWeight: 'bold',
+        fontSize: '1rem',
+        display: 'flex',
+        alignItems: 'center',
+        height: '24px', // Match the height of textarea
+        fontFamily: 'Courier Prime, Source Code Pro, VT323, Courier New, monospace',
       }}>
-        &gt;
+        $
       </div>
       
       <textarea
@@ -95,7 +102,7 @@ const CommandInput: React.FC = () => {
         onChange={handleInputChange}
         onKeyDown={handleKeyPress}
         disabled={isProcessing}
-        placeholder={isProcessing ? "Processing..." : "Type your message..."}
+        placeholder={isProcessing ? "Processing request..." : "Enter command..."}
         style={{
           backgroundColor: 'transparent',
           border: 'none',
@@ -108,7 +115,10 @@ const CommandInput: React.FC = () => {
           flex: 1,
           outline: 'none',
           padding: '0',
+          paddingTop: '4px', // Add padding to center text
           overflow: 'hidden',
+          lineHeight: '1.5',
+          verticalAlign: 'middle',
         }}
         rows={1}
       />

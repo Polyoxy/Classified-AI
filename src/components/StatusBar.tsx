@@ -193,6 +193,7 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
       style={{
         padding: '0.25rem 1rem',
         borderTop: '1px solid var(--border-color)',
+        borderBottom: '1px solid var(--border-color)',
         backgroundColor: 'var(--input-bg)',
         display: 'flex',
         justifyContent: 'space-between',
@@ -205,24 +206,43 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
         <div style={{ position: 'relative' }} ref={dropdownRef}>
           <div style={{ display: 'flex', alignItems: 'center' }}>
             <span style={{ marginRight: '0.25rem' }}>Model:</span>
-            <select 
-              value={getCurrentModel()}
-              onChange={(e) => handleModelChange(e.target.value)}
-              className="form-select"
-              style={{
-                backgroundColor: 'var(--input-bg)',
-                border: '1px solid var(--border-color)',
-                color: 'var(--accent-color)',
-                padding: '0.125rem 0.25rem',
-                fontSize: '0.75rem',
-                borderRadius: '0.25rem',
-                cursor: 'pointer',
-              }}
-            >
-              {getModelsForProvider().map((model) => (
-                <option key={model} value={model}>{model}</option>
-              ))}
-            </select>
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+              <select 
+                value={getCurrentModel()}
+                onChange={(e) => handleModelChange(e.target.value)}
+                className="form-select"
+                style={{
+                  backgroundColor: '#f0f0f0',
+                  border: '1px solid var(--border-color)',
+                  color: '#000000',
+                  padding: '0.125rem 0.25rem',
+                  paddingRight: '1.5rem', // Make room for the arrows
+                  fontSize: '0.75rem',
+                  borderRadius: '0.25rem',
+                  cursor: 'pointer',
+                  fontFamily: 'var(--font-mono)',
+                  fontWeight: 'bold',
+                  appearance: 'none', // Remove default arrow
+                }}
+              >
+                {getModelsForProvider().map((model) => (
+                  <option key={model} value={model}>{model}</option>
+                ))}
+              </select>
+              <div style={{ 
+                position: 'absolute', 
+                right: '0.25rem', 
+                pointerEvents: 'none',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                height: '100%'
+              }}>
+                <span style={{ fontSize: '8px', lineHeight: '8px' }}>▲</span>
+                <span style={{ fontSize: '8px', lineHeight: '8px' }}>▼</span>
+              </div>
+            </div>
           </div>
         </div>
         
