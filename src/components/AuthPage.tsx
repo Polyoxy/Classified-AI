@@ -357,6 +357,7 @@ const AuthPage: React.FC = () => {
               fontSize: '32px',
               fontWeight: 'normal',
               letterSpacing: '1.5px',
+              fontFamily: 'var(--font-family-terminal)',
             }}>
               CLASSIFIED AI
             </h1>
@@ -364,6 +365,7 @@ const AuthPage: React.FC = () => {
               margin: '0',
               opacity: 0.8,
               fontSize: '14px',
+              fontFamily: 'var(--font-family-sans)',
             }}>
               Enter your credentials to access the system
             </p>
@@ -377,6 +379,7 @@ const AuthPage: React.FC = () => {
               color: '#ff4d4f',
               border: '1px solid #ff4d4f',
               borderRadius: '4px',
+              fontFamily: 'var(--font-family-general)',
             }}>
               {error}
             </div>
@@ -392,6 +395,7 @@ const AuthPage: React.FC = () => {
                   display: 'block', 
                   marginBottom: '8px',
                   fontWeight: 'bold',
+                  fontFamily: 'var(--font-family-terminal)',
                 }}
               >
                 Email
@@ -405,11 +409,11 @@ const AuthPage: React.FC = () => {
                   width: '100%',
                   padding: '12px',
                   backgroundColor: 'var(--input-bg)',
-                  border: '1px solid var(--input-border)',
+                  border: '1px solid var(--border-color)',
                   borderRadius: '4px',
                   color: 'var(--text-color)',
                   boxSizing: 'border-box',
-                  fontFamily: 'inherit',
+                  fontFamily: 'var(--font-family-terminal)',
                 }}
                 className="auth-input"
                 placeholder="agent@example.com"
@@ -425,6 +429,7 @@ const AuthPage: React.FC = () => {
                   display: 'block', 
                   marginBottom: '8px',
                   fontWeight: 'bold',
+                  fontFamily: 'var(--font-family-terminal)',
                 }}
               >
                 Password
@@ -439,11 +444,11 @@ const AuthPage: React.FC = () => {
                     width: '100%',
                     padding: '12px',
                     backgroundColor: 'var(--input-bg)',
-                    border: '1px solid var(--input-border)',
+                    border: '1px solid var(--border-color)',
                     borderRadius: '4px',
                     color: 'var(--text-color)',
                     boxSizing: 'border-box',
-                    fontFamily: 'inherit',
+                    fontFamily: 'var(--font-family-terminal)',
                   }}
                   className="auth-input"
                   required
@@ -499,13 +504,13 @@ const AuthPage: React.FC = () => {
                   style={{
                     width: '16px',
                     height: '16px',
-                    border: '1px solid var(--input-border)',
+                    border: '1px solid var(--border-color)',
                     borderRadius: '2px',
                     marginRight: '8px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    backgroundColor: rememberMe ? 'var(--slider-handle)' : 'transparent',
+                    backgroundColor: rememberMe ? 'var(--accent-color)' : 'transparent',
                   }}
                   onClick={() => setRememberMe(!rememberMe)}
                 >
@@ -524,7 +529,7 @@ const AuthPage: React.FC = () => {
                     </svg>
                   )}
                 </div>
-                <span style={{ fontSize: '14px' }}>Remember me</span>
+                <span style={{ fontSize: '14px', fontFamily: 'var(--font-family-terminal)' }}>Remember me</span>
               </label>
             </div>
             
@@ -540,7 +545,7 @@ const AuthPage: React.FC = () => {
                 border: 'none',
                 borderRadius: '4px',
                 cursor: isLoading ? 'wait' : 'pointer',
-                fontFamily: 'inherit',
+                fontFamily: 'var(--font-family-terminal)',
                 fontSize: '16px',
                 fontWeight: 'bold',
                 marginBottom: '16px',
@@ -588,7 +593,7 @@ const AuthPage: React.FC = () => {
               border: '1px solid var(--border-color)',
               borderRadius: '4px',
               cursor: isLoading ? 'wait' : 'pointer',
-              fontFamily: 'inherit',
+              fontFamily: 'var(--font-family-terminal)',
               fontSize: '16px',
               marginBottom: '24px',
             }}
@@ -612,7 +617,7 @@ const AuthPage: React.FC = () => {
                 cursor: 'pointer',
                 padding: 0,
                 textDecoration: 'none',
-                font: 'inherit',
+                fontFamily: 'var(--font-family-terminal)',
               }}
             >
               Create Account
@@ -628,7 +633,7 @@ const AuthPage: React.FC = () => {
                 cursor: 'pointer',
                 padding: 0,
                 textDecoration: 'none',
-                font: 'inherit',
+                fontFamily: 'var(--font-family-terminal)',
               }}
             >
               Forgot Password?
@@ -639,30 +644,40 @@ const AuthPage: React.FC = () => {
 
       {/* Status bar */}
       <div style={{
-        height: '30px',
-        backgroundColor: 'var(--header-bg)',
+        height: '24px',
         borderTop: '1px solid var(--border-color)',
+        backgroundColor: 'var(--header-bg)',
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '0 15px',
+        padding: '0 10px',
         fontSize: '12px',
-        color: 'var(--system-color)',
+        color: 'var(--text-color)',
+        fontFamily: 'var(--font-family-terminal)',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-          <div style={{ display: 'flex', alignItems: 'center' }}>
-            <div style={{ 
-              width: '8px', 
-              height: '8px', 
-              borderRadius: '50%', 
-              backgroundColor: '#9e9e9e', 
-              marginRight: '5px' 
-            }}></div>
-            <span>disconnected</span>
-          </div>
+        {/* Left section - Hello Agent with status */}
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '6px' 
+        }}>
+          <div style={{
+            width: '8px',
+            height: '8px',
+            borderRadius: '50%',
+            backgroundColor: '#10b981',
+            marginRight: '6px',
+          }} />
+          Agent::X1-7R4C3
         </div>
-        <div>
-          <span>Theme: {currentTheme}</span>
+
+        {/* Right section */}
+        <div style={{ 
+          marginLeft: 'auto',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+        }}>
+          <span>Classified-AI by The Shine</span>
         </div>
       </div>
     </div>

@@ -55,6 +55,7 @@ const ResetPasswordPage: React.FC<ResetPasswordPageProps> = ({ onBackToLogin }) 
             fontSize: '32px',
             fontWeight: 'normal',
             letterSpacing: '1.5px',
+            fontFamily: 'var(--font-family-terminal)',
           }}>
             RESET PASSWORD
           </h1>
@@ -62,6 +63,7 @@ const ResetPasswordPage: React.FC<ResetPasswordPageProps> = ({ onBackToLogin }) 
             margin: '0',
             opacity: 0.8,
             fontSize: '14px',
+            fontFamily: 'var(--font-family-general)',
           }}>
             Enter your email to receive a password reset link
           </p>
@@ -75,6 +77,7 @@ const ResetPasswordPage: React.FC<ResetPasswordPageProps> = ({ onBackToLogin }) 
             color: '#ff4d4f',
             border: '1px solid #ff4d4f',
             borderRadius: '4px',
+            fontFamily: 'var(--font-family-general)',
           }}>
             {error}
           </div>
@@ -88,6 +91,7 @@ const ResetPasswordPage: React.FC<ResetPasswordPageProps> = ({ onBackToLogin }) 
             color: '#52c41a',
             border: '1px solid #52c41a',
             borderRadius: '4px',
+            fontFamily: 'var(--font-family-general)',
           }}>
             Password reset email sent! Please check your inbox.
           </div>
@@ -103,6 +107,7 @@ const ResetPasswordPage: React.FC<ResetPasswordPageProps> = ({ onBackToLogin }) 
                 display: 'block', 
                 marginBottom: '8px',
                 fontWeight: 'bold',
+                fontFamily: 'var(--font-family-terminal)',
               }}
             >
               Email
@@ -116,11 +121,11 @@ const ResetPasswordPage: React.FC<ResetPasswordPageProps> = ({ onBackToLogin }) 
                 width: '100%',
                 padding: '12px',
                 backgroundColor: 'var(--input-bg)',
-                border: '1px solid var(--input-border)',
+                border: '1px solid var(--border-color)',
                 borderRadius: '4px',
                 color: 'var(--text-color)',
                 boxSizing: 'border-box',
-                fontFamily: 'inherit',
+                fontFamily: 'var(--font-family-terminal)',
               }}
               placeholder="agent@example.com"
               required
@@ -139,7 +144,7 @@ const ResetPasswordPage: React.FC<ResetPasswordPageProps> = ({ onBackToLogin }) 
               border: 'none',
               borderRadius: '4px',
               cursor: isLoading ? 'wait' : 'pointer',
-              fontFamily: 'inherit',
+              fontFamily: 'var(--font-family-terminal)',
               fontSize: '16px',
               fontWeight: 'bold',
               marginBottom: '24px',
@@ -157,11 +162,11 @@ const ResetPasswordPage: React.FC<ResetPasswordPageProps> = ({ onBackToLogin }) 
             style={{
               background: 'none',
               border: 'none',
-              color: 'var(--link-color)',
+              color: '#474747',
               cursor: 'pointer',
               padding: 0,
               textDecoration: 'none',
-              font: 'inherit',
+              fontFamily: 'var(--font-family-terminal)',
             }}
           >
             Back to Login

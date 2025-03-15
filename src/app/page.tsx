@@ -44,8 +44,8 @@ const globalStyles = `
   
   /* Font variables */
   :root {
-    --font-mono: 'JetBrains Mono', monospace;
-    --font-sans: 'Inter', sans-serif;
+    --font-terminal: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Source Code Pro', monospace;
+    --font-general: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   }
   
   :root {
@@ -135,7 +135,7 @@ const globalStyles = `
     padding: 0;
     background-color: var(--bg-color);
     color: var(--text-color);
-    font-family: var(--font-mono);
+    font-family: var(--font-terminal);
     font-size: 14px;
     line-height: 1.6;
     height: 100vh;
@@ -145,11 +145,11 @@ const globalStyles = `
   }
   
   * {
-    font-family: var(--font-mono);
+    font-family: var(--font-terminal);
   }
 
   p, div.description, .help-text {
-    font-family: var(--font-sans);
+    font-family: var(--font-general);
   }
   
   .chat-container::-webkit-scrollbar {
@@ -190,7 +190,7 @@ const globalStyles = `
     background-color: transparent;
     border: 1px solid var(--border-color);
     color: var(--text-color);
-    font-family: inherit;
+    font-family: var(--font-terminal);
     font-size: 0.875rem;
     cursor: pointer;
     transition: all 0.2s ease;
