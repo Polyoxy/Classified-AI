@@ -38,6 +38,7 @@ async function createWindow() {
       webSecurity: true,
       allowRunningInsecureContent: false,
       enableRemoteModule: false,
+      nativeWindowOpen: true, // Enable this for Firebase auth popups
     },
     backgroundColor: '#1E1E1E', // Dark background color
     icon: path.join(__dirname, '../public/icon.png'),
@@ -50,11 +51,11 @@ async function createWindow() {
         ...details.responseHeaders,
         'Content-Security-Policy': [
           isDev 
-            ? "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://*.google-analytics.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https://*.google-analytics.com; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' http://localhost:* ws://localhost:* https://*.openai.com https://*.deepseek.com https://*.firebaseio.com https://firestore.googleapis.com https://*.firebase.com https://*.googleapis.com https://*.google-analytics.com"
-            : "default-src 'self'; script-src 'self' https://www.googletagmanager.com https://*.google-analytics.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https://*.google-analytics.com; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://*.openai.com https://*.deepseek.com https://*.firebaseio.com https://firestore.googleapis.com https://*.firebase.com https://*.googleapis.com https://*.google-analytics.com"
+            ? "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.firebaseapp.com https://*.googleapis.com https://*.google-analytics.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https://*.google-analytics.com; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' http://localhost:* ws://localhost:* https://*.openai.com https://*.deepseek.com https://*.firebaseio.com https://firestore.googleapis.com https://*.firebase.com https://*.googleapis.com https://*.google-analytics.com https://identitytoolkit.googleapis.com; frame-src 'self' https://*.firebaseapp.com https://*.firebase.com https://*.firebaseio.com https://identitytoolkit.googleapis.com"
+            : "default-src 'self'; script-src 'self' https://*.firebaseapp.com https://*.googleapis.com https://*.google-analytics.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https://*.google-analytics.com; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://*.openai.com https://*.deepseek.com https://*.firebaseio.com https://firestore.googleapis.com https://*.firebase.com https://*.googleapis.com https://*.google-analytics.com https://identitytoolkit.googleapis.com; frame-src 'self' https://*.firebaseapp.com https://*.firebase.com https://*.firebaseio.com https://identitytoolkit.googleapis.com"
         ],
         'X-Content-Type-Options': ['nosniff'],
-        'X-Frame-Options': ['DENY'],
+        'X-Frame-Options': ['SAMEORIGIN'], // Changed from DENY to SAMEORIGIN for Firebase auth
         'X-XSS-Protection': ['1; mode=block'],
         'Referrer-Policy': ['no-referrer']
       }

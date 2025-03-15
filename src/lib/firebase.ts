@@ -1,6 +1,6 @@
 import { initializeApp, getApps } from "firebase/app";
 import { getDatabase } from "firebase/database";
-import { getAuth } from "firebase/auth";
+import { getAuth, setPersistence, browserLocalPersistence } from "firebase/auth";
 // Analytics is typically not used in Electron apps, but included for completeness
 import { getAnalytics, isSupported } from "firebase/analytics";
 
@@ -20,17 +20,25 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
 
-// Initialize Realtime Database
-export const rtdb = getDatabase(app);
-
 // Initialize Auth
 export const auth = getAuth(app);
 
-// Initialize Analytics conditionally (only in browser environment, not in Electron)
+// Check if we're in Electron environment
+const isElectron = typeof window !== 'undefined' && window.electron;
+
+// Set default persistence to local in Electron
+if (isElectron) {
+  setPersistence(auth, browserLocalPersistence)
+    .catch((error) => {
+      console.error('Error setting persistence:', error);
+    });
+}
+
+// Initialize Realtime Database
+export const rtdb = getDatabase(app);
+
+// Initialize Analytics conditionally
 export const initAnalytics = async () => {
-  // Check if we're in Electron environment
-  const isElectron = typeof window !== 'undefined' && window.electron;
-  
   // Skip analytics in Electron
   if (isElectron) {
     console.log('Analytics disabled in Electron environment');

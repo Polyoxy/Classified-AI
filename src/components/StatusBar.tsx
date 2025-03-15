@@ -230,6 +230,11 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
   // Handle logout
   const handleLogout = async () => {
     try {
+      // Store the current user's email before logging out
+      if (user && user.email) {
+        localStorage.setItem('lastLoginEmail', user.email);
+      }
+
       // Check if user is an offline user
       const isOfflineUser = user && user.uid.startsWith('offline-');
       
@@ -242,8 +247,6 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
         await auth.signOut();
         // The auth state observer will handle updating the user state
       }
-      
-      // Removed unnecessary console.log for successful logout
     } catch (error) {
       console.error('Error during logout:', error);
     }

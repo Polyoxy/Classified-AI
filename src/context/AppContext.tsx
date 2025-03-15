@@ -136,34 +136,43 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         // Check if we're in Electron environment
         const isElectron = typeof window !== 'undefined' && window.electron;
         
-        // If we're in Electron, we can use local storage instead of requiring Firebase auth
-        if (isElectron) {
-          // Skip Firebase auth in Electron environment
-          console.log('Running in Electron, skipping Firebase auth');
+        // First check for offline/guest user
+        const offlineUserJson = localStorage.getItem('offlineUser');
+        if (offlineUserJson) {
+          const offlineUser = JSON.parse(offlineUserJson);
+          console.log('Restoring offline/guest user session:', offlineUser.uid);
+          setUser(offlineUser);
           setIsLoading(false);
           return () => {};
         }
         
+        // Set up auth state observer for both Electron and web
         console.log('Setting up Firebase auth state observer');
         const unsubscribe = onAuthStateChanged(auth, (user) => {
           if (user) {
             console.log('User authenticated:', user.uid, 'Anonymous:', user.isAnonymous);
             setUser(user);
+            
+            // Store user data in localStorage for Electron
+            if (isElectron) {
+              localStorage.setItem('offlineUser', JSON.stringify(user));
+            }
+            
             setIsLoading(false);
           } else {
             console.log('No authenticated user');
             setUser(null);
-            setIsLoading(false);
             
-            // We no longer automatically sign in anonymously
-            // This will be handled by the AuthPage component
+            // Clear offline user data
+            localStorage.removeItem('offlineUser');
+            
+            setIsLoading(false);
           }
         });
         
         return () => unsubscribe();
       } catch (error) {
         console.error('Firebase auth error:', error);
-        // Continue without Firebase if it fails
         setIsLoading(false);
         return () => {};
       }

@@ -78,16 +78,29 @@ const AuthPage: React.FC = () => {
     setError(null);
     
     try {
-      // Set persistence based on "Remember me" checkbox
-      const persistenceType = rememberMe ? browserLocalPersistence : browserSessionPersistence;
-      await setPersistence(auth, persistenceType);
+      // Check if we're in Electron environment
+      const isElectron = typeof window !== 'undefined' && window.electron;
+      
+      // Only set persistence if not in Electron (Electron always uses local persistence)
+      if (!isElectron) {
+        const persistenceType = rememberMe ? browserLocalPersistence : browserSessionPersistence;
+        await setPersistence(auth, persistenceType);
+      }
+      
+      // Store the email in localStorage before attempting login
+      localStorage.setItem('lastLoginEmail', email);
       
       // Sign in
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
       
+      // Store the rememberMe preference in localStorage
+      localStorage.setItem('rememberMe', JSON.stringify(rememberMe));
+      
       const lastLoginData = {
-        lastLogin: new Date().toISOString()
+        lastLogin: new Date().toISOString(),
+        rememberMe, // Store the preference in the database too
+        email // Store the email in the database too
       };
       
       // Update last login time in Realtime Database only
@@ -108,6 +121,25 @@ const AuthPage: React.FC = () => {
       setIsLoading(false);
     }
   };
+  
+  // Add effect to restore rememberMe preference and last login email
+  useEffect(() => {
+    try {
+      // Restore remember me preference
+      const savedRememberMe = localStorage.getItem('rememberMe');
+      if (savedRememberMe !== null) {
+        setRememberMe(JSON.parse(savedRememberMe));
+      }
+
+      // Restore last login email
+      const lastLoginEmail = localStorage.getItem('lastLoginEmail');
+      if (lastLoginEmail) {
+        setEmail(lastLoginEmail);
+      }
+    } catch (error) {
+      console.error('Error restoring preferences:', error);
+    }
+  }, []);
   
   // Handle guest/offline login
   const handleGuestLogin = async () => {
