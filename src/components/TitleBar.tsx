@@ -86,7 +86,7 @@ const TitleBar: React.FC<TitleBarProps> = ({ title }) => {
         </span>
       </div>
       
-      <div className="window-controls non-draggable" style={{ 
+      <div className="window-controls" style={{
         display: 'flex', 
         gap: '0.5rem',
       }}>
@@ -103,21 +103,6 @@ const TitleBar: React.FC<TitleBarProps> = ({ title }) => {
             cursor: 'pointer',
           }}
         />
-        
-        <div
-          onClick={handleMaximize}
-          className="window-control maximize non-draggable"
-          title="Maximize"
-          style={{
-            width: '12px',
-            height: '12px',
-            borderRadius: '50%',
-            backgroundColor: '#10b981', // green-500
-            border: 'none',
-            cursor: 'pointer',
-          }}
-        />
-        
         <div
           onClick={handleClose}
           className="window-control close non-draggable"

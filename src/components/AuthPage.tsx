@@ -258,21 +258,6 @@ const AuthPage: React.FC = () => {
               cursor: 'pointer',
             }}
           />
-          
-          <div
-            onClick={() => window.electron?.windowControls?.maximize()}
-            className="window-control maximize non-draggable"
-            title="Maximize"
-            style={{
-              width: '12px',
-              height: '12px',
-              borderRadius: '50%',
-              backgroundColor: '#10b981', // green-500
-              border: 'none',
-              cursor: 'pointer',
-            }}
-          />
-          
           <div
             onClick={() => window.electron?.windowControls?.close()}
             className="window-control close non-draggable"

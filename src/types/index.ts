@@ -60,7 +60,6 @@ export interface TokenUsage {
 export interface ElectronAPI {
   windowControls: {
     minimize: () => void;
-    maximize: () => void;
     close: () => void;
   };
   store: {
