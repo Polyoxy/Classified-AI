@@ -307,248 +307,215 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
 
   return (
     <div className="status-bar" style={{
-      height: '40px',
       display: 'flex',
       justifyContent: 'space-between',
       alignItems: 'center',
-      padding: '0 12px',
-      borderTop: '1px solid var(--border-color)',
-      backgroundColor: 'var(--input-bg)',
+      padding: '0.5rem 1rem',
+      backgroundColor: settings?.theme === 'dark' ? '#121212' : '#f0f0f0',
+      borderTop: `1px solid ${settings?.theme === 'dark' ? '#333' : '#ddd'}`,
       color: 'var(--text-color)',
-      fontSize: '0.75rem',
-      fontFamily: 'var(--font-mono)',
-      boxSizing: 'border-box',
+      fontFamily: 'JetBrains Mono, monospace',
+      fontSize: '12px',
+      position: 'relative',
+      minHeight: '32px',
     }}>
-      <div style={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        gap: '0.75rem',
-        height: '100%'
-      }}>
+      {/* Left side: Model selector and connection status */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
         {/* Model selector */}
-        <div style={{ 
-          position: 'relative', 
-          display: 'flex', 
-          alignItems: 'center',
-          height: '100%',
-          marginRight: '2px',
-        }} ref={dropdownRef}>
-          <span style={{ 
-            marginRight: '0.25rem',
-            display: 'flex',
-            alignItems: 'center',
-            height: '100%' 
-          }}>Model:</span>
-          <div style={{ 
-            position: 'relative', 
-            display: 'flex', 
-            alignItems: 'center',
-            height: '100%'
-          }}>
-            <select 
-              value={getCurrentModel()}
-              onChange={(e) => handleModelChange(e.target.value)}
-              className="form-select"
+        <div 
+          className="model-selector" 
+          ref={dropdownRef}
+          style={{ position: 'relative' }}
+        >
+          <div 
+            className="selected-model"
+            onClick={() => setIsModelDropdownOpen(!isModelDropdownOpen)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              padding: '0.25rem 0.5rem',
+              backgroundColor: settings?.theme === 'dark' ? '#1a1a1a' : '#e0e0e0',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              minWidth: '150px',
+              border: `1px solid ${settings?.theme === 'dark' ? '#333' : '#ccc'}`,
+              transition: 'all 0.2s ease',
+            }}
+          >
+            <span style={{ marginRight: '0.5rem' }}>
+              {getCurrentModel()}
+            </span>
+            <svg 
+              width="10" 
+              height="10" 
+              viewBox="0 0 24 24" 
+              fill="none" 
+              stroke="currentColor" 
+              strokeWidth="2" 
+              strokeLinecap="round" 
+              strokeLinejoin="round"
+              style={{ marginLeft: 'auto' }}
+            >
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </div>
+          
+          {isModelDropdownOpen && (
+            <div 
+              className="model-dropdown"
               style={{
-                backgroundColor: 'var(--input-bg)',
-                border: '1px solid var(--border-color)',
-                color: 'var(--text-color)',
-                padding: '0 0.5rem',
-                paddingRight: '1.75rem',
-                fontSize: '0.75rem',
-                borderRadius: '0.25rem',
-                cursor: 'pointer',
-                fontFamily: 'var(--font-mono)',
-                fontWeight: 'bold',
-                appearance: 'none',
-                height: '26px',
-                display: 'inline-flex',
-                alignItems: 'center',
-                position: 'relative',
-                boxSizing: 'border-box',
-                verticalAlign: 'middle',
-                top: '0',
-                width: 'auto',
-                minWidth: '130px',
-                lineHeight: '26px',
-                textAlign: 'center',
+                position: 'absolute',
+                top: '100%',
+                left: '0',
+                width: '100%',
+                backgroundColor: settings?.theme === 'dark' ? '#1a1a1a' : '#f5f5f5',
+                border: `1px solid ${settings?.theme === 'dark' ? '#333' : '#ddd'}`,
+                borderRadius: '4px',
+                marginTop: '0.25rem',
+                zIndex: 1000,
+                maxHeight: '200px',
+                overflowY: 'auto',
+                boxShadow: settings?.theme === 'dark' 
+                  ? '0 4px 8px rgba(0,0,0,0.3)' 
+                  : '0 4px 8px rgba(0,0,0,0.1)',
               }}
             >
+              {/* Model options */}
               {getModelsForProvider().map((model) => (
-                <option 
-                  key={model} 
-                  value={model}
+                <div 
+                  key={model}
+                  className="model-option"
+                  onClick={() => handleModelChange(model)}
                   style={{
-                    color: 'var(--text-color)',
-                    fontWeight: 'normal',
+                    padding: '0.5rem',
+                    cursor: 'pointer',
+                    backgroundColor: model === selectedModel 
+                      ? (settings?.theme === 'dark' ? '#333' : '#e0e0e0') 
+                      : 'transparent',
+                    transition: 'all 0.1s ease',
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.backgroundColor = settings?.theme === 'dark' ? '#333' : '#e0e0e0';
+                  }}
+                  onMouseOut={(e) => {
+                    if (model !== selectedModel) {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }
                   }}
                 >
                   {model}
-                </option>
+                </div>
               ))}
-            </select>
-            <div style={{ 
-              position: 'absolute', 
-              right: '0.25rem', 
-              pointerEvents: 'none',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              height: '100%',
-              top: '0',
-              bottom: '0',
-              margin: 'auto',
-              width: '12px',
-            }}>
-              <span style={{ fontSize: '8px', lineHeight: '1', height: '8px', display: 'block', marginBottom: '1px' }}>▲</span>
-              <span style={{ fontSize: '8px', lineHeight: '1', height: '8px', display: 'block', marginTop: '1px' }}>▼</span>
             </div>
-          </div>
+          )}
         </div>
         
-        {/* Connection status display */}
-        {connectionStatus === 'connected' && (
+        {/* Connection status indicator */}
+        <div className="connection-status" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '12px',
-            color: 'var(--text-color)',
-            fontFamily: 'var(--font-mono)',
-            fontWeight: 'bold',
-            padding: '2px 8px',
-            borderRadius: '4px',
-            backgroundColor: 'rgba(0, 0, 0, 0.1)',
-            border: '1px solid rgba(0, 0, 0, 0.3)',
-            height: '26px',
-            marginLeft: '10px',
-            boxSizing: 'border-box',
-            position: 'relative',
-            top: '0',
-          }}>
-            <div style={{
-              width: '8px',
-              height: '8px',
-              borderRadius: '50%',
-              backgroundColor: 'var(--text-color)',
-              marginRight: '6px',
-            }}></div>
-            Connected
-          </div>
-        )}
-        
-        {/* Token usage */}
-        {tokenUsage && tokenUsage.totalTokens > 0 && (
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <span>
-              Tokens: {formatNumber(tokenUsage.totalTokens)}
-            </span>
-            <span>
-              Cost: {formatCost(tokenUsage.estimatedCost)}
-            </span>
-          </div>
-        )}
+            width: '10px',
+            height: '10px',
+            borderRadius: '50%',
+            backgroundColor: getStatusColor(),
+            marginRight: '4px',
+          }}></div>
+          <span>Connected</span>
+          
+          {/* Token usage */}
+          {tokenUsage.totalTokens > 0 && (
+            <>
+              <span style={{ marginLeft: '12px' }}>
+                Tokens: {formatNumber(tokenUsage.totalTokens)}
+              </span>
+              <span style={{ marginLeft: '12px' }}>
+                Cost: {formatCost(tokenUsage.estimatedCost)}
+              </span>
+            </>
+          )}
+        </div>
       </div>
       
-      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-        {/* Active model info - REMOVED as requested */}
-        
+      {/* Right side: Action buttons */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        {/* History button */}
         <button
-          onClick={() => {
-            onOpenSettings();
-          }}
           style={{
             backgroundColor: 'transparent',
             border: 'none',
-            color: 'var(--text-color)',
             cursor: 'pointer',
-            padding: '0.25rem',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
+            padding: '4px',
+            borderRadius: '4px',
+            color: 'var(--text-color)',
           }}
-          onMouseOver={(e) => {
-            e.currentTarget.style.color = 'var(--accent-color, #E34234)';
+          title="History"
+        >
+          <svg 
+            width="16" 
+            height="16" 
+            viewBox="0 0 24 24" 
+            fill="none" 
+            stroke="currentColor" 
+            strokeWidth="2" 
+            strokeLinecap="round" 
+            strokeLinejoin="round"
+          >
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 16 14"></polyline>
+          </svg>
+        </button>
+        
+        {/* Reload button */}
+        <button
+          style={{
+            backgroundColor: 'transparent',
+            border: 'none',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '4px',
+            borderRadius: '4px',
+            color: 'var(--text-color)',
           }}
-          onMouseOut={(e) => {
-            e.currentTarget.style.color = 'var(--text-color)';
+          title="Reload"
+        >
+          <svg 
+            width="16" 
+            height="16" 
+            viewBox="0 0 24 24" 
+            fill="none" 
+            stroke="currentColor" 
+            strokeWidth="2" 
+            strokeLinecap="round" 
+            strokeLinejoin="round"
+          >
+            <path d="M21 2v6h-6"></path>
+            <path d="M3 12a9 9 0 0 1 15-6.7L21 8"></path>
+            <path d="M3 22v-6h6"></path>
+            <path d="M21 12a9 9 0 0 1-15 6.7L3 16"></path>
+          </svg>
+        </button>
+        
+        {/* Settings button */}
+        <button
+          onClick={onOpenSettings}
+          style={{
+            backgroundColor: 'transparent',
+            border: 'none',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '4px',
+            borderRadius: '4px',
+            color: 'var(--text-color)',
           }}
-          aria-label="Open settings"
-          id="settings-button"
           title="Settings"
         >
           <SettingsIcon />
-        </button>
-        
-        <button
-          title="Save"
-          style={{
-            backgroundColor: 'transparent',
-            border: 'none',
-            color: 'var(--text-color)',
-            cursor: 'pointer',
-            padding: '0.25rem',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            transition: 'all 0.2s ease',
-          }}
-          onMouseOver={(e) => {
-            e.currentTarget.style.color = 'var(--accent-color, #E34234)';
-          }}
-          onMouseOut={(e) => {
-            e.currentTarget.style.color = 'var(--text-color)';
-          }}
-        >
-          <SaveIcon />
-        </button>
-        
-        <button
-          title="Output"
-          style={{
-            backgroundColor: 'transparent',
-            border: 'none',
-            color: 'var(--text-color)',
-            cursor: 'pointer',
-            padding: '0.25rem',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            transition: 'all 0.2s ease',
-          }}
-          onMouseOver={(e) => {
-            e.currentTarget.style.color = 'var(--accent-color, #E34234)';
-          }}
-          onMouseOut={(e) => {
-            e.currentTarget.style.color = 'var(--text-color)';
-          }}
-        >
-          <MonitorIcon />
-        </button>
-        
-        <button
-          onClick={handleLogout}
-          title="Logout"
-          style={{
-            backgroundColor: 'transparent',
-            border: 'none',
-            color: 'var(--text-color)',
-            cursor: 'pointer',
-            padding: '0.25rem',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            transition: 'all 0.2s ease',
-          }}
-          onMouseOver={(e) => {
-            e.currentTarget.style.color = 'var(--accent-color, #E34234)';
-          }}
-          onMouseOut={(e) => {
-            e.currentTarget.style.color = 'var(--text-color)';
-          }}
-        >
-          <LogoutIcon />
         </button>
       </div>
     </div>

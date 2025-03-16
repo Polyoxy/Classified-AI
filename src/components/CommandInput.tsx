@@ -117,7 +117,9 @@ const CommandInput: React.FC = () => {
       alignItems: 'center',
       boxShadow: settings?.theme === 'dark' 
         ? 'inset 0 1px 3px rgba(0,0,0,0.2)' 
-        : 'inset 0 1px 3px rgba(0,0,0,0.05)'
+        : 'inset 0 1px 3px rgba(0,0,0,0.05)',
+      borderRadius: '8px',
+      margin: '0.5rem',
     }}>
       {showResetButton && (
         <button 
@@ -141,29 +143,27 @@ const CommandInput: React.FC = () => {
         </button>
       )}
       
-      {/* Connection status indicator - Removed as we'll move it to the StatusBar */}
-      
+      {/* Lightning bolt icon */}
       <div className="command-prompt" style={{
         color: 'var(--text-color)',
         marginRight: '0.75rem',
         userSelect: 'none',
-        fontWeight: 'bold',
-        fontSize: `${settings?.fontSize || 14}px`,
         display: 'flex',
         alignItems: 'center',
-        height: '24px', // Match the height of textarea
-        fontFamily: 'var(--font-mono, "JetBrains Mono", monospace)',
+        height: '24px',
       }}>
-        <span 
-          style={{ 
-            color: 'var(--text-color)',
-            marginRight: '0.5rem',
-            fontWeight: 'bold',
-            userSelect: 'none',
-          }}
+        <svg 
+          width="18" 
+          height="18" 
+          viewBox="0 0 24 24" 
+          fill="none" 
+          stroke="currentColor" 
+          strokeWidth="2" 
+          strokeLinecap="round" 
+          strokeLinejoin="round"
         >
-          $
-        </span>
+          <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
+        </svg>
       </div>
       
       <textarea
@@ -185,7 +185,7 @@ const CommandInput: React.FC = () => {
           flex: 1,
           outline: 'none',
           padding: '0',
-          paddingTop: '4px', // Add padding to center text
+          paddingTop: '4px',
           overflow: 'hidden',
           lineHeight: '1.5',
           verticalAlign: 'middle',
@@ -193,6 +193,39 @@ const CommandInput: React.FC = () => {
         rows={1}
       />
       
+      {/* Upload button */}
+      <button
+        style={{
+          backgroundColor: 'transparent',
+          border: 'none',
+          color: 'var(--text-color)',
+          cursor: 'pointer',
+          padding: '0.25rem',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginLeft: '0.5rem',
+          transition: 'all 0.2s ease',
+        }}
+        title="Upload file"
+      >
+        <svg 
+          width="18" 
+          height="18" 
+          viewBox="0 0 24 24" 
+          fill="none" 
+          stroke="currentColor" 
+          strokeWidth="2" 
+          strokeLinecap="round" 
+          strokeLinejoin="round"
+        >
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="17 8 12 3 7 8"></polyline>
+          <line x1="12" y1="3" x2="12" y2="15"></line>
+        </svg>
+      </button>
+      
+      {/* Send button */}
       <button
         onClick={handleSendMessage}
         disabled={!input.trim() || isProcessing}
@@ -207,12 +240,13 @@ const CommandInput: React.FC = () => {
           justifyContent: 'center',
           marginLeft: '0.5rem',
           transition: 'all 0.2s ease',
+          opacity: input.trim() && !isProcessing ? 1 : 0.5,
         }}
         title="Send message"
       >
         <svg 
-          width="16" 
-          height="16" 
+          width="18" 
+          height="18" 
           viewBox="0 0 24 24" 
           fill="none" 
           stroke="currentColor" 
@@ -223,47 +257,6 @@ const CommandInput: React.FC = () => {
           <line x1="22" y1="2" x2="11" y2="13"></line>
           <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
         </svg>
-      </button>
-      
-      <button
-        style={{
-          backgroundColor: 'transparent',
-          border: 'none',
-          color: 'var(--text-color)',
-          cursor: 'pointer',
-          padding: '0.25rem',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          marginLeft: '0.5rem',
-          transition: 'all 0.2s ease',
-        }}
-        onMouseOver={(e) => {
-          e.currentTarget.style.color = 'var(--accent-color, #E34234)';
-        }}
-        onMouseOut={(e) => {
-          e.currentTarget.style.color = 'var(--text-color)';
-        }}
-        title="Upload file"
-      >
-        <svg 
-          width="16" 
-          height="16" 
-          viewBox="0 0 24 24" 
-          fill="none" 
-          stroke="currentColor" 
-          strokeWidth="2" 
-          strokeLinecap="round" 
-          strokeLinejoin="round"
-        >
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-          <polyline points="17 8 12 3 7 8"></polyline>
-          <line x1="12" y1="3" x2="12" y2="15"></line>
-        </svg>
-      </button>
-      
-      <button onClick={stopAIResponse} disabled={!isProcessing} className="stop-button">
-        Stop
       </button>
     </div>
   );
