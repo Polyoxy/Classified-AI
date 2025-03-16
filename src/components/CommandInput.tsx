@@ -27,16 +27,18 @@ const pulsingLightningStyles = `
 
 // Example questions to cycle through
 const EXAMPLE_QUESTIONS = [
-  "What is the meaning of life?",
-  "How do I build an app with React?",
-  "Generate a function to sort an array",
-  "Explain quantum computing",
-  "Write a poem about AI",
-  "Tell me about machine learning",
-  "What's the best way to learn coding?",
-  "Summarize blockchain technology",
-  "Help me solve this algorithm",
-  "How does GPT work?",
+  "How can I optimize my React application's performance?",
+  "Write a Python script to analyze sentiment in tweets",
+  "Create a beautiful landing page with Next.js and Tailwind",
+  "Explain the concept of blockchain in simple terms",
+  "Help me debug this async/await function",
+  "Design a scalable microservices architecture",
+  "Generate a secure password validation regex",
+  "What are the best practices for API design?",
+  "Create a machine learning model for image classification",
+  "How does quantum computing differ from classical computing?",
+  "Implement a real-time chat system with WebSockets",
+  "Build a responsive navigation menu with CSS Grid",
 ];
 
 const CommandInput: React.FC = () => {
@@ -67,32 +69,38 @@ const CommandInput: React.FC = () => {
   // Show connection status changes and notify user
   const [prevConnectionStatus, setPrevConnectionStatus] = useState<'connected' | 'disconnected' | 'error' | null>(null);
   
-  // Function to scramble text with hacker effect
+  // Function to scramble text with enhanced hacker effect
   const scrambleText = (target: string, current: string, progress: number) => {
-    // Create a scrambled version of the text that gradually transforms from current to target
-    const result = target.split('').map((char, index) => {
-      // If we're past the progress point for this character, show the final character
-      if (index < progress * target.length) {
-        return target[index];
-      }
-      
-      // For characters we haven't "solved" yet, show a random character
-      // But occasionally show the correct one to make it look like it's being solved
-      if (Math.random() > 0.8) {
-        return target[index];
-      }
-      
-      // Get a random character - prefer letters, numbers, and some special chars
-      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()-_=+';
-      return chars.charAt(Math.floor(Math.random() * chars.length));
-    }).join('');
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
     
-    return result;
+    return target.split('').map((char, index) => {
+      // If character is a space or punctuation, preserve it
+      if (char === ' ' || /[.,?!]/.test(char)) {
+        return char;
+      }
+
+      // If we're past the progress point for this character
+      if (index < progress * target.length) {
+        return char;
+      }
+      
+      // For characters we haven't "solved" yet
+      const rand = Math.random();
+      
+      // Higher chance of showing the correct character as we get closer
+      const closeToReveal = (index - (progress * target.length)) < 2;
+      if (closeToReveal && rand > 0.6) {
+        return target[index];
+      }
+      
+      // Use only letters for scrambling
+      return rand > 0.8 ? target[index] : chars[Math.floor(Math.random() * chars.length)];
+    }).join('');
   };
 
   // Animation function to gradually transform placeholder
   const animatePlaceholder = (current: string, target: string, startTime: number) => {
-    const duration = 1500; // Animation duration in ms
+    const duration = 1200; // Faster animation
     const elapsed = Date.now() - startTime;
     const progress = Math.min(elapsed / duration, 1);
     
@@ -103,17 +111,17 @@ const CommandInput: React.FC = () => {
       // Continue animation
       animationTimerRef.current = setTimeout(() => {
         animatePlaceholder(current, target, startTime);
-      }, 50);
+      }, 20); // Even smoother updates
     } else {
       // Animation complete
       setPlaceholder(target);
       
-      // Schedule next change
+      // Schedule next change with consistent timing
       cycleTimerRef.current = setTimeout(() => {
         const nextIndex = (placeholderIndex + 1) % EXAMPLE_QUESTIONS.length;
         setPlaceholderIndex(nextIndex);
         setTargetPlaceholder(EXAMPLE_QUESTIONS[nextIndex]);
-      }, 4000); // Wait before starting next transition
+      }, 4000); // Consistent 4-second display time
     }
   };
 

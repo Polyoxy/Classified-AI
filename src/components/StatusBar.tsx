@@ -367,19 +367,19 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
               className="model-dropdown"
               style={{
                 position: 'absolute',
-                top: '100%',
+                bottom: '100%',
                 left: '0',
                 width: '100%',
                 backgroundColor: settings?.theme === 'dark' ? '#1a1a1a' : '#f5f5f5',
                 border: `1px solid ${settings?.theme === 'dark' ? '#333' : '#ddd'}`,
                 borderRadius: '4px',
-                marginTop: '0.25rem',
+                marginBottom: '0.25rem',
                 zIndex: 1000,
                 maxHeight: '200px',
                 overflowY: 'auto',
                 boxShadow: settings?.theme === 'dark' 
-                  ? '0 4px 8px rgba(0,0,0,0.3)' 
-                  : '0 4px 8px rgba(0,0,0,0.1)',
+                  ? '0 -4px 8px rgba(0,0,0,0.3)' 
+                  : '0 -4px 8px rgba(0,0,0,0.1)',
               }}
             >
               {/* Model options */}
