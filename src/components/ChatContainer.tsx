@@ -34,7 +34,17 @@ const ChatContainer: React.FC = () => {
   }
 
   // Debug: log the current conversation messages
-  console.log('Current conversation messages:', currentConversation.messages);
+  console.log('Current conversation messages:', {
+    messageCount: currentConversation.messages.length,
+    hasUserMessages: currentConversation.messages.some(m => m.role === 'user'),
+    hasAssistantMessages: currentConversation.messages.some(m => m.role === 'assistant'),
+    messageRoles: currentConversation.messages.map(m => m.role),
+    messageIds: currentConversation.messages.map(m => m.id?.toString().substring(0, 6)),
+    recentMessages: currentConversation.messages.slice(-3).map(m => ({
+      role: m.role,
+      content: m.content.substring(0, 30) + (m.content.length > 30 ? '...' : '')
+    }))
+  });
 
   return (
     <div 
@@ -49,7 +59,7 @@ const ChatContainer: React.FC = () => {
         scrollBehavior: 'smooth',
         display: 'flex',
         flexDirection: 'column',
-        gap: '0.5rem',
+        gap: '0.75rem',
       }}
     >
       {/* Welcome message if no messages yet */}
@@ -67,6 +77,11 @@ const ChatContainer: React.FC = () => {
 
       {/* Display messages */}
       {currentConversation.messages.map((message, index) => {
+        // Skip empty messages (except for streaming assistants)
+        if (message.content === '' && message.role !== 'assistant') {
+          return null;
+        }
+        
         // Skip initial system messages except errors
         if (message.role === 'system' && 
             !message.content.startsWith('Error') && 
@@ -78,7 +93,7 @@ const ChatContainer: React.FC = () => {
         // Render all other messages
         return (
           <MessageItem
-            key={message.id || index}
+            key={message.id || `msg-${index}`}
             role={message.role}
             content={message.content}
           />

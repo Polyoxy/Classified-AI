@@ -172,31 +172,26 @@ export const callOllama = async (
     
     // Prepare messages for Ollama format with improved role handling
     const ollamaMessages = messages.map(msg => {
-      // Properly map each role
-      let role = 'user'; // Default to user
-      
-      if (msg.role === 'assistant') {
-        role = 'assistant';
-      } else if (msg.role === 'system') {
-        hasSystemMessage = true;
-        role = 'system';
-      }
-      
+      // Keep the original role
       return {
-        role: role,
+        role: msg.role,
         content: msg.content,
       };
     });
 
-    // Add a system message if none exists
-    if (!hasSystemMessage) {
+    // Only add system message if there isn't one already
+    if (!messages.some(msg => msg.role === 'system')) {
       ollamaMessages.unshift({
         role: 'system',
         content: systemMessageContent
       });
     }
 
-    console.log('📝 Prepared messages for Ollama:', ollamaMessages);
+    console.log('📝 Prepared messages for Ollama:', 
+      ollamaMessages.map(m => ({
+        role: m.role,
+        preview: m.content.substring(0, 50) + (m.content.length > 50 ? '...' : '')
+      })));
 
     // Estimate prompt tokens
     const promptText = messages.map(msg => msg.content).join(' ');

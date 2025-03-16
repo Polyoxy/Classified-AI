@@ -403,28 +403,36 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   // Create a new conversation
   const createConversation = () => {
     const id = uuidv4();
-    const systemMessage = "You are a helpful AI assistant that provides accurate, factual information. Only answer what you know with certainty. If you don't know something, say 'I don't know' or 'I'm not sure' rather than making up information. Keep your responses concise and focused on the user's question.";
+    
+    // Create an effective system prompt to reduce hallucinations
+    const systemPrompt = `You are a helpful, accurate AI assistant. 
+    
+    - NEVER invent or hallucinate information
+    - If you don't know something, say "I don't know" rather than guessing
+    - Keep responses clear, concise and helpful
+    - Respond directly to user questions
+    - For code requests, provide working, well-commented examples`;
     
     const newConversation: Conversation = {
       id,
-      title: `New Chat ${new Date().toLocaleString()}`,
-      model: settings.providers[settings.activeProvider].defaultModel,
-      provider: settings.activeProvider,
-      systemPrompt: systemMessage,
+      title: 'New Conversation',
       messages: [
         {
           id: uuidv4(),
           role: 'system',
-          content: systemMessage,
+          content: systemPrompt,
           timestamp: Date.now(),
         }
       ],
       createdAt: Date.now(),
       updatedAt: Date.now(),
+      systemPrompt,
+      model: settings.providers[settings.activeProvider].defaultModel,
+      provider: settings.activeProvider,
     };
     
-    setConversations(prev => [newConversation, ...prev]);
     setCurrentConversation(newConversation);
+    setConversations(prev => [...prev, newConversation]);
     
     // Check if we're in Electron environment
     const isElectron = typeof window !== 'undefined' && window.electron;
@@ -492,6 +500,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const addMessage = (content: string, role: 'user' | 'assistant' | 'system') => {
     if (!currentConversation) return;
 
+    console.log(`Adding ${role} message to conversation:`, content.substring(0, 50));
+
     const newMessage: Message = {
       id: uuidv4(),
       role,
@@ -499,13 +509,17 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       timestamp: Date.now(),
     };
 
+    // Create updated conversation with the new message
     const updatedConversation: Conversation = {
       ...currentConversation,
       messages: [...currentConversation.messages, newMessage],
       updatedAt: Date.now(),
     };
 
+    // Update state immediately
     setCurrentConversation(updatedConversation);
+    
+    // Update conversations list
     setConversations(prev => 
       prev.map(conv => conv.id === currentConversation.id ? updatedConversation : conv)
     );

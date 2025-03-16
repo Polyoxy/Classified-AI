@@ -74,15 +74,15 @@ const MessageItem: React.FC<MessageItemProps> = ({ role, content }) => {
   const getUserColors = () => {
     if (isDarkTheme) {
       return {
-        prefix: 'var(--accent-color, #E34234)', // Vermillion orange for prefix
-        bg: '#2a2a2a',      // Darker background for user messages
-        border: '1px solid #3a3a3a'  // Border to make user messages stand out
+        prefix: '#FFD700', // Golden color for user prefix
+        bg: '#1e3a8a',    // Dark blue for better visibility
+        border: '2px solid #3b82f6'  // Prominent blue border
       };
     } else {
       return {
-        prefix: 'var(--accent-color, #E34234)', // Vermillion orange for prefix
-        bg: '#f0f0f0',      // Light gray background for user messages
-        border: '1px solid #e0e0e0'  // Border to make user messages stand out
+        prefix: '#1d4ed8', // Blue for user prefix in light mode
+        bg: '#dbeafe',     // Light blue background for user messages
+        border: '2px solid #3b82f6'  // Blue border for visibility
       };
     }
   };

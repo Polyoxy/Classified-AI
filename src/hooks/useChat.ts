@@ -51,17 +51,35 @@ export const useChat = () => {
 
       // Get all messages for the current conversation
       const messages = currentConversation.messages
-        // Exclude the temporary empty message we just added
-        .filter(msg => msg.timestamp !== parseInt(tempMessageId, 10))
+        // Include all messages except empty ones and the temporary one
+        .filter(msg => {
+          // Keep all non-empty messages except the temporary one
+          if (msg.content === '') {
+            return false;
+          }
+          // Keep system messages
+          if (msg.role === 'system') {
+            return true;
+          }
+          // Keep all user and assistant messages that aren't temporary
+          return msg.timestamp !== parseInt(tempMessageId, 10);
+        })
         .map(msg => ({
           role: msg.role,
           content: msg.content
         }));
-      
+
+      // Add the current user message
+      messages.push({
+        role: 'user',
+        content: content.trim()
+      });
+
       console.log('🚀 Sending message to AI:', { 
         provider: settings.activeProvider,
         model,
-        messages: messages.length
+        messageCount: messages.length,
+        lastMessage: messages[messages.length - 1]
       });
 
       // Log the actual conversation for debugging
