@@ -324,6 +324,41 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
       
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
         <button
+          onClick={() => {
+            const isElectron = typeof window !== 'undefined' && window.electron;
+            if (isElectron && window.electron) {
+              const windowControls = window.electron.windowControls as ElectronWindowControls;
+              windowControls.reload();
+            } else {
+              // Use browser reload for web
+              window.location.reload();
+            }
+          }}
+          style={{
+            backgroundColor: 'transparent',
+            border: 'none',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '4px',
+            borderRadius: '4px',
+            color: 'var(--text-color)',
+            opacity: 0.7,
+            transition: 'opacity 0.2s ease',
+          }}
+          title="Reload Application"
+          onMouseOver={(e) => e.currentTarget.style.opacity = '1'}
+          onMouseOut={(e) => e.currentTarget.style.opacity = '0.7'}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 2v6h6"></path>
+            <path d="M21 12A9 9 0 0 0 6 5.3L3 8"></path>
+            <path d="M21 22v-6h-6"></path>
+            <path d="M3 12a9 9 0 0 0 15 6.7l3-2.7"></path>
+          </svg>
+        </button>
+        <button
           onClick={() => setIsSidebarOpen(!isSidebarOpen)}
           style={{
             backgroundColor: 'transparent',

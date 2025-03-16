@@ -534,7 +534,7 @@ const ChatContainer: React.FC = () => {
           flex: 1,
           overflowY: 'auto',
           padding: '2rem',
-          paddingTop: isElectron ? '2rem' : '2rem',
+          paddingTop: '2rem',
           backgroundColor,
         }}
       >
