@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { AppProvider, useAppContext } from '@/context/AppContext';
+import { useAppContext } from '@/context/AppContext';
 import TitleBar from '@/components/TitleBar';
 import ChatContainer from '@/components/ChatContainer';
 import CommandInput from '@/components/CommandInput';
@@ -249,26 +249,23 @@ const globalStyles = `
 `;
 
 export default function Home() {
-  // Check if we're in an Electron environment
   const [isElectron, setIsElectron] = useState(false);
 
   useEffect(() => {
-    setIsElectron(window.electron !== undefined);
+    setIsElectron(window?.process?.type === 'renderer');
   }, []);
 
   return (
     <main className={`${inter.variable} ${jetbrainsMono.variable}`}>
       <style jsx global>{globalStyles}</style>
-      <AppProvider>
-        <App isElectron={isElectron} />
-      </AppProvider>
+      <App isElectron={isElectron} />
     </main>
   );
 }
 
 const App: React.FC<{ isElectron: boolean }> = ({ isElectron }) => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const { user, isLoading, setUser } = useAppContext();
+  const { user, isLoading } = useAppContext();
 
   // Set up analytics
   useEffect(() => {
@@ -307,29 +304,12 @@ const App: React.FC<{ isElectron: boolean }> = ({ isElectron }) => {
           const offlineUser = JSON.parse(offlineUserJson);
           // Only log when actually restoring a user
           console.log('Restoring offline user session:', offlineUser.uid);
-          setUser(offlineUser);
         }
       } catch (error) {
         console.error('Error checking for offline user:', error);
       }
     }
-  }, [user, isLoading, setUser]);
-
-  // We don't need to log every time the settings modal state changes
-  useEffect(() => {
-    // Removing console log to prevent console spam
-  }, [isSettingsOpen]);
-
-  // We don't need to log authentication state on every render
-  useEffect(() => {
-    // Removing console logs to prevent console spam
   }, [user, isLoading]);
-
-  // Handler for opening settings
-  const handleOpenSettings = () => {
-    // Removed console log
-    setIsSettingsOpen(true);
-  };
 
   // While authentication is loading, show a loading state
   if (isLoading) {
@@ -352,7 +332,6 @@ const App: React.FC<{ isElectron: boolean }> = ({ isElectron }) => {
 
   // If no user, show the auth page
   if (!user) {
-    // Only log on first render or during actual state changes
     return <AuthPage />;
   }
 
@@ -367,19 +346,16 @@ const App: React.FC<{ isElectron: boolean }> = ({ isElectron }) => {
       {isElectron && <TitleBar title="CLASSIFIED AI" />}
       
       {/* Main content */}
-      <AppContent 
-        isSettingsOpen={isSettingsOpen} 
-        setIsSettingsOpen={handleOpenSettings} 
+      <AppContent
+        isSettingsOpen={isSettingsOpen}
+        setIsSettingsOpen={() => setIsSettingsOpen(!isSettingsOpen)} 
       />
       
       {/* Settings modal */}
       {isSettingsOpen && (
         <SettingsModal 
           isOpen={true}
-          onClose={() => {
-            // Removed console log
-            setIsSettingsOpen(false);
-          }} 
+          onClose={() => setIsSettingsOpen(false)} 
         />
       )}
     </div>
@@ -433,7 +409,7 @@ const AppContent: React.FC<{
       
       <CommandInput />
       
-      <StatusBar onOpenSettings={() => setIsSettingsOpen()} />
+      <StatusBar onOpenSettings={setIsSettingsOpen} />
     </>
   );
 };

@@ -24,6 +24,7 @@ const Sidebar: React.FC = () => {
 
   const [filter, setFilter] = useState<'all' | 'starred'>('all');
   const [hoveredConversation, setHoveredConversation] = useState<string | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   // Handle starring a conversation
   const toggleStar = (conversationId: string) => {
@@ -73,64 +74,43 @@ const Sidebar: React.FC = () => {
   // Handle switching to a conversation
   const handleConversationClick = async (conversation: Conversation) => {
     try {
+      // Prevent switching if already on this conversation
+      if (currentConversation?.id === conversation.id) {
+        console.log('Already on this conversation, ignoring click');
+        return;
+      }
+
+      // Prevent multiple rapid clicks
+      if (isProcessing) {
+        console.log('Already processing a switch, ignoring click');
+        return;
+      }
+
+      setIsProcessing(true);
+
+      // Add visual feedback
+      const targetElement = document.querySelector(`[data-conversation-id="${conversation.id}"]`);
+      if (targetElement) {
+        targetElement.classList.add('switching');
+      }
+
       console.log('Attempting to switch to conversation:', {
         id: conversation.id,
         title: conversation.title,
-        messageCount: conversation.messages.length
+        messageCount: conversation.messages?.length
       });
 
-      // Check if we're in Electron environment
-      const isElectron = typeof window !== 'undefined' && window.electron;
-      
-      // If using Firebase, fetch the latest version of the conversation
-      if (user && !isElectron) {
-        try {
-          console.log('Fetching latest conversation from Firebase...');
-          const convRef = ref(rtdb, `users/${user.uid}/conversations/${conversation.id}`);
-          const snapshot = await get(convRef);
-          
-          if (snapshot.exists()) {
-            const latestConversation = snapshot.val() as Conversation;
-            console.log('Latest conversation fetched:', {
-              id: latestConversation.id,
-              messageCount: latestConversation.messages.length,
-              lastMessage: latestConversation.messages[latestConversation.messages.length - 1]?.content.substring(0, 50)
-            });
-            
-            // Validate conversation data
-            if (!latestConversation.messages || !Array.isArray(latestConversation.messages)) {
-              throw new Error('Invalid conversation data: messages array is missing or invalid');
-            }
-            
-            // Update the conversation with the latest data
-            setCurrentConversation(latestConversation);
-          } else {
-            console.warn('Conversation not found in Firebase, using local version');
-            setCurrentConversation(conversation);
-          }
-        } catch (error: any) {
-          console.error('Firebase fetch error:', error);
-          // Show error in UI
-          addMessage(`Error loading conversation: ${error?.message || 'Unknown error'}`, 'system');
-          // Fallback to local version
-          setCurrentConversation(conversation);
-        }
-      } else {
-        console.log('Using local conversation data');
-        // Validate conversation data
-        if (!conversation.messages || !Array.isArray(conversation.messages)) {
-          throw new Error('Invalid conversation data: messages array is missing or invalid');
-        }
-        
-        // For Electron or local storage, use the conversation as is
-        setCurrentConversation(conversation);
-      }
-
-      console.log('Conversation switch completed');
+      await setCurrentConversation(conversation);
     } catch (error: any) {
-      console.error('Error switching conversation:', error);
-      // Show error in UI
-      addMessage(`Error switching conversation: ${error?.message || 'Unknown error'}`, 'system');
+      console.error('Error in handleConversationClick:', error);
+      addMessage(`Error switching conversation: ${error.message}`, 'system');
+    } finally {
+      setIsProcessing(false);
+      // Remove visual feedback
+      const targetElement = document.querySelector(`[data-conversation-id="${conversation.id}"]`);
+      if (targetElement) {
+        targetElement.classList.remove('switching');
+      }
     }
   };
 

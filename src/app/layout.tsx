@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import { Providers } from "@/components/Providers";
 import "./globals.css";
-import { AppProvider } from '@/context/AppContext';
 import Sidebar from '@/components/Sidebar';
 
 const inter = Inter({
@@ -66,7 +65,7 @@ export default function RootLayout({
         <meta name="theme-color" content="#121212" />
       </head>
       <body className="antialiased theme-dark">
-        <AppProvider>
+        <Providers>
           <div style={{
             display: 'flex',
             height: '100vh',
@@ -85,7 +84,7 @@ export default function RootLayout({
             </main>
             <Sidebar />
           </div>
-        </AppProvider>
+        </Providers>
       </body>
     </html>
   );

@@ -191,6 +191,25 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
     }
   };
 
+  const formatContent = (content: string) => {
+    return content
+      // Fix extra spaces between words
+      .replace(/\s+/g, ' ')
+      // Fix extra spaces around punctuation
+      .replace(/\s+([.,!?])/g, '$1')
+      // Ensure proper spacing after punctuation
+      .replace(/([.,!?])(\w)/g, '$1 $2')
+      // Fix extra spaces around quotes
+      .replace(/"\s+/g, '"')
+      .replace(/\s+"/g, '"')
+      // Fix extra spaces around apostrophes
+      .replace(/'\s+/g, "'")
+      .replace(/\s+'/g, "'")
+      // Ensure proper paragraph breaks
+      .replace(/\n\s*\n/g, '\n\n')
+      .trim();
+  };
+
   const commonMarkdownStyles = {
     code: ({ node, inline, className, children, ...props }: any) => {
       const match = /language-(\w+)/.exec(className || '');
@@ -474,7 +493,7 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
             remarkPlugins={[remarkGfm]}
             rehypePlugins={[rehypeRaw, rehypeSanitize]}
           >
-            {response}
+            {formatContent(response)}
           </ReactMarkdown>
 
           <div style={{
