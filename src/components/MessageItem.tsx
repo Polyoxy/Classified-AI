@@ -333,10 +333,13 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
         padding: '0.75rem 1rem',
         borderRadius: '8px',
         backgroundColor: message.role === 'assistant' 
-          ? (isDarkTheme ? 'rgba(26, 26, 26, 0.4)' : 'rgba(245, 245, 245, 0.6)')
+          ? (isDarkTheme ? 'rgba(26, 26, 26, 0.4)' : 'rgba(240, 240, 240, 0.95)')
           : 'transparent',
         border: message.role === 'assistant'
-          ? `1px solid ${isDarkTheme ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'}`
+          ? `1px solid ${isDarkTheme ? 'rgba(255, 255, 255, 0.05)' : 'rgba(200, 200, 200, 0.8)'}`
+          : 'none',
+        boxShadow: message.role === 'assistant' && !isDarkTheme 
+          ? '0 3px 10px rgba(0, 0, 0, 0.08)'
           : 'none',
         position: 'relative',
       }}>

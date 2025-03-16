@@ -201,7 +201,7 @@ const CommandInput: React.FC = () => {
         }
       `}</style>
       
-      <div className="command-input-container" style={{
+      <div style={{
         position: 'relative',
         padding: '0.75rem 1rem',
         borderTop: '1px solid var(--border-color)',
@@ -214,7 +214,7 @@ const CommandInput: React.FC = () => {
         borderRadius: '8px',
         margin: '0.75rem 1rem 1rem 1rem',
       }}>
-        <div className="command-prompt" style={{
+        <div style={{
           color: 'var(--text-color)',
           marginRight: '0.75rem',
           userSelect: 'none',

@@ -2,9 +2,10 @@ import React from 'react';
 
 interface TitleBarProps {
   title: string;
+  style?: React.CSSProperties;
 }
 
-const TitleBar: React.FC<TitleBarProps> = ({ title }) => {
+const TitleBar: React.FC<TitleBarProps> = ({ title, style }) => {
   return (
     <div style={{
       height: '36px',
@@ -16,6 +17,12 @@ const TitleBar: React.FC<TitleBarProps> = ({ title }) => {
       // @ts-ignore
       WebkitAppRegion: 'drag',
       userSelect: 'none',
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      zIndex: 1000,
+      ...style,
     }}>
       <div style={{
         display: 'flex',

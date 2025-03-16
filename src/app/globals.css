@@ -648,3 +648,20 @@ option:focus {
   background-color: var(--accent-color) !important;
   color: white !important;
 }
+
+/* Add back the essential chat-container class for scrolling */
+.chat-container {
+  flex: 1;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
+}
+
+.chat-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.chat-container::-webkit-scrollbar-thumb {
+  background-color: var(--scrollbar-thumb);
+  border-radius: 3px;
+}

@@ -203,7 +203,12 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
       color: 'var(--text-color)',
       fontFamily: 'JetBrains Mono, monospace',
       fontSize: '12px',
-      position: 'relative',
+      position: 'fixed',
+      bottom: 0,
+      left: 0,
+      right: isSidebarOpen ? '320px' : 0,
+      transition: 'right 0.3s ease',
+      zIndex: 100,
       minHeight: '32px',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>

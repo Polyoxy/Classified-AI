@@ -3,6 +3,7 @@ import { Inter, JetBrains_Mono } from "next/font/google";
 import { Providers } from "@/components/Providers";
 import "./globals.css";
 import Sidebar from '@/components/Sidebar';
+import ClientTitleBar from '@/components/ClientTitleBar';
 
 const inter = Inter({
   subsets: ["latin"],
@@ -66,6 +67,9 @@ export default function RootLayout({
       </head>
       <body className="antialiased theme-dark">
         <Providers>
+          {/* Client-side Title Bar wrapper */}
+          <ClientTitleBar />
+          
           <div style={{
             display: 'flex',
             height: '100vh',
@@ -78,7 +82,6 @@ export default function RootLayout({
               height: '100%',
               overflow: 'auto',
               position: 'relative',
-              marginRight: '320px', // Fixed margin for sidebar
             }}>
               {children}
             </main>

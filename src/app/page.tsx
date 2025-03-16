@@ -341,10 +341,9 @@ const App: React.FC<{ isElectron: boolean }> = ({ isElectron }) => {
       height: '100vh', 
       display: 'flex', 
       flexDirection: 'column',
+      padding: '0',
+      overflow: 'visible',
     }}>
-      {/* Title bar (only for Electron) */}
-      {isElectron && <TitleBar title="CLASSIFIED AI" />}
-      
       {/* Main content */}
       <AppContent
         isSettingsOpen={isSettingsOpen}
@@ -403,11 +402,21 @@ const AppContent: React.FC<{
         borderRight: 'none',
         marginRight: isSidebarOpen ? '320px' : '0',
         transition: 'margin-right 0.3s ease',
+        marginBottom: '82px', // Add space for CommandInput + StatusBar
       }}>
         <ChatContainer />
       </div>
       
-      <CommandInput />
+      <div style={{
+        position: 'fixed',
+        bottom: '40px', // Increased from 32px to add more space above StatusBar
+        left: 0,
+        right: isSidebarOpen ? '320px' : 0,
+        transition: 'right 0.3s ease',
+        zIndex: 100,
+      }}>
+        <CommandInput />
+      </div>
       
       <StatusBar onOpenSettings={setIsSettingsOpen} />
     </>
