@@ -1,13 +1,15 @@
+'use client';
+
 import React, { useRef, useEffect, useState } from 'react';
 import { useAppContext } from '@/context/AppContext';
 import MessageItem from './MessageItem';
 import { Message, Conversation } from '@/types';
-import { useRouter } from 'next/navigation';
 import { auth } from '@/lib/firebase';
 import { signOut } from 'firebase/auth';
 import { update, ref } from 'firebase/database';
 import { rtdb } from '@/lib/firebase';
 import TitleBar from './TitleBar';
+import Sidebar from './Sidebar';
 
 const ChatContainer: React.FC = () => {
   const { 
@@ -20,16 +22,13 @@ const ChatContainer: React.FC = () => {
     setUser,
     user,
     isSidebarOpen,
-    setIsSidebarOpen
+    setIsSidebarOpen,
+    isProcessing
   } = useAppContext();
   
-  const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<'all' | 'starred'>('all');
-  const [hoveredConversation, setHoveredConversation] = useState<string | null>(null);
-  const [isProcessing, setIsProcessing] = useState(false);
   const backgroundColor = settings?.theme === 'dark' ? '#121212' : '#f8f8f8';
   const textColor = settings?.theme === 'dark' ? '#a0a0a0' : '#666666';
   const previousConversationId = useRef<string | null>(null);
@@ -58,23 +57,6 @@ const ChatContainer: React.FC = () => {
     }
   };
 
-  // Handle switching to a conversation
-  const handleConversationClick = async (conversation: Conversation) => {
-    try {
-      if (currentConversation?.id === conversation.id || isProcessing) {
-        return;
-      }
-
-      setIsProcessing(true);
-      await setCurrentConversation(conversation);
-    } catch (error: any) {
-      console.error('Error in handleConversationClick:', error);
-      addMessage(`Error switching conversation: ${error.message}`, 'system');
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
   // Handle creating a new chat
   const handleNewChat = () => {
     createConversation();
@@ -83,18 +65,18 @@ const ChatContainer: React.FC = () => {
   // Handle logout
   const handleLogout = async () => {
     try {
+      // Set the flag to prevent auto-login
+      localStorage.setItem('preventAutoLogin', 'true');
+      
       await signOut(auth);
       setUser(null);
-      router.push('/auth');
+      
+      // Use replace instead of push for cleaner navigation
+      window.location.replace('/auth');
     } catch (error) {
       console.error('Logout failed:', error);
     }
   };
-
-  // Filter conversations based on current filter
-  const filteredConversations = conversations.filter(conv => 
-    filter === 'all' || (filter === 'starred' && conv.isStarred)
-  );
 
   // Update messages when conversation changes
   useEffect(() => {
@@ -156,6 +138,19 @@ const ChatContainer: React.FC = () => {
     observer.observe(containerRef.current);
     return () => observer.disconnect();
   }, []);
+  
+  // Add listener for sidebar toggle
+  useEffect(() => {
+    const handleResize = () => {
+      // Close sidebar on small screens
+      if (window.innerWidth < 768 && isSidebarOpen) {
+        setIsSidebarOpen(false);
+      }
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [isSidebarOpen, setIsSidebarOpen]);
 
   // Render sidebar content
   const renderSidebar = () => (
@@ -165,235 +160,13 @@ const ChatContainer: React.FC = () => {
       right: 0,
       bottom: 0,
       width: '320px',
-      backgroundColor: settings?.theme === 'dark' ? '#1a1a1a' : '#ffffff',
-      borderLeft: '1px solid var(--border-color)',
-      display: 'flex',
-      flexDirection: 'column',
-      zIndex: 9999,
+      zIndex: 100,
       transform: isSidebarOpen ? 'translateX(0)' : 'translateX(100%)',
       transition: 'transform 0.3s ease',
       overflow: 'hidden',
       boxShadow: '-2px 0 5px rgba(0, 0, 0, 0.1)',
     }}>
-      {/* Command Center Header */}
-      <div style={{
-        padding: '20px',
-        borderBottom: '1px solid var(--border-color)',
-        backgroundColor: settings?.theme === 'dark' ? '#1a1a1a' : '#ffffff',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-            <line x1="3" y1="9" x2="21" y2="9"></line>
-            <line x1="9" y1="21" x2="9" y2="9"></line>
-          </svg>
-          <div style={{ 
-            fontSize: '16px', 
-            fontWeight: 600,
-            color: 'var(--text-color)',
-          }}>
-            Command Center
-          </div>
-        </div>
-        <button
-          onClick={() => setIsSidebarOpen(false)}
-          style={{
-            background: 'none',
-            border: 'none',
-            color: 'var(--text-color)',
-            cursor: 'pointer',
-            padding: '4px',
-            opacity: 0.8,
-            transition: 'opacity 0.2s ease',
-          }}
-          onMouseOver={(e) => e.currentTarget.style.opacity = '1'}
-          onMouseOut={(e) => e.currentTarget.style.opacity = '0.8'}
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
-      </div>
-
-      {/* New Chat Button */}
-      <button
-        onClick={handleNewChat}
-        style={{
-          margin: '20px',
-          padding: '10px',
-          backgroundColor: settings?.theme === 'dark' ? '#2D2D2D' : '#f0f0f0',
-          color: 'var(--text-color)',
-          border: '1px solid var(--border-color)',
-          borderRadius: '4px',
-          cursor: 'pointer',
-          fontSize: '14px',
-          fontWeight: 600,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '8px',
-          transition: 'all 0.2s ease',
-        }}
-        onMouseOver={(e) => {
-          e.currentTarget.style.backgroundColor = settings?.theme === 'dark' ? '#3D3D3D' : '#e0e0e0';
-          e.currentTarget.style.borderColor = 'var(--text-color)';
-        }}
-        onMouseOut={(e) => {
-          e.currentTarget.style.backgroundColor = settings?.theme === 'dark' ? '#2D2D2D' : '#f0f0f0';
-          e.currentTarget.style.borderColor = 'var(--border-color)';
-        }}
-      >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <line x1="12" y1="5" x2="12" y2="19"></line>
-          <line x1="5" y1="12" x2="19" y2="12"></line>
-        </svg>
-        New Chat
-      </button>
-
-      {/* Filter Tabs */}
-      <div style={{
-        display: 'flex',
-        borderBottom: '1px solid var(--border-color)',
-        padding: '0 20px',
-        backgroundColor: settings?.theme === 'dark' ? '#1a1a1a' : '#ffffff',
-      }}>
-        <button
-          onClick={() => setFilter('all')}
-          style={{
-            flex: 1,
-            padding: '10px',
-            backgroundColor: 'transparent',
-            border: 'none',
-            borderBottom: `2px solid ${filter === 'all' ? 'var(--text-color)' : 'transparent'}`,
-            color: 'var(--text-color)',
-            opacity: filter === 'all' ? 1 : 0.7,
-            cursor: 'pointer',
-            fontSize: '14px',
-            transition: 'all 0.2s ease',
-          }}
-        >
-          All
-        </button>
-        <button
-          onClick={() => setFilter('starred')}
-          style={{
-            flex: 1,
-            padding: '10px',
-            backgroundColor: 'transparent',
-            border: 'none',
-            borderBottom: `2px solid ${filter === 'starred' ? 'var(--text-color)' : 'transparent'}`,
-            color: 'var(--text-color)',
-            opacity: filter === 'starred' ? 1 : 0.7,
-            cursor: 'pointer',
-            fontSize: '14px',
-            transition: 'all 0.2s ease',
-          }}
-        >
-          Starred
-        </button>
-      </div>
-
-      {/* Conversations List */}
-      <div style={{
-        flex: 1,
-        overflowY: 'auto',
-        padding: '10px',
-        backgroundColor: settings?.theme === 'dark' ? '#1a1a1a' : '#ffffff',
-      }}>
-        {filteredConversations.map((conv) => (
-          <div
-            key={conv.id}
-            onClick={() => handleConversationClick(conv)}
-            onMouseEnter={() => setHoveredConversation(conv.id)}
-            onMouseLeave={() => setHoveredConversation(null)}
-            style={{
-              padding: '10px',
-              marginBottom: '5px',
-              borderRadius: '4px',
-              backgroundColor: currentConversation?.id === conv.id 
-                ? 'var(--accent-color)'
-                : hoveredConversation === conv.id
-                ? settings?.theme === 'dark' ? '#2D2D2D' : '#f0f0f0'
-                : 'transparent',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              color: currentConversation?.id === conv.id
-                ? '#fff'
-                : 'var(--text-color)',
-              transition: 'all 0.2s ease',
-            }}
-          >
-            <div style={{
-              flex: 1,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }}>
-              {conv.title || 'New Conversation'}
-            </div>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                toggleStar(conv.id);
-              }}
-              style={{
-                background: 'none',
-                border: 'none',
-                padding: '4px',
-                cursor: 'pointer',
-                color: conv.isStarred ? '#FFD700' : 'var(--text-color)',
-                opacity: hoveredConversation === conv.id || conv.isStarred ? 1 : 0,
-                transition: 'opacity 0.2s ease',
-              }}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill={conv.isStarred ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
-              </svg>
-            </button>
-          </div>
-        ))}
-      </div>
-
-      {/* Logout Button */}
-      <button
-        onClick={handleLogout}
-        style={{
-          margin: '10px 20px',
-          padding: '10px',
-          backgroundColor: 'transparent',
-          color: 'var(--text-color)',
-          border: '1px solid var(--border-color)',
-          borderRadius: '4px',
-          cursor: 'pointer',
-          fontSize: '14px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '8px',
-          transition: 'all 0.2s ease',
-        }}
-        onMouseOver={(e) => {
-          e.currentTarget.style.backgroundColor = settings?.theme === 'dark' ? '#2D2D2D' : '#f0f0f0';
-          e.currentTarget.style.borderColor = 'var(--text-color)';
-        }}
-        onMouseOut={(e) => {
-          e.currentTarget.style.backgroundColor = 'transparent';
-          e.currentTarget.style.borderColor = 'var(--border-color)';
-        }}
-      >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-          <polyline points="16 17 21 12 16 7"></polyline>
-          <line x1="21" y1="12" x2="9" y2="12"></line>
-        </svg>
-        Logout
-      </button>
+      <Sidebar />
     </div>
   );
 
@@ -411,6 +184,9 @@ const ChatContainer: React.FC = () => {
             height: '100%',
             fontFamily: 'JetBrains Mono, monospace',
             paddingTop: isElectron ? '1.5rem' : '2rem',
+            paddingRight: isSidebarOpen ? '320px' : '2rem',
+            paddingLeft: '2rem',
+            transition: 'padding-right 0.3s ease',
           }}
         >
           <div style={{ 
@@ -438,6 +214,9 @@ const ChatContainer: React.FC = () => {
             fontFamily: 'Inter, sans-serif',
             padding: '2rem',
             paddingTop: isElectron ? '1.5rem' : '2rem',
+            paddingRight: isSidebarOpen ? '320px' : '2rem',
+            paddingLeft: '2rem',
+            transition: 'padding-right 0.3s ease',
           }}
         >
           <div style={{
@@ -519,7 +298,7 @@ const ChatContainer: React.FC = () => {
                 <line x1="12" y1="5" x2="12" y2="19"></line>
                 <line x1="5" y1="12" x2="19" y2="12"></line>
               </svg>
-              Start New Chat
+              Activate Intelligence
             </button>
           </div>
         </div>
@@ -534,8 +313,15 @@ const ChatContainer: React.FC = () => {
           flex: 1,
           overflowY: 'auto',
           padding: '2rem',
-          paddingTop: '2rem',
+          paddingTop: isElectron ? '2.5rem' : '2rem',
+          paddingRight: isSidebarOpen ? '340px' : '2rem',
+          paddingLeft: '2rem',
           backgroundColor,
+          width: '100%',
+          maxWidth: '100%',
+          margin: '0 auto',
+          transition: 'padding-right 0.3s ease',
+          boxSizing: 'border-box',
         }}
       >
         {messages
@@ -544,9 +330,11 @@ const ChatContainer: React.FC = () => {
             <MessageItem
               key={message.id || index}
               message={message}
+              isThinking={isProcessing && index === messages.length - 1 && message.role === 'assistant'}
             />
           ))
         }
+        <div style={{ height: '20px' }}></div> {/* Add some space at the end */}
       </div>
     );
   };
@@ -558,6 +346,7 @@ const ChatContainer: React.FC = () => {
       flexDirection: 'column',
       height: '100%',
       width: '100%',
+      overflow: 'hidden',
     }}>
       {isElectron && <TitleBar title="CLASSIFIED AI" />}
       <div style={{
@@ -566,6 +355,7 @@ const ChatContainer: React.FC = () => {
         flexDirection: 'column',
         overflow: 'hidden',
         paddingTop: isElectron ? '16px' : '0',
+        position: 'relative',
       }}>
         {renderContent()}
       </div>

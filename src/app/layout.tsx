@@ -1,8 +1,7 @@
+import "./globals.css";
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import { Providers } from "@/components/Providers";
-import "./globals.css";
-import Sidebar from '@/components/Sidebar';
 import ClientTitleBar from '@/components/ClientTitleBar';
 
 const inter = Inter({
@@ -44,11 +43,14 @@ const baseCSP = `
 `;
 
 export const metadata: Metadata = {
-  title: "Classified AI - Terminal-Style Chat",
-  description: "A terminal-style AI chat application with multiple AI providers",
+  title: "Classified AI",
+  description: "AI Assistant for classified operations",
   authors: [{ name: "Classified AI" }],
   keywords: ["AI", "Chat", "Terminal", "OpenAI", "Ollama", "Llama"],
-  themeColor: "#121212",
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#f8f9fa' },
+    { media: '(prefers-color-scheme: dark)', color: '#121212' },
+  ],
   // Use the same CSP for all environments
   other: {
     "Content-Security-Policy": baseCSP.replace(/\n/g, '')
@@ -65,7 +67,7 @@ export default function RootLayout({
       <head>
         <meta name="theme-color" content="#121212" />
       </head>
-      <body className="antialiased theme-dark">
+      <body className="antialiased">
         <Providers>
           {/* Client-side Title Bar wrapper */}
           <ClientTitleBar />
@@ -85,10 +87,10 @@ export default function RootLayout({
             }}>
               {children}
             </main>
-            <Sidebar />
           </div>
         </Providers>
       </body>
     </html>
   );
 }
+

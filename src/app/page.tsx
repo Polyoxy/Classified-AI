@@ -76,10 +76,10 @@ const globalStyles = `
   .theme-dark {
     --bg-color: #121212; /* Dark black background */
     --text-color: #e9ecef; /* Light text */
-    --accent-color: #1e88e5; /* Blue accent color */
-    --accent-rgb: 30, 136, 229; /* RGB value of accent color */
-    --user-prefix-color: #1e88e5; /* Blue for user prefix */
-    --ai-prefix-color: #1e88e5; /* Blue for AI prefix */
+    --accent-color: #aaaaaa; /* Light gray accent color */
+    --accent-rgb: 170, 170, 170; /* RGB value of accent color */
+    --user-prefix-color: #cccccc; /* Light gray for user prefix */
+    --ai-prefix-color: #aaaaaa; /* Light gray for AI prefix */
     --input-bg: #1a1a1a; /* Darker input background */
     --input-border: #343a40; /* Dark border for inputs */
     --scrollbar-thumb: #4D4D4D;
@@ -88,11 +88,11 @@ const globalStyles = `
     --header-bg: #1a1a1a;
     --modal-bg: #1a1a1a;
     --modal-border: #343a40;
-    --slider-handle: #1e88e5; /* Accent color for slider */
+    --slider-handle: #aaaaaa; /* Gray accent for slider */
     --system-color: #b0bec5;
-    --link-color: #90caf9; /* Light blue links */
-    --button-bg: #1e88e5; /* Blue button */
-    --button-text: #ffffff; /* White text on buttons */
+    --link-color: #cccccc; /* Light gray links */
+    --button-bg: #aaaaaa; /* Gray button */
+    --button-text: #121212; /* Dark text on buttons */
     --divider-color: #343a40; /* Divider color */
     --success-color: #10b981; /* Green for success status */
     --error-color: #ef5350; /* Red for error status */
@@ -105,10 +105,10 @@ const globalStyles = `
   .theme-light {
     --bg-color: #f8f9fa;
     --text-color: #212529;
-    --accent-color: #1e88e5; /* Blue accent color */
-    --accent-rgb: 30, 136, 229; /* RGB value of accent color */
-    --user-prefix-color: #1e88e5; /* Blue for user prefix */
-    --ai-prefix-color: #1e88e5; /* Blue for AI prefix */
+    --accent-color: #505050; /* Dark gray accent color */
+    --accent-rgb: 80, 80, 80; /* RGB value of accent color */
+    --user-prefix-color: #505050; /* Dark gray for user prefix */
+    --ai-prefix-color: #505050; /* Dark gray for AI prefix */
     --input-bg: #ffffff; /* White input background */
     --input-border: #ced4da; /* Light grey border for inputs */
     --scrollbar-thumb: #CCCCCC;
@@ -117,10 +117,10 @@ const globalStyles = `
     --header-bg: #ffffff;
     --modal-bg: #ffffff;
     --modal-border: #dee2e6;
-    --slider-handle: #1e88e5; /* Blue accent */
+    --slider-handle: #505050; /* Dark gray accent */
     --system-color: #607d8b;
-    --link-color: #1e88e5; /* Blue links */
-    --button-bg: #1e88e5; /* Blue button */
+    --link-color: #333333; /* Dark gray links */
+    --button-bg: #505050; /* Dark gray button */
     --button-text: #ffffff; /* White text on buttons */
     --divider-color: #e9ecef; /* Divider color */
     --success-color: #10b981; /* Green for success status */
@@ -267,6 +267,21 @@ const App: React.FC<{ isElectron: boolean }> = ({ isElectron }) => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const { user, isLoading, settings, updateSettings } = useAppContext();
 
+  // Check for preventAutoLogin flag on mount
+  useEffect(() => {
+    // If we're on the main app page but have preventAutoLogin set, redirect to auth
+    if (!isLoading && typeof window !== 'undefined') {
+      const preventAutoLogin = localStorage.getItem('preventAutoLogin') === 'true';
+      if (preventAutoLogin) {
+        localStorage.removeItem('preventAutoLogin');
+        // Redirect to auth page if not already there
+        if (window.location.pathname !== '/auth') {
+          window.location.href = '/auth';
+        }
+      }
+    }
+  }, [isLoading]);
+
   // Set up analytics
   useEffect(() => {
     const setupAnalytics = async () => {
@@ -376,17 +391,6 @@ const AppContent: React.FC<{
       setIsElectron(true);
     }
   }, []);
-  
-  useEffect(() => {
-    document.body.className = `theme-${settings.theme}`;
-    const metaThemeColor = document.querySelector('meta[name="theme-color"]');
-    if (metaThemeColor) {
-      metaThemeColor.setAttribute(
-        'content',
-        settings.theme === 'dark' ? '#121212' : '#f8f9fa'
-      );
-    }
-  }, [settings.theme]);
   
   return (
     <>

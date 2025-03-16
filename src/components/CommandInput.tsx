@@ -51,6 +51,8 @@ const CommandInput: React.FC = () => {
     settings,
     isProcessing,
     setIsProcessing,
+    currentConversation,
+    createConversation,
   } = useAppContext();
   
   // Use our chat hook
@@ -163,6 +165,11 @@ const CommandInput: React.FC = () => {
   const handleInputClick = () => {
     if (inputRef.current) {
       inputRef.current.focus();
+    }
+    
+    // Ensure we're connected to the AI when the user interacts with the input
+    if (!currentConversation) {
+      createConversation();
     }
   };
   

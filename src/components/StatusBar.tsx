@@ -159,8 +159,6 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
         }
       }
       
-      const isOfflineUser = user && (user.uid.startsWith('offline-') || user.isAnonymous);
-      
       try {
         await auth.signOut();
       } catch (firebaseError) {
@@ -170,25 +168,15 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
       setUser(null);
       
       if (isElectron && window.electron?.windowControls) {
-        setTimeout(() => {
-          try {
-            const windowControls = window.electron.windowControls as ElectronWindowControls;
-            windowControls.reload();
-          } catch (reloadError) {
-            console.warn('Failed to reload window:', reloadError);
-            window.location.reload();
-          }
-        }, 500);
+        window.location.href = '/auth';
       } else {
-        setTimeout(() => {
-          window.location.reload();
-        }, 500);
+        window.location.href = '/auth';
       }
     } catch (error) {
       console.error('Error during logout:', error);
       localStorage.removeItem('offlineUser');
       setUser(null);
-      window.location.reload();
+      window.location.href = '/auth';
     }
   };
 
@@ -201,7 +189,7 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
       backgroundColor: settings?.theme === 'dark' ? '#121212' : '#f0f0f0',
       borderTop: `1px solid ${settings?.theme === 'dark' ? '#333' : '#ddd'}`,
       color: 'var(--text-color)',
-      fontFamily: 'JetBrains Mono, monospace',
+      fontFamily: 'Inter, sans-serif',
       fontSize: '12px',
       position: 'fixed',
       bottom: 0,
@@ -230,6 +218,8 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
               minWidth: '150px',
               border: `1px solid ${settings?.theme === 'dark' ? '#333' : '#ccc'}`,
               transition: 'all 0.2s ease',
+              fontFamily: 'Inter, sans-serif',
+              letterSpacing: '0.2px',
             }}
           >
             <span style={{ marginRight: '0.5rem' }}>
@@ -268,6 +258,7 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
                 boxShadow: settings?.theme === 'dark' 
                   ? '0 -4px 8px rgba(0,0,0,0.3)' 
                   : '0 -4px 8px rgba(0,0,0,0.1)',
+                fontFamily: 'Inter, sans-serif',
               }}
             >
               {getModelsForProvider().map((model) => (
@@ -282,6 +273,8 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
                       ? (settings?.theme === 'dark' ? '#333' : '#e0e0e0') 
                       : 'transparent',
                     transition: 'all 0.1s ease',
+                    fontSize: '12px',
+                    letterSpacing: '0.2px',
                   }}
                   onMouseOver={(e) => {
                     e.currentTarget.style.backgroundColor = settings?.theme === 'dark' ? '#333' : '#e0e0e0';
@@ -307,14 +300,32 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
             backgroundColor: getStatusColor(),
             marginRight: '4px',
           }}></div>
-          <span>Connected</span>
+          <span style={{ 
+            fontFamily: 'Inter, sans-serif',
+            fontSize: '12px',
+            letterSpacing: '0.2px'
+          }}>
+            {connectionStatus === 'connected' ? 'Connected' : 
+             connectionStatus === 'disconnected' ? 'Disconnected' : 
+             connectionStatus === 'error' ? 'Error' : 'Unknown'}
+          </span>
           
           {tokenUsage.totalTokens > 0 && (
             <>
-              <span style={{ marginLeft: '12px' }}>
+              <span style={{ 
+                marginLeft: '12px',
+                fontFamily: 'Inter, sans-serif',
+                fontSize: '12px',
+                letterSpacing: '0.2px'
+              }}>
                 Tokens: {formatNumber(tokenUsage.totalTokens)}
               </span>
-              <span style={{ marginLeft: '12px' }}>
+              <span style={{ 
+                marginLeft: '12px',
+                fontFamily: 'Inter, sans-serif',
+                fontSize: '12px',
+                letterSpacing: '0.2px'
+              }}>
                 Cost: {formatCost(tokenUsage.estimatedCost)}
               </span>
             </>
@@ -330,7 +341,6 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
               const windowControls = window.electron.windowControls as ElectronWindowControls;
               windowControls.reload();
             } else {
-              // Use browser reload for web
               window.location.reload();
             }
           }}
@@ -346,38 +356,15 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
             color: 'var(--text-color)',
             opacity: 0.7,
             transition: 'opacity 0.2s ease',
+            fontFamily: 'Inter, sans-serif',
           }}
-          title="Reload Application"
+          title="Reload"
           onMouseOver={(e) => e.currentTarget.style.opacity = '1'}
           onMouseOut={(e) => e.currentTarget.style.opacity = '0.7'}
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M3 2v6h6"></path>
-            <path d="M21 12A9 9 0 0 0 6 5.3L3 8"></path>
-            <path d="M21 22v-6h-6"></path>
-            <path d="M3 12a9 9 0 0 0 15 6.7l3-2.7"></path>
-          </svg>
-        </button>
-        <button
-          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-          style={{
-            backgroundColor: 'transparent',
-            border: 'none',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '4px',
-            borderRadius: '4px',
-            color: 'var(--text-color)',
-            opacity: isSidebarOpen ? 1 : 0.7,
-            transition: 'opacity 0.2s ease',
-          }}
-          title={isSidebarOpen ? "Close Sidebar" : "Open Sidebar"}
-        >
           <svg 
-            width="16" 
-            height="16" 
+            width="14" 
+            height="14" 
             viewBox="0 0 24 24" 
             fill="none" 
             stroke="currentColor" 
@@ -385,8 +372,10 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
             strokeLinecap="round" 
             strokeLinejoin="round"
           >
-            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-            <line x1="9" y1="3" x2="9" y2="21"></line>
+            <path d="M23 4v6h-6"></path>
+            <path d="M1 20v-6h6"></path>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"></path>
+            <path d="M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
           </svg>
         </button>
         
@@ -402,10 +391,48 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
             padding: '4px',
             borderRadius: '4px',
             color: 'var(--text-color)',
+            opacity: 0.7,
+            transition: 'opacity 0.2s ease',
+            fontFamily: 'Inter, sans-serif',
           }}
           title="Settings"
+          onMouseOver={(e) => e.currentTarget.style.opacity = '1'}
+          onMouseOut={(e) => e.currentTarget.style.opacity = '0.7'}
         >
           <SettingsIcon />
+        </button>
+        
+        <button
+          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+          style={{
+            backgroundColor: 'transparent',
+            border: 'none',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '4px',
+            borderRadius: '4px',
+            color: 'var(--text-color)',
+            opacity: isSidebarOpen ? 1 : 0.7,
+            transition: 'opacity 0.2s ease',
+            fontFamily: 'Inter, sans-serif',
+          }}
+          title={isSidebarOpen ? "Close Dashboard" : "Open Dashboard"}
+        >
+          <svg 
+            width="16" 
+            height="16" 
+            viewBox="0 0 24 24" 
+            fill="none" 
+            stroke="currentColor" 
+            strokeWidth="2" 
+            strokeLinecap="round" 
+            strokeLinejoin="round"
+          >
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="9" y1="3" x2="9" y2="21"></line>
+          </svg>
         </button>
       </div>
     </div>

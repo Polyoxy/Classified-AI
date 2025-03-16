@@ -135,72 +135,72 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     estimatedCost: 0,
   });
   const [isProcessing, setIsProcessing] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'error'>('disconnected');
+  const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'error'>('connected');
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
 
-  // Handle Firebase Authentication
+  // Simplified auth/user setup for Electron only
   useEffect(() => {
-    const handleAuth = async () => {
-      try {
-        // Set up auth state observer
-        console.log('Setting up Firebase auth state observer');
-        const unsubscribe = onAuthStateChanged(auth, async (user) => {
-          if (user) {
-            console.log('User authenticated:', user.uid, 'Anonymous:', user.isAnonymous);
-            setUser(user);
-            setIsLoading(false);
-          } else {
-            console.log('No authenticated user, signing in anonymously');
-            try {
-              const anonUser = await signInAnonymously(auth);
-              console.log('Anonymous user signed in:', anonUser.user.uid);
-              setUser(anonUser.user);
-            } catch (signInError) {
-              console.error('Anonymous sign in failed:', signInError);
-              setUser(null);
-            }
-            setIsLoading(false);
-          }
-        });
-        
-        return () => unsubscribe();
-      } catch (error) {
-        console.error('Firebase auth error:', error);
-        setIsLoading(false);
-        return () => {};
-      }
-    };
-    
-    handleAuth();
-  }, []);
-
-  // Load settings from Firebase or electron-store on mount
-  useEffect(() => {
-    const loadSettings = async () => {
+    const setupElectronUser = async () => {
       try {
         // Check if we're in Electron environment
         const isElectron = typeof window !== 'undefined' && window.electron;
         
-        if (user && !isElectron) {
-          // Listen to Realtime Database for settings
-          const rtdbSettingsRef = ref(rtdb, `users/${user.uid}/settings`);
-          const rtdbUnsubscribe = onValue(rtdbSettingsRef, (snapshot) => {
-            if (snapshot.exists()) {
-              const rtdbSettings = snapshot.val();
-              setSettings(prev => ({ ...prev, ...rtdbSettings }));
-            }
-          });
+        if (!isElectron) {
+          console.log('Not in Electron environment, app is designed for Electron only');
+          setIsLoading(false);
+          return;
+        }
+        
+        console.log('Setting up electron user session');
+        
+        // Create or use a pseudo-user for Electron
+        const electronUser = {
+          uid: 'electron-user',
+          displayName: 'Electron User',
+          email: 'user@electron.app',
+          isAnonymous: false
+        };
+        
+        // Set user info
+        setUser(electronUser as unknown as User);
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error setting up electron user:', error);
+        setIsLoading(false);
+      }
+    };
+    
+    setupElectronUser();
+  }, []);
+
+  // Load settings from electron-store on mount
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const isElectron = typeof window !== 'undefined' && window.electron;
+        
+        if (!isElectron) {
+          console.log('Not in Electron environment, app is designed for Electron only');
+          return;
+        }
+        
+        // Use electron-store in Electron environment
+        const storedSettings = await window.electron.store.get('settings');
+        if (storedSettings) {
+          setSettings(prev => ({ ...prev, ...storedSettings }));
           
-          return () => {
-            rtdbUnsubscribe();
-          };
-        } else if (isElectron) {
-          // Use electron-store in Electron environment
-          const storedSettings = await window.electron.store.get('settings');
-          if (storedSettings) {
-            setSettings(prev => ({ ...prev, ...storedSettings }));
+          // Apply theme to document body
+          if (storedSettings.theme) {
+            document.body.className = `theme-${storedSettings.theme}`;
+            const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+            if (metaThemeColor) {
+              metaThemeColor.setAttribute(
+                'content',
+                storedSettings.theme === 'dark' ? '#121212' : '#f8f9fa'
+              );
+            }
           }
         }
       } catch (error) {
@@ -211,51 +211,59 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     if (!isLoading) {
       loadSettings();
     }
-  }, [user, isLoading]);
+  }, [isLoading]);
 
-  // Load conversations from Firebase or electron-store
+  // Apply theme when settings change
+  useEffect(() => {
+    if (settings.theme) {
+      document.body.className = `theme-${settings.theme}`;
+      const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+      if (metaThemeColor) {
+        metaThemeColor.setAttribute(
+          'content',
+          settings.theme === 'dark' ? '#121212' : '#f8f9fa'
+        );
+      }
+    }
+  }, [settings.theme]);
+
+  // Load conversations from electron-store
   useEffect(() => {
     const loadConversations = async () => {
       try {
-        // Load from Realtime Database
-        const conversationsRef = ref(rtdb, `users/${user?.uid || 'anonymous'}/conversations`);
-        const conversationsQuery = query(conversationsRef, orderByChild('updatedAt'));
+        const isElectron = typeof window !== 'undefined' && window.electron;
         
-        const unsubscribe = onValue(conversationsQuery, (snapshot) => {
-          const loadedConversations: Conversation[] = [];
+        if (!isElectron) {
+          console.log('Not in Electron environment, app is designed for Electron only');
+          return;
+        }
+        
+        // Load from electron-store
+        const storedConversations = await window.electron.store.get('conversations');
+        
+        if (storedConversations && Array.isArray(storedConversations) && storedConversations.length > 0) {
+          // Sort by updatedAt in descending order
+          const sortedConversations = [...storedConversations].sort((a, b) => b.updatedAt - a.updatedAt);
           
-          if (snapshot.exists()) {
-            snapshot.forEach((childSnapshot) => {
-              const conversation = childSnapshot.val() as Conversation;
-              loadedConversations.push(conversation);
-            });
-            
-            // Sort by updatedAt in descending order
-            loadedConversations.sort((a, b) => b.updatedAt - a.updatedAt);
-            
-            setConversations(loadedConversations);
-            
-            // Set the most recent conversation as current if available
-            if (loadedConversations.length > 0 && !currentConversation) {
-              setCurrentConversationState(loadedConversations[0]);
-            }
-          } else if (loadedConversations.length === 0) {
-            // Create a new conversation if none exists
-            const newConv = createNewConversation(settings);
-            setConversations([newConv]);
-            setCurrentConversationState(newConv);
-            
-            // Save to Realtime Database
-            try {
-              set(ref(rtdb, `users/${user?.uid || 'anonymous'}/conversations/${newConv.id}`), newConv)
-                .catch(error => console.error('Error saving conversation to Realtime Database:', error));
-            } catch (error) {
-              console.error('Error preparing conversation for Realtime Database:', error);
-            }
+          setConversations(sortedConversations);
+          
+          // Set the most recent conversation as current if available
+          if (!currentConversation) {
+            setCurrentConversationState(sortedConversations[0]);
           }
-        });
-        
-        return () => unsubscribe();
+        } else {
+          // Create a new conversation if none exists
+          const newConv = createNewConversation(settings);
+          setConversations([newConv]);
+          setCurrentConversationState(newConv);
+          
+          // Save to electron-store
+          try {
+            await window.electron.store.set('conversations', [newConv]);
+          } catch (error) {
+            console.error('Error saving conversation to electron-store:', error);
+          }
+        }
       } catch (error) {
         console.error('Error loading conversations:', error);
         // Create a fallback conversation if loading fails
@@ -268,12 +276,18 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     if (!isLoading) {
       loadConversations();
     }
-  }, [user, settings, isLoading, currentConversation]);
+  }, [settings, isLoading, currentConversation]);
 
   // Save conversations when they change
   useEffect(() => {
     const saveConversations = async () => {
       try {
+        const isElectron = typeof window !== 'undefined' && window.electron;
+        
+        if (!isElectron) {
+          return;
+        }
+        
         if (conversations.length > 0) {
           // Ensure we're not saving any temporary or error messages
           const cleanedConversations = conversations.map(conv => ({
@@ -286,17 +300,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           // Sort conversations by updatedAt before saving
           const sortedConversations = [...cleanedConversations].sort((a, b) => b.updatedAt - a.updatedAt);
           
-          // Save to Firebase
-          await Promise.all(sortedConversations.map(conv => 
-            set(ref(rtdb, `users/${user?.uid || 'anonymous'}/conversations/${conv.id}`), conv)
-          ));
-
-          // Save current conversation ID
+          // Save to electron-store
+          await window.electron.store.set('conversations', sortedConversations);
+          
+          // Save current conversation ID if it exists
           if (currentConversation) {
-            await set(ref(rtdb, `users/${user?.uid || 'anonymous'}/currentConversationId`), currentConversation.id);
+            await window.electron.store.set('currentConversationId', currentConversation.id);
           }
-
-          console.log('Successfully saved conversations to Firebase:', {
+          
+          console.log('Successfully saved conversations to electron-store:', {
             conversationCount: sortedConversations.length,
             currentId: currentConversation?.id
           });
@@ -309,24 +321,21 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     if (!isLoading) {
       saveConversations();
     }
-  }, [conversations, currentConversation, user, isLoading]);
+  }, [conversations, currentConversation, isLoading]);
 
-  // Save settings to Firebase or electron-store when they change
+  // Save settings to electron-store when they change
   useEffect(() => {
     const saveSettings = async () => {
       try {
-        // Check if we're in Electron environment
         const isElectron = typeof window !== 'undefined' && window.electron;
         
-        if (user && !isElectron) {
-          // Save to Realtime Database
-          await set(ref(rtdb, `users/${user.uid}/settings`), settings);
+        if (!isElectron) {
+          return;
         }
         
-        if (isElectron) {
-          // Save to electron-store in Electron environment
-          await window.electron.store.set('settings', settings);
-        }
+        // Save to electron-store
+        await window.electron.store.set('settings', settings);
+        console.log('Settings saved to electron-store');
       } catch (error) {
         console.error('Error saving settings:', error);
       }
@@ -335,69 +344,22 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     if (!isLoading) {
       saveSettings();
     }
-  }, [settings, user, isLoading]);
+  }, [settings, isLoading]);
 
-  // Save conversations to electron-store when they change (only in Electron)
-  useEffect(() => {
-    const saveConversations = async () => {
-      try {
-        const isElectron = typeof window !== 'undefined' && window.electron;
-        
-        if (isElectron && conversations.length > 0) {
-          // Ensure we're not saving any temporary or error messages
-          const cleanedConversations = conversations.map(conv => ({
-            ...conv,
-            messages: conv.messages.filter(msg => 
-              !(msg.role === 'system' && msg.content.includes('Response generation was cancelled'))
-            )
-          }));
-
-          // Sort conversations by updatedAt before saving
-          const sortedConversations = [...cleanedConversations].sort((a, b) => b.updatedAt - a.updatedAt);
-          
-          // Save to electron-store atomically
-          await Promise.all([
-            window.electron.store.set('conversations', sortedConversations),
-            currentConversation && window.electron.store.set('currentConversationId', currentConversation.id)
-          ]);
-
-          console.log('Successfully saved to electron-store:', {
-            conversationCount: sortedConversations.length,
-            currentId: currentConversation?.id
-          });
-        }
-      } catch (error) {
-        console.error('Error saving to electron-store:', error);
-      }
-    };
-
-    if (!isLoading) {
-      saveConversations();
-    }
-  }, [conversations, currentConversation, isLoading]);
-
-  // Save a conversation to Firebase or electron-store
+  // Save a conversation to electron-store
   const saveConversation = (conversation: Conversation) => {
-    // Check if we're in Electron environment
-    const isElectron = typeof window !== 'undefined' && window.electron;
-    
-    // Save to Firebase if authenticated and not in Electron
-    if (user && !isElectron) {
-      try {
-        // Save to Realtime Database
-        set(ref(rtdb, `users/${user.uid}/conversations/${conversation.id}`), conversation)
-          .catch(error => console.error('Error saving conversation to Realtime Database:', error));
-      } catch (error) {
-        console.error('Error preparing conversation for Realtime Database:', error);
+    try {
+      const isElectron = typeof window !== 'undefined' && window.electron;
+      
+      if (!isElectron) {
+        return;
       }
-    } else if (isElectron) {
+      
       // Save to electron-store
-      try {
-        window.electron.store.set(`conversation_${conversation.id}`, JSON.stringify(conversation))
-          .catch(error => console.error('Error saving to electron-store:', error));
-      } catch (error) {
-        console.error('Error saving to electron-store:', error);
-      }
+      window.electron.store.set(`conversation_${conversation.id}`, JSON.stringify(conversation))
+        .catch(error => console.error('Error saving to electron-store:', error));
+    } catch (error) {
+      console.error('Error saving to electron-store:', error);
     }
   };
 
@@ -439,30 +401,17 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       isStarred: false
     };
     
-    // Update state immediately
+    // Update state immediately for better UX
     setCurrentConversationState(newConversation);
     setConversations(prev => [newConversation, ...prev]); // Add to beginning of list
     
-    // Check if we're in Electron environment
-    const isElectron = typeof window !== 'undefined' && window.electron;
-    
-    // Save to Firebase if authenticated and not in Electron
-    if (user && !isElectron) {
-      try {
-        // Save to Realtime Database
-        set(ref(rtdb, `users/${user.uid}/conversations/${id}`), newConversation)
-          .catch(error => console.error('Error saving conversation to Realtime Database:', error));
-      } catch (error) {
-        console.error('Error preparing conversation for Realtime Database:', error);
-      }
-    } else if (isElectron) {
-      // Save to electron-store
-      try {
-        window.electron.store.set('conversations', conversations)
-          .catch(error => console.error('Error saving to electron-store:', error));
-      } catch (error) {
-        console.error('Error saving to electron-store:', error);
-      }
+    // Save to electron-store
+    try {
+      // Update conversations with the new conversation included
+      window.electron.store.set('conversations', [newConversation, ...conversations])
+        .catch(error => console.error('Error saving to electron-store:', error));
+    } catch (error) {
+      console.error('Error saving to electron-store:', error);
     }
     
     return newConversation;
@@ -493,15 +442,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const deleteConversation = (id: string) => {
     setConversations(prev => prev.filter(conv => conv.id !== id));
     
-    // Check if we're in Electron environment
-    const isElectron = typeof window !== 'undefined' && window.electron;
-    
-    // Delete from Firebase if authenticated and not in Electron
-    if (user && !isElectron) {
-      remove(ref(rtdb, `users/${user.uid}/conversations/${id}`))
-        .catch(error => console.error('Error deleting conversation from Realtime Database:', error));
-    }
-    
     // If the deleted conversation is the current one, set the first available as current
     if (currentConversation?.id === id) {
       const remaining = conversations.filter(conv => conv.id !== id);
@@ -529,7 +469,49 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
     // Update conversation title if this is the first user message
     const isFirstUserMessage = currentConversation.messages.filter(m => m.role === 'user').length === 0 && role === 'user';
-    const newTitle = isFirstUserMessage ? content.substring(0, 30) + (content.length > 30 ? '...' : '') : currentConversation.title;
+    
+    // Generate a more descriptive title from the first user message
+    let newTitle = currentConversation.title;
+    if (isFirstUserMessage) {
+      // Generate title based on content type
+      if (content.toLowerCase().startsWith('create') || content.toLowerCase().startsWith('generate') || content.toLowerCase().startsWith('make')) {
+        // For creation requests
+        const matches = content.match(/create|generate|make|build|develop|implement|write/i);
+        if (matches && matches.index !== undefined) {
+          const actionWord = matches[0];
+          const restOfSentence = content.substring(matches.index + actionWord.length).trim();
+          // Extract the main subject (up to first punctuation or 5 words max)
+          const mainSubject = restOfSentence.split(/[,.!?]/)[0].split(' ').slice(0, 5).join(' ');
+          newTitle = `${actionWord.charAt(0).toUpperCase() + actionWord.slice(1)} ${mainSubject}`;
+        }
+      } else if (content.toLowerCase().startsWith('how')) {
+        // For "how to" questions
+        const howToMatch = content.match(/how (to|do|can|would|should|could)/i);
+        if (howToMatch && howToMatch.index !== undefined) {
+          const restOfSentence = content.substring(howToMatch.index).trim();
+          const mainQuestion = restOfSentence.split(/[,.!?]/)[0].split(' ').slice(0, 6).join(' ');
+          newTitle = mainQuestion.charAt(0).toUpperCase() + mainQuestion.slice(1);
+        }
+      } else if (content.toLowerCase().startsWith('what') || content.toLowerCase().startsWith('why') || 
+                content.toLowerCase().startsWith('when') || content.toLowerCase().startsWith('where') ||
+                content.toLowerCase().startsWith('who')) {
+        // For other question types
+        const questionMatch = content.match(/what|why|when|where|who/i);
+        if (questionMatch && questionMatch[0]) {
+          const questionType = questionMatch[0];
+          const restOfSentence = content.substring(questionType.length).trim();
+          const mainQuestion = `${questionType} ${restOfSentence.split(/[,.!?]/)[0].split(' ').slice(0, 5).join(' ')}`;
+          newTitle = mainQuestion.charAt(0).toUpperCase() + mainQuestion.slice(1);
+        }
+      } else {
+        // For other messages, take first 6-8 words
+        const words = content.split(' ');
+        newTitle = words.slice(0, Math.min(6, words.length)).join(' ');
+        if (newTitle.length > 40) {
+          newTitle = newTitle.substring(0, 40) + '...';
+        }
+      }
+    }
 
     // Create updated conversation with the new message
     const updatedConversation: Conversation = {
@@ -548,13 +530,22 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       return [updatedConversation, ...withoutCurrent];
     });
 
-    // Save to Firebase
+    // Save to electron-store
     try {
-      const userPath = `users/${user?.uid || 'anonymous'}`;
-      update(ref(rtdb, `${userPath}/conversations/${currentConversation.id}`), updatedConversation)
-        .catch(error => console.error('Error updating conversation in Firebase:', error));
+      const isElectron = typeof window !== 'undefined' && window.electron;
+      
+      if (isElectron) {
+        // Save the updated conversation
+        window.electron.store.set(`conversation_${updatedConversation.id}`, JSON.stringify(updatedConversation))
+          .catch(error => console.error('Error saving conversation to electron-store:', error));
+        
+        // Also update the full conversations list
+        window.electron.store.set('conversations', conversations.map(conv => 
+          conv.id === updatedConversation.id ? updatedConversation : conv
+        )).catch(error => console.error('Error saving conversations to electron-store:', error));
+      }
     } catch (error) {
-      console.error('Error preparing conversation update for Firebase:', error);
+      console.error('Error preparing conversation update for electron-store:', error);
     }
   };
 
@@ -571,8 +562,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   // Reset all conversations and create a fresh one
   const resetConversations = async () => {
     try {
-      // Remove all conversations from Firebase
-      await remove(ref(rtdb, `users/${user?.uid || 'anonymous'}/conversations`));
+      // Remove all conversations from electron-store
+      await window.electron.store.set('conversations', []);
       
       // Clear conversations state
       setConversations([]);
@@ -590,15 +581,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     try {
       // Prevent switching to the same conversation
       if (currentConversation?.id === conversation.id) {
-        console.log('Already on this conversation, ignoring switch');
         return;
       }
-
-      console.log('Setting current conversation:', {
-        id: conversation.id,
-        title: conversation.title,
-        messageCount: conversation.messages?.length
-      });
 
       // Validate conversation data
       if (!conversation.id || typeof conversation.id !== 'string') {
@@ -627,31 +611,28 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       // First update state to ensure UI responsiveness
       setCurrentConversationState(updatedConversation);
 
+      // Update conversations list
+      setConversations(prev => {
+        const withoutCurrent = prev.filter(conv => conv.id !== conversation.id);
+        return [updatedConversation, ...withoutCurrent].sort((a, b) => b.updatedAt - a.updatedAt);
+      });
+
+      // Save to electron-store
       try {
-        // Save to Firebase
-        const userPath = `users/${user?.uid || 'anonymous'}`;
+        const isElectron = typeof window !== 'undefined' && window.electron;
         
-        // Update conversation in conversations list
-        await set(ref(rtdb, `${userPath}/conversations/${conversation.id}`), updatedConversation);
-        
-        // Update current conversation ID
-        await set(ref(rtdb, `${userPath}/currentConversationId`), updatedConversation.id);
-        
-        // Update conversations list after successful save
-        setConversations(prev => {
-          const withoutCurrent = prev.filter(conv => conv.id !== conversation.id);
-          return [updatedConversation, ...withoutCurrent].sort((a, b) => b.updatedAt - a.updatedAt);
-        });
-        
-        console.log('Successfully updated Firebase and state:', {
-          id: updatedConversation.id,
-          messageCount: updatedConversation.messages.length
-        });
+        if (isElectron) {
+          // Save the updated conversation
+          window.electron.store.set(`conversation_${updatedConversation.id}`, JSON.stringify(updatedConversation))
+            .catch(error => console.error('Error saving conversation to electron-store:', error));
+          
+          // Also update the full conversations list
+          window.electron.store.set('conversations', conversations.map(conv => 
+            conv.id === updatedConversation.id ? updatedConversation : conv
+          )).catch(error => console.error('Error saving conversations to electron-store:', error));
+        }
       } catch (error) {
-        console.error('Failed to save to Firebase:', error);
-        // Revert state changes on error
-        setCurrentConversationState(currentConversation);
-        throw error;
+        console.error('Error preparing conversation update for electron-store:', error);
       }
     } catch (error: any) {
       console.error('Error setting current conversation:', error);

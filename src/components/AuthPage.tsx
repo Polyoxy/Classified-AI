@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, ReactNode } from 'react';
 import { useAppContext } from '@/context/AppContext';
 import { auth, rtdb } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
@@ -10,14 +10,27 @@ import {
   browserLocalPersistence,
   browserSessionPersistence,
   setPersistence,
-  onAuthStateChanged
+  onAuthStateChanged,
+  User
 } from 'firebase/auth';
 import { ref, update } from 'firebase/database';
 import RegisterPage from './RegisterPage';
 import ResetPasswordPage from './ResetPasswordPage';
+import dynamic from 'next/dynamic';
 
 // Define the possible authentication screens
 type AuthScreen = 'login' | 'register' | 'reset-password';
+
+// Create a client-only component for elements that need browser features
+const ClientOnly: React.FC<{children: ReactNode}> = ({ children }) => {
+  const [isMounted, setIsMounted] = useState(false);
+  
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+  
+  return isMounted ? <>{children}</> : null;
+};
 
 const AuthPage: React.FC = () => {
   const router = useRouter();
@@ -31,13 +44,48 @@ const AuthPage: React.FC = () => {
   const [currentScreen, setCurrentScreen] = useState<AuthScreen>('login');
   const [currentTheme, setCurrentTheme] = useState<'dark' | 'light'>(settings?.theme as 'dark' | 'light' || 'dark');
   
+  // Detect client-side on first render
+  useEffect(() => {
+    // Clear the preventAutoLogin flag when the auth page mounts
+    // This ensures we won't get redirected back to auth after login
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('preventAutoLogin');
+    }
+  }, []);
+
+  // Check if in Electron - if so, redirect to main app automatically
+  useEffect(() => {
+    const isElectron = typeof window !== 'undefined' && window.electron;
+    
+    if (isElectron) {
+      // For Electron, create a direct user and redirect
+      const electronUser = {
+        uid: 'electron-user',
+        displayName: 'Electron User',
+        email: 'user@electron.app',
+        isAnonymous: false
+      };
+      
+      // Set user info
+      setUser(electronUser as unknown as User);
+      
+      // Redirect to main app
+      router.push('/');
+    }
+  }, [router, setUser]);
+
   // Handle auth state changes
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
+      if (user && !user.isAnonymous) {
+        // Only redirect for non-anonymous users
         console.log('Auth state changed: User logged in', user.uid);
         setUser(user);
         router.push('/');
+      } else if (user && user.isAnonymous) {
+        // For anonymous users, stay on auth page
+        console.log('Auth state changed: Anonymous user detected on auth page');
+        setUser(null); // Don't set the anonymous user in context when on auth page
       } else {
         console.log('Auth state changed: No user');
         setUser(null);
@@ -55,37 +103,35 @@ const AuthPage: React.FC = () => {
     }
   }, [currentTheme, updateSettings, settings?.theme]);
   
-  // Handle login with email/password
+  // Handle login with email/password (simplified for Electron)
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
     
     try {
-      // Check if we're in Electron environment
-      const isElectron = typeof window !== 'undefined' && window.electron;
+      // For Electron, we'll create a simple local user
+      const electronUser = {
+        uid: 'electron-user',
+        displayName: 'Electron User',
+        email: email || 'user@electron.app',
+        isAnonymous: false
+      };
       
-      // Only set persistence if not in Electron
-      if (!isElectron) {
-        await setPersistence(auth, rememberMe ? browserLocalPersistence : browserSessionPersistence);
+      // Set user info
+      setUser(electronUser as unknown as User);
+      
+      // Save email to localStorage if remember me is checked
+      if (rememberMe && email) {
+        localStorage.setItem('lastLoginEmail', email);
+        localStorage.setItem('rememberMe', JSON.stringify(rememberMe));
       }
       
-      // Store the email in localStorage before attempting login
-      localStorage.setItem('lastLoginEmail', email);
-      
-      // Sign in - the auth state observer will handle the redirect
-      await signInWithEmailAndPassword(auth, email, password);
-      
-      // Store the rememberMe preference in localStorage
-      localStorage.setItem('rememberMe', JSON.stringify(rememberMe));
-      
+      // Redirect to main app
+      router.push('/');
     } catch (error: any) {
       console.error('Login error:', error);
-      setError(
-        error.code === 'auth/invalid-login-credentials' ? 'Invalid email or password. Please try again.' :
-        error.code === 'auth/user-not-found' ? 'No account found with this email. Please register first.' :
-        'Failed to login. Please try again.'
-      );
+      setError('Failed to login. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -99,46 +145,39 @@ const AuthPage: React.FC = () => {
       if (savedRememberMe !== null) {
         setRememberMe(JSON.parse(savedRememberMe));
       }
-
+      
       // Restore last login email
-      const lastLoginEmail = localStorage.getItem('lastLoginEmail');
-      if (lastLoginEmail) {
-        setEmail(lastLoginEmail);
+      const lastEmail = localStorage.getItem('lastLoginEmail');
+      if (lastEmail) {
+        setEmail(lastEmail);
       }
     } catch (error) {
-      console.error('Error restoring preferences:', error);
+      console.warn('Failed to restore login preferences:', error);
     }
   }, []);
   
-  // Handle guest/offline login
+  // Handle guest/offline login (simplified for Electron)
   const handleGuestLogin = async () => {
     setIsLoading(true);
     setError(null);
     
     try {
-      // Try Firebase anonymous auth first
-      const userCredential = await signInAnonymously(auth);
-      const user = userCredential.user;
-      
-      // Create guest user data
-      const guestData = {
-        uid: user.uid,
-        isAnonymous: true,
-        createdAt: new Date().toISOString(),
-        lastLogin: new Date().toISOString()
+      // For Electron, create a generic guest user
+      const guestUser = {
+        uid: 'guest-user',
+        displayName: 'Guest User',
+        email: 'guest@electron.app',
+        isAnonymous: true
       };
       
-      // Save guest data to Realtime Database
-      try {
-        await update(ref(rtdb, `users/${user.uid}`), guestData);
-      } catch (dbErr) {
-        console.warn('Could not save guest user data to database', dbErr);
-      }
+      // Set user info
+      setUser(guestUser as unknown as User);
       
-      // The auth state observer will handle the redirect
+      // Redirect to main app
+      router.push('/');
     } catch (error: any) {
       console.error('Guest login error:', error);
-      setError('Unable to continue as guest. Please try again or create an account.');
+      setError('Unable to continue as guest. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -179,8 +218,6 @@ const AuthPage: React.FC = () => {
           backgroundColor: 'var(--header-bg)',
           height: '36px',
           boxSizing: 'border-box',
-          // @ts-ignore
-          WebkitAppRegion: 'drag', // Make the title bar draggable in Electron
         }}
       >
         <div className="terminal-title" style={{ 
@@ -212,42 +249,46 @@ const AuthPage: React.FC = () => {
           </span>
         </div>
         
-        <div 
-          className="window-controls non-draggable" 
-          style={{ 
-            display: 'flex', 
-            gap: '0.5rem',
-            // @ts-ignore
-            WebkitAppRegion: 'no-drag'
-          }}
-        >
-          <div
-            onClick={() => window.electron?.windowControls?.minimize()}
-            className="window-control minimize non-draggable"
-            title="Minimize"
-            style={{
-              width: '12px',
-              height: '12px',
-              borderRadius: '50%',
-              backgroundColor: '#f59e0b', // amber-500
-              border: 'none',
-              cursor: 'pointer',
-            }}
-          />
-          <div
-            onClick={() => window.electron?.windowControls?.close()}
-            className="window-control close non-draggable"
-            title="Close"
-            style={{
-              width: '12px',
-              height: '12px',
-              borderRadius: '50%',
-              backgroundColor: '#ef4444', // red-500
-              border: 'none',
-              cursor: 'pointer',
-            }}
-          />
-        </div>
+        <ClientOnly>
+          {typeof window !== 'undefined' && window.electron && (
+            <div 
+              className="window-controls non-draggable" 
+              style={{ 
+                display: 'flex', 
+                gap: '0.5rem',
+                // @ts-ignore
+                WebkitAppRegion: 'no-drag'
+              }}
+            >
+              <div
+                onClick={() => window.electron?.windowControls?.minimize()}
+                className="window-control minimize non-draggable"
+                title="Minimize"
+                style={{
+                  width: '12px',
+                  height: '12px',
+                  borderRadius: '50%',
+                  backgroundColor: '#f59e0b', // amber-500
+                  border: 'none',
+                  cursor: 'pointer',
+                }}
+              />
+              <div
+                onClick={() => window.electron?.windowControls?.close()}
+                className="window-control close non-draggable"
+                title="Close"
+                style={{
+                  width: '12px',
+                  height: '12px',
+                  borderRadius: '50%',
+                  backgroundColor: '#ef4444', // red-500
+                  border: 'none',
+                  cursor: 'pointer',
+                }}
+              />
+            </div>
+          )}
+        </ClientOnly>
       </div>
 
       {/* Main content */}
@@ -262,45 +303,49 @@ const AuthPage: React.FC = () => {
         {/* Theme selector */}
         <div style={{
           position: 'absolute',
-          top: '20px',
-          right: '20px',
+          bottom: '1rem',
+          left: 0,
+          right: 0,
           display: 'flex',
-          gap: '10px',
+          justifyContent: 'center',
+          gap: '1rem',
+          fontSize: '0.75rem',
+          opacity: 0.7,
+          color: 'var(--text-color)',
         }}>
-          <button
-            onClick={() => handleThemeChange('dark')}
-            style={{
-              width: '20px',
-              height: '20px',
-              borderRadius: '3px',
-              backgroundColor: '#1E1E1E',
-              border: currentTheme === 'dark' ? 
-                '2px solid #333333' : 
-                '1px solid #555',
-              cursor: 'pointer',
-              transition: 'transform 0.2s',
-            }}
-            onMouseOver={(e) => (e.currentTarget.style.transform = 'scale(1.1)')}
-            onMouseOut={(e) => (e.currentTarget.style.transform = 'scale(1)')}
-            title="Dark Theme"
-          />
-          <button
-            onClick={() => handleThemeChange('light')}
-            style={{
-              width: '20px',
-              height: '20px',
-              borderRadius: '3px',
-              backgroundColor: '#FFFFFF',
-              border: currentTheme === 'light' ? 
-                '2px solid #474747' : 
-                '1px solid #555',
-              cursor: 'pointer',
-              transition: 'transform 0.2s',
-            }}
-            onMouseOver={(e) => (e.currentTarget.style.transform = 'scale(1.1)')}
-            onMouseOut={(e) => (e.currentTarget.style.transform = 'scale(1)')}
-            title="Light Theme"
-          />
+          <ClientOnly>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span>Theme:</span>
+              <button
+                onClick={() => setCurrentTheme('dark')}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '0.25rem 0.5rem',
+                  borderRadius: '4px',
+                  backgroundColor: currentTheme === 'dark' ? 'var(--accent-color)' : 'transparent',
+                  color: currentTheme === 'dark' ? '#fff' : 'var(--text-color)',
+                }}
+              >
+                Dark
+              </button>
+              <button
+                onClick={() => setCurrentTheme('light')}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '0.25rem 0.5rem',
+                  borderRadius: '4px',
+                  backgroundColor: currentTheme === 'light' ? 'var(--accent-color)' : 'transparent',
+                  color: currentTheme === 'light' ? '#fff' : 'var(--text-color)',
+                }}
+              >
+                Light
+              </button>
+            </div>
+          </ClientOnly>
         </div>
 
         <div style={{
