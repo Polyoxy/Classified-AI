@@ -105,16 +105,17 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
   const thinkingContainerStyle = {
     padding: '0.5rem 0.75rem',
     borderLeft: `2px solid ${isDarkTheme ? '#2a2a2a' : '#d0d0d0'}`,
-    marginBottom: '1rem',
-    fontSize: '12px',
+    marginBottom: '0.75rem',
+    fontSize: '13px',
     fontFamily: 'Inter, sans-serif',
     color: isDarkTheme ? '#909090' : '#606060',
-    whiteSpace: 'pre-wrap' as const,
+    whiteSpace: 'pre-line' as const,
     wordBreak: 'break-word' as const,
     maxHeight: showThinking ? '500px' : '0px',
     overflow: 'hidden',
     transition: 'all 0.3s ease',
     opacity: showThinking ? 0.9 : 0,
+    lineHeight: 1.5,
   };
 
   // Style for thinking animation
@@ -124,7 +125,7 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
     fontFamily: 'Inter, sans-serif',
     display: 'flex',
     alignItems: 'center',
-    marginBottom: '6px',
+    marginBottom: '4px',
     fontSize: '11px',
     textTransform: 'uppercase' as const,
     letterSpacing: '0.5px',
@@ -155,7 +156,7 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
   // Message content style
   const messageContentStyle = {
     padding: '0.5rem 0.75rem',
-    whiteSpace: 'pre-wrap' as const,
+    whiteSpace: 'pre-line' as const,
     wordBreak: 'break-word' as const,
     lineHeight: 1.6,
     fontFamily: message.role === 'assistant' ? 'Inter, sans-serif' : 'inherit',
@@ -338,6 +339,40 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
     },
   };
 
+  // Add compact styles for markdown in thinking section
+  const thinkingMarkdownComponents = {
+    ...MarkdownComponents,
+    p: ({ node, ...props }: any) => (
+      <p style={{ marginBottom: '0.5rem', whiteSpace: 'pre-line' }} {...props} />
+    ),
+    ul: ({ node, ...props }: any) => (
+      <ul style={{ marginBottom: '0.75rem', paddingLeft: '1.5rem' }} {...props} />
+    ),
+    ol: ({ node, ...props }: any) => (
+      <ol style={{ marginBottom: '0.75rem', paddingLeft: '1.5rem' }} {...props} />
+    ),
+    li: ({ node, ...props }: any) => (
+      <li style={{ marginBottom: '0.25rem' }} {...props} />
+    ),
+  };
+
+  // Add styles for the main message markdown components
+  const messageMarkdownComponents = {
+    ...MarkdownComponents,
+    p: ({ node, ...props }: any) => (
+      <p style={{ marginBottom: '0.75rem', whiteSpace: 'pre-line' }} {...props} />
+    ),
+    ul: ({ node, ...props }: any) => (
+      <ul style={{ marginBottom: '0.75rem', paddingLeft: '1.5rem' }} {...props} />
+    ),
+    ol: ({ node, ...props }: any) => (
+      <ol style={{ marginBottom: '0.75rem', paddingLeft: '1.5rem' }} {...props} />
+    ),
+    li: ({ node, ...props }: any) => (
+      <li style={{ marginBottom: '0.25rem' }} {...props} />
+    ),
+  };
+
   // Determine if thinking is complete - an answer exists and isn't empty
   const isThinkingComplete = hasThinking && response.trim().length > 0;
 
@@ -477,7 +512,7 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
             )}
           </div>
           <ReactMarkdown
-            components={MarkdownComponents}
+            components={thinkingMarkdownComponents}
             remarkPlugins={[remarkGfm]}
             rehypePlugins={[rehypeRaw, rehypeSanitize]}
           >
@@ -491,7 +526,7 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
         ...messageContentStyle,
       }}>
         <ReactMarkdown
-          components={MarkdownComponents}
+          components={messageMarkdownComponents}
           remarkPlugins={[remarkGfm]}
           rehypePlugins={[rehypeRaw, rehypeSanitize]}
         >

@@ -168,14 +168,19 @@ export const callOllama = async (
 
     // Make sure we have a proper system message to set the context
     let hasSystemMessage = false;
-    const systemMessageContent = "You are a helpful AI assistant that provides accurate, factual information. Only answer what you know with certainty. If you don't know something, say 'I don't know' or 'I'm not sure' rather than making up information. Keep your responses concise and focused on the user's question.";
+    const systemMessageContent = "You are a helpful AI assistant that provides accurate, factual information. Only answer what you know with certainty. If you don't know something, say 'I don't know' or 'I'm not sure' rather than making up information. Keep your responses concise and focused on the user's question. Format your responses with single line breaks between paragraphs and avoid multiple consecutive line breaks.";
     
     // Prepare messages for Ollama format with improved role handling
     const ollamaMessages = messages.map(msg => {
-      // Keep the original role
+      // Clean up excessive newlines in the content
+      const cleanContent = msg.content
+        .replace(/\n{3,}/g, '\n\n') // Replace 3 or more newlines with 2
+        .replace(/\n\s+\n/g, '\n\n') // Replace newlines with spaces between them
+        .trim();
+      
       return {
         role: msg.role,
-        content: msg.content,
+        content: cleanContent,
       };
     });
 
@@ -363,7 +368,17 @@ export const callOllama = async (
             }
             
             if (content) {
-              accumulatedContent += content;
+              // Clean up the response formatting
+              const cleanContent = content
+                .replace(/\n{3,}/g, '\n\n') // Replace 3 or more newlines with 2
+                .replace(/\n\s+\n/g, '\n\n') // Replace newlines with spaces between them
+                .trim();
+              
+              // Add a space before appending if needed
+              if (accumulatedContent && !accumulatedContent.endsWith(' ') && !cleanContent.startsWith(' ')) {
+                accumulatedContent += ' ';
+              }
+              accumulatedContent += cleanContent;
               console.log(`💬 Updated content (${accumulatedContent.length} chars)`);
               onUpdate({
                 content: accumulatedContent,
