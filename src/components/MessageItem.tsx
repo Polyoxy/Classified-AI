@@ -43,31 +43,41 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
 
   // Container style for the entire message
   const containerStyle = {
-    marginBottom: message.role === 'assistant' ? '0.5rem' : '1rem',
+    marginBottom: message.role === 'assistant' ? '1.5rem' : '1.5rem',
     fontFamily: message.role === 'assistant' ? 'Inter, sans-serif' : 'JetBrains Mono, monospace',
     fontSize: '14px',
     color: isDarkTheme ? '#e0e0e0' : '#404040',
+    padding: '0.75rem 1rem',
+    borderRadius: '8px',
+    backgroundColor: message.role === 'assistant' 
+      ? (isDarkTheme ? 'rgba(26, 26, 26, 0.4)' : 'rgba(245, 245, 245, 0.6)')
+      : 'transparent',
+    border: message.role === 'assistant'
+      ? `1px solid ${isDarkTheme ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'}`
+      : 'none',
   };
 
   // Style for the role label
   const roleLabelStyle = {
     display: 'flex',
     alignItems: 'center',
-    marginBottom: '0.5rem',
+    marginBottom: '0.75rem',
     gap: '0.5rem',
   };
 
   // Role badge style
   const roleBadgeStyle = {
-    display: 'inline-block',
+    display: 'inline-flex',
+    alignItems: 'center',
     padding: '0.25rem 0.5rem',
     backgroundColor: message.role === 'user' 
       ? (isDarkTheme ? '#2a2a2a' : '#e0e0e0')
       : (isDarkTheme ? '#1e1e1e' : '#d0d0d0'),
     borderRadius: '4px',
-    fontWeight: 600,
-    fontSize: '12px',
+    fontWeight: 500,
+    fontSize: '11px',
     color: isDarkTheme ? '#e0e0e0' : '#404040',
+    letterSpacing: '0.5px',
   };
 
   // Style for the analysis badge
@@ -77,59 +87,66 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
     padding: '0.25rem 0.5rem',
     borderRadius: '4px',
     backgroundColor: isDarkTheme ? '#1a1a1a' : '#e0e0e0',
-    fontSize: '12px',
-    fontWeight: 600,
+    fontSize: '11px',
+    fontWeight: 500,
     cursor: 'pointer',
-    gap: '6px',
-    transition: 'background-color 0.2s ease',
-    border: `1px solid ${isDarkTheme ? '#3a3a3a' : '#ccc'}`,
+    gap: '4px',
+    transition: 'all 0.2s ease',
+    border: `1px solid ${isDarkTheme ? '#2a2a2a' : '#d0d0d0'}`,
+    opacity: 0.8,
+    userSelect: 'none' as const,
+    '&:hover': {
+      opacity: 1,
+      backgroundColor: isDarkTheme ? '#2a2a2a' : '#d0d0d0',
+    }
   };
 
   // Style for thinking section
   const thinkingContainerStyle = {
-    backgroundColor: isDarkTheme ? 'rgba(30, 30, 30, 0.6)' : 'rgba(245, 245, 245, 0.8)',
-    padding: '0.75rem',
-    borderLeft: `4px solid ${isDarkTheme ? '#404040' : '#a0a0a0'}`,
-    marginBottom: '0.75rem',
+    padding: '0.5rem 0.75rem',
+    borderLeft: `2px solid ${isDarkTheme ? '#2a2a2a' : '#d0d0d0'}`,
+    marginBottom: '1rem',
     fontSize: '12px',
     fontFamily: 'Inter, sans-serif',
-    color: isDarkTheme ? '#b0b0b0' : '#606060',
+    color: isDarkTheme ? '#909090' : '#606060',
     whiteSpace: 'pre-wrap' as const,
     wordBreak: 'break-word' as const,
     maxHeight: showThinking ? '500px' : '0px',
     overflow: 'hidden',
     transition: 'all 0.3s ease',
-    opacity: showThinking ? 1 : 0,
-    borderRadius: '3px',
+    opacity: showThinking ? 0.9 : 0,
   };
 
   // Style for thinking animation
   const thinkingAnimationStyle = {
-    fontWeight: 'bold',
-    color: isDarkTheme ? '#c0c0c0' : '#505050',
+    fontWeight: 500,
+    color: isDarkTheme ? '#a0a0a0' : '#505050',
     fontFamily: 'Inter, sans-serif',
     display: 'flex',
     alignItems: 'center',
-    marginBottom: '8px'
+    marginBottom: '6px',
+    fontSize: '11px',
+    textTransform: 'uppercase' as const,
+    letterSpacing: '0.5px',
   };
 
   // Dots animation keyframes (defined in a style tag)
   const dotsAnimation = `
     @keyframes thinking-dots {
       0%, 20% {
-        opacity: 0.2;
+        opacity: 0.3;
         transform: translateY(0px);
       }
       40% {
-        opacity: 1;
-        transform: translateY(-2px);
+        opacity: 0.8;
+        transform: translateY(-1px);
       }
       60% {
-        opacity: 1;
-        transform: translateY(-2px);
+        opacity: 0.8;
+        transform: translateY(-1px);
       }
       80%, 100% {
-        opacity: 0.2;
+        opacity: 0.3;
         transform: translateY(0px);
       }
     }
@@ -137,31 +154,25 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
 
   // Message content style
   const messageContentStyle = {
-    padding: '0.75rem',
-    backgroundColor: message.role === 'user' 
-      ? (isDarkTheme ? 'transparent' : 'transparent')
-      : (isDarkTheme ? 'transparent' : 'transparent'),
+    padding: '0.5rem 0.75rem',
     whiteSpace: 'pre-wrap' as const,
     wordBreak: 'break-word' as const,
-    lineHeight: 1.5,
-    borderRadius: '3px',
-    border: message.role === 'assistant' 
-      ? `1px solid ${isDarkTheme ? 'rgba(42, 42, 42, 0.15)' : 'rgba(224, 224, 224, 0.3)'}`
-      : 'none',
+    lineHeight: 1.6,
     fontFamily: message.role === 'assistant' ? 'Inter, sans-serif' : 'inherit',
+    marginTop: hasThinking ? '0.5rem' : '0',
   };
 
   // Timestamp style
   const timestampStyle = {
-    fontSize: '12px',
-    color: isDarkTheme ? 'rgba(224, 224, 224, 0.5)' : 'rgba(64, 64, 64, 0.5)',
-    marginTop: '0.5rem',
-    paddingTop: '0.5rem',
-    borderTop: `1px solid ${isDarkTheme ? 'rgba(42, 42, 42, 0.3)' : 'rgba(224, 224, 224, 0.5)'}`,
+    fontSize: '11px',
+    color: isDarkTheme ? 'rgba(224, 224, 224, 0.4)' : 'rgba(64, 64, 64, 0.4)',
+    marginTop: '0.75rem',
+    paddingTop: '0.75rem',
+    borderTop: `1px solid ${isDarkTheme ? 'rgba(42, 42, 42, 0.2)' : 'rgba(224, 224, 224, 0.3)'}`,
     display: 'flex',
     justifyContent: 'flex-end',
     alignItems: 'center',
-    gap: '16px',
+    gap: '12px',
   };
 
   // Toggle thinking display
@@ -207,16 +218,40 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
       const language = match ? match[1] : '';
       
       return !inline && match ? (
-        <SyntaxHighlighter
-          style={vscDarkPlus}
-          language={language}
-          PreTag="div"
+        <div style={{ 
+          marginBottom: '1rem',
+          borderRadius: '4px',
+          overflow: 'hidden',
+          boxShadow: isDarkTheme 
+            ? '0 2px 4px rgba(0, 0, 0, 0.2)' 
+            : '0 2px 4px rgba(0, 0, 0, 0.1)'
+        }}>
+          <SyntaxHighlighter
+            style={isDarkTheme ? vscDarkPlus : vs}
+            language={language}
+            PreTag="div"
+            customStyle={{
+              margin: 0,
+              borderRadius: '4px',
+              fontSize: '13px',
+            }}
+            {...props}
+          >
+            {String(children).replace(/\n$/, '')}
+          </SyntaxHighlighter>
+        </div>
+      ) : (
+        <code 
+          className={className} 
+          style={{
+            backgroundColor: isDarkTheme ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+            padding: '2px 6px',
+            borderRadius: '3px',
+            fontSize: '13px',
+            fontFamily: 'var(--font-mono)',
+          }}
           {...props}
         >
-          {String(children).replace(/\n$/, '')}
-        </SyntaxHighlighter>
-      ) : (
-        <code className={className} {...props}>
           {children}
         </code>
       );
@@ -316,7 +351,7 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
   // Add copy button style
   const copyButtonStyle = {
     cursor: 'pointer',
-    padding: '4px',
+    padding: '4px 8px',
     borderRadius: '4px',
     backgroundColor: 'transparent',
     border: 'none',
@@ -325,9 +360,11 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
     display: 'flex',
     alignItems: 'center',
     gap: '6px',
-    fontSize: '12px',
+    fontSize: '11px',
+    opacity: 0.8,
     '&:hover': {
-      color: isDarkTheme ? 'rgba(224, 224, 224, 0.8)' : 'rgba(64, 64, 64, 0.8)',
+      opacity: 1,
+      backgroundColor: isDarkTheme ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
     }
   };
 
@@ -373,11 +410,11 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
               onClick={toggleThinking}
             >
               <svg 
-                width="14" 
-                height="14" 
+                width="12" 
+                height="12" 
                 viewBox="0 0 24 24" 
                 fill="none" 
-                stroke={isDarkTheme ? '#b0b0b0' : '#606060'} 
+                stroke={isDarkTheme ? '#909090' : '#606060'} 
                 strokeWidth="2" 
                 strokeLinecap="round" 
                 strokeLinejoin="round"
@@ -385,10 +422,10 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
                 <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path>
                 <circle cx="12" cy="12" r="3"></circle>
               </svg>
-              <span style={{color: isDarkTheme ? '#e0e0e0' : '#404040'}}>CLASSIFIED ANALYSIS</span>
+              <span style={{color: isDarkTheme ? '#b0b0b0' : '#505050', letterSpacing: '0.5px'}}>ANALYSIS</span>
               <svg 
-                width="14" 
-                height="14" 
+                width="10" 
+                height="10" 
                 viewBox="0 0 24 24" 
                 fill="none" 
                 stroke="currentColor" 
@@ -413,27 +450,27 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
           <style>{dotsAnimation}</style>
           <div style={thinkingAnimationStyle}>
             {isThinkingComplete ? (
-              <span>Thinking process</span>
+              <span>Analysis</span>
             ) : (
               <>
-                <span>Thinking process</span>
+                <span>Analyzing</span>
                 <span style={{ 
                   display: 'inline-block', 
                   marginLeft: '2px',
-                  fontWeight: 'bold',
-                  fontSize: '16px', 
+                  fontWeight: 500,
+                  fontSize: '11px', 
                   animation: 'thinking-dots 1.5s infinite 0s'
                 }}>.</span>
                 <span style={{ 
                   display: 'inline-block',
-                  fontWeight: 'bold',
-                  fontSize: '16px',  
+                  fontWeight: 500,
+                  fontSize: '11px',  
                   animation: 'thinking-dots 1.5s infinite 0.3s'
                 }}>.</span>
                 <span style={{ 
                   display: 'inline-block',
-                  fontWeight: 'bold',
-                  fontSize: '16px',  
+                  fontWeight: 500,
+                  fontSize: '11px',  
                   animation: 'thinking-dots 1.5s infinite 0.6s'
                 }}>.</span>
               </>
@@ -452,9 +489,6 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
       {/* Message content and footer container */}
       <div style={{
         ...messageContentStyle,
-        backgroundColor: message.role === 'assistant' 
-          ? (isDarkTheme ? 'rgba(30, 30, 30, 0.2)' : 'rgba(245, 245, 245, 0.5)')
-          : 'transparent',
       }}>
         <ReactMarkdown
           components={MarkdownComponents}
@@ -472,12 +506,12 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
           {message.role === 'assistant' && (
             <button
               onClick={handleCopy}
+              className="command-button"
               style={{
                 ...copyButtonStyle,
                 color: copySuccess 
                   ? (isDarkTheme ? '#81c784' : '#4caf50')
                   : (isDarkTheme ? 'rgba(224, 224, 224, 0.5)' : 'rgba(64, 64, 64, 0.5)'),
-                padding: '4px',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '4px',
@@ -489,7 +523,7 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <polyline points="20 6 9 17 4 12"></polyline>
                   </svg>
-                  <span style={{ fontSize: '12px' }}>Copied</span>
+                  <span style={{ fontSize: '11px', letterSpacing: '0.5px' }}>Copied</span>
                 </>
               ) : (
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

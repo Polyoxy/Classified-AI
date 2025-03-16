@@ -621,6 +621,27 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     createConversation();
   };
 
+  // Add effect to persist sidebar state
+  useEffect(() => {
+    try {
+      const savedState = localStorage.getItem('sidebarOpen');
+      if (savedState !== null) {
+        setIsSidebarOpen(JSON.parse(savedState));
+      }
+    } catch (error) {
+      console.error('Error loading sidebar state:', error);
+    }
+  }, []);
+
+  // Save sidebar state when it changes
+  useEffect(() => {
+    try {
+      localStorage.setItem('sidebarOpen', JSON.stringify(isSidebarOpen));
+    } catch (error) {
+      console.error('Error saving sidebar state:', error);
+    }
+  }, [isSidebarOpen]);
+
   const contextValue: AppContextType = {
     settings,
     updateSettings,

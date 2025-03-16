@@ -256,18 +256,30 @@ const CommandInput: React.FC = () => {
         }
       `}</style>
       
+      <style>{`
+        .command-button {
+          transition: opacity 0.2s ease;
+        }
+        .command-button:hover {
+          opacity: 0.8 !important;
+        }
+        .command-button-disabled:hover {
+          opacity: 0.3 !important;
+        }
+      `}</style>
+      
       <div className="command-input-container" style={{
         position: 'relative',
         padding: '0.75rem 1rem',
         borderTop: '1px solid var(--border-color)',
-        backgroundColor: settings?.theme === 'dark' ? '#1a1a1a' : '#ffffff',
+        backgroundColor: settings?.theme === 'dark' ? 'rgba(26, 26, 26, 0.4)' : 'rgba(245, 245, 245, 0.6)',
         display: 'flex',
         alignItems: 'center',
         boxShadow: settings?.theme === 'dark' 
-          ? 'inset 0 1px 3px rgba(0,0,0,0.2)' 
-          : 'inset 0 1px 3px rgba(0,0,0,0.05)',
+          ? 'inset 0 1px 2px rgba(0,0,0,0.1)' 
+          : 'inset 0 1px 2px rgba(0,0,0,0.05)',
         borderRadius: '8px',
-        margin: '0.5rem',
+        margin: '0.75rem 1rem 1rem 1rem',
       }}>
         {showResetButton && (
           <button 
@@ -284,7 +296,9 @@ const CommandInput: React.FC = () => {
               cursor: 'pointer',
               zIndex: 100,
               fontFamily: 'var(--font-mono)',
-              fontSize: `${settings?.fontSize || 14}px`,
+              fontSize: '11px',
+              letterSpacing: '0.5px',
+              fontWeight: 500,
             }}
           >
             Reset All
@@ -299,11 +313,12 @@ const CommandInput: React.FC = () => {
           display: 'flex',
           alignItems: 'center',
           height: '24px',
+          opacity: 0.8,
         }}>
           <svg 
             className="lightning-icon"
-            width="18" 
-            height="18" 
+            width="16" 
+            height="16" 
             viewBox="0 0 24 24" 
             fill="none" 
             stroke="currentColor" 
@@ -336,16 +351,16 @@ const CommandInput: React.FC = () => {
               border: 'none',
               color: 'var(--text-color)',
               fontFamily: 'var(--font-mono, "JetBrains Mono", monospace)',
-              fontSize: `${settings?.fontSize || 14}px`,
+              fontSize: '14px',
               resize: 'none',
               height: 'auto',
               minHeight: '24px',
               width: '100%',
               outline: 'none',
               padding: '0',
-              paddingTop: '4px',
+              paddingTop: '2px',
               overflow: 'hidden',
-              lineHeight: '1.5',
+              lineHeight: '1.6',
               verticalAlign: 'middle',
               caretColor: 'var(--text-color)',
             }}
@@ -357,6 +372,7 @@ const CommandInput: React.FC = () => {
         
         {/* Upload button */}
         <button
+          className="command-button"
           style={{
             backgroundColor: 'transparent',
             border: 'none',
@@ -367,13 +383,13 @@ const CommandInput: React.FC = () => {
             alignItems: 'center',
             justifyContent: 'center',
             marginLeft: '0.5rem',
-            transition: 'all 0.2s ease',
+            opacity: 0.6,
           }}
           title="Upload file"
         >
           <svg 
-            width="18" 
-            height="18" 
+            width="16" 
+            height="16" 
             viewBox="0 0 24 24" 
             fill="none" 
             stroke="currentColor" 
@@ -391,6 +407,7 @@ const CommandInput: React.FC = () => {
         <button
           onClick={handleSendMessage}
           disabled={!input.trim() || isProcessing}
+          className={`command-button ${(!input.trim() || isProcessing) ? 'command-button-disabled' : ''}`}
           style={{
             backgroundColor: 'transparent',
             border: 'none',
@@ -401,14 +418,13 @@ const CommandInput: React.FC = () => {
             alignItems: 'center',
             justifyContent: 'center',
             marginLeft: '0.5rem',
-            transition: 'all 0.2s ease',
-            opacity: input.trim() && !isProcessing ? 1 : 0.5,
+            opacity: input.trim() && !isProcessing ? 0.6 : 0.3,
           }}
           title="Send message"
         >
           <svg 
-            width="18" 
-            height="18" 
+            width="16" 
+            height="16" 
             viewBox="0 0 24 24" 
             fill="none" 
             stroke="currentColor" 

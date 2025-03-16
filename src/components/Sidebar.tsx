@@ -80,6 +80,11 @@ const Sidebar: React.FC = () => {
       display: 'flex',
       flexDirection: 'column',
       zIndex: 1000,
+      overflow: 'hidden',
+      boxShadow: isSidebarOpen ? '-2px 0 5px rgba(0, 0, 0, 0.1)' : 'none',
+      pointerEvents: 'all',
+      transform: 'translateZ(0)', // Force GPU acceleration
+      willChange: 'right', // Optimize for animations
     }}>
       {/* Command Center Header */}
       <div style={{
