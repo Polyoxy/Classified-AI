@@ -23,6 +23,7 @@ export interface Conversation {
   id: string;
   title: string;
   messages: Message[];
+  isStarred?: boolean;
   createdAt: number;
   updatedAt: number;
   systemPrompt: string;

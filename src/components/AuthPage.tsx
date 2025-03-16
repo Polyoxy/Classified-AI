@@ -1,13 +1,17 @@
+'use client';
+
 import React, { useState, useEffect } from 'react';
 import { useAppContext } from '@/context/AppContext';
 import { auth, rtdb } from '@/lib/firebase';
+import { useRouter } from 'next/navigation';
 import { 
   signInWithEmailAndPassword, 
   signInAnonymously, 
   sendPasswordResetEmail,
   browserLocalPersistence,
   browserSessionPersistence,
-  setPersistence
+  setPersistence,
+  onAuthStateChanged
 } from 'firebase/auth';
 import { ref, update } from 'firebase/database';
 import RegisterPage from './RegisterPage';
@@ -32,6 +36,7 @@ const createOfflineUser = () => {
 };
 
 const AuthPage: React.FC = () => {
+  const router = useRouter();
   const { setUser, settings, updateSettings } = useAppContext();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -42,21 +47,21 @@ const AuthPage: React.FC = () => {
   const [currentScreen, setCurrentScreen] = useState<AuthScreen>('login');
   const [currentTheme, setCurrentTheme] = useState<'dark' | 'light'>(settings?.theme as 'dark' | 'light' || 'dark');
   
-  // Debug: Log auth state changes - only in development
+  // Handle auth state changes
   useEffect(() => {
-    // Only log auth state in development mode
-    if (process.env.NODE_ENV === 'development') {
-      const unsubscribe = auth.onAuthStateChanged((user) => {
-        console.log('Auth state changed:', user ? `User ${user.uid} logged in` : 'No user');
-      });
-      
-      return () => unsubscribe();
-    }
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        console.log('Auth state changed: User logged in', user.uid);
+        setUser(user);
+        router.push('/');
+      } else {
+        console.log('Auth state changed: No user');
+        setUser(null);
+      }
+    });
     
-    // In production, still set up the listener but don't log
-    const unsubscribe = auth.onAuthStateChanged(() => {});
     return () => unsubscribe();
-  }, []);
+  }, [setUser, router]);
 
   // Apply theme when it changes
   useEffect(() => {
@@ -81,7 +86,7 @@ const AuthPage: React.FC = () => {
       // Check if we're in Electron environment
       const isElectron = typeof window !== 'undefined' && window.electron;
       
-      // Only set persistence if not in Electron (Electron always uses local persistence)
+      // Only set persistence if not in Electron
       if (!isElectron) {
         const persistenceType = rememberMe ? browserLocalPersistence : browserSessionPersistence;
         await setPersistence(auth, persistenceType);
@@ -90,33 +95,21 @@ const AuthPage: React.FC = () => {
       // Store the email in localStorage before attempting login
       localStorage.setItem('lastLoginEmail', email);
       
-      // Sign in
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
+      // Sign in - the auth state observer will handle the redirect
+      await signInWithEmailAndPassword(auth, email, password);
       
       // Store the rememberMe preference in localStorage
       localStorage.setItem('rememberMe', JSON.stringify(rememberMe));
       
-      const lastLoginData = {
-        lastLogin: new Date().toISOString(),
-        rememberMe, // Store the preference in the database too
-        email // Store the email in the database too
-      };
-      
-      // Update last login time in Realtime Database only
-      try {
-        await update(ref(rtdb, `users/${user.uid}`), lastLoginData);
-      } catch (err) {
-        // Only log warnings in development
-        if (process.env.NODE_ENV === 'development') {
-          console.warn('Could not update last login time:', err);
-        }
-      }
-      
-      // Login successful - will be handled by the auth state observer
     } catch (error: any) {
       console.error('Login error:', error);
-      setError(error.message || 'Failed to login. Please try again.');
+      let errorMessage = 'Failed to login. Please try again.';
+      if (error.code === 'auth/invalid-login-credentials') {
+        errorMessage = 'Invalid email or password. Please try again.';
+      } else if (error.code === 'auth/user-not-found') {
+        errorMessage = 'No account found with this email. Please register first.';
+      }
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -147,51 +140,26 @@ const AuthPage: React.FC = () => {
     setError(null);
     
     try {
+      // Try Firebase anonymous auth first
+      const userCredential = await signInAnonymously(auth);
+      const user = userCredential.user;
+      
+      // Create guest user data
+      const guestData = {
+        uid: user.uid,
+        isAnonymous: true,
+        createdAt: new Date().toISOString(),
+        lastLogin: new Date().toISOString()
+      };
+      
+      // Save guest data to Realtime Database
       try {
-        // Try Firebase anonymous auth first
-        const userCredential = await signInAnonymously(auth);
-        const user = userCredential.user;
-        
-        // Create guest user data
-        const guestData = {
-          uid: user.uid,
-          isAnonymous: true,
-          createdAt: new Date().toISOString(),
-          lastLogin: new Date().toISOString()
-        };
-        
-        // Save guest data to Realtime Database
-        try {
-          await update(ref(rtdb, `users/${user.uid}`), guestData);
-        } catch (dbErr) {
-          // Only log warnings in development
-          if (process.env.NODE_ENV === 'development') {
-            console.warn('Could not save guest user data to database, continuing in offline mode', dbErr);
-          }
-        }
-      } catch (authError: any) {
-        // Only log warnings in development
-        if (process.env.NODE_ENV === 'development') {
-          console.warn('Firebase anonymous auth failed, using offline mode', authError);
-        }
-        
-        // Create an offline user if Firebase auth fails
-        const offlineUser = createOfflineUser();
-        
-        // Manually set user in context to bypass Firebase Auth
-        setUser(offlineUser as any);
-        
-        // Store in localStorage to persist the session
-        try {
-          localStorage.setItem('offlineUser', JSON.stringify(offlineUser));
-        } catch (e) {
-          if (process.env.NODE_ENV === 'development') {
-            console.warn('Could not save offline user to localStorage', e);
-          }
-        }
+        await update(ref(rtdb, `users/${user.uid}`), guestData);
+      } catch (dbErr) {
+        console.warn('Could not save guest user data to database', dbErr);
       }
       
-      // Anonymous login successful - will be handled by the auth state observer or the manual setUser above
+      // The auth state observer will handle the redirect
     } catch (error: any) {
       console.error('Guest login error:', error);
       setError('Unable to continue as guest. Please try again or create an account.');

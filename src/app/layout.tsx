@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import { Providers } from "@/components/Providers";
 import "./globals.css";
+import { AppProvider } from '@/context/AppContext';
+import Sidebar from '@/components/Sidebar';
 
 const inter = Inter({
   subsets: ["latin"],
@@ -55,18 +57,28 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
     <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`}>
       <head>
         <meta name="theme-color" content="#121212" />
       </head>
       <body className="antialiased theme-dark">
-        <Providers>
-          {children}
-        </Providers>
+        <AppProvider>
+          <div style={{
+            display: 'flex',
+            height: '100vh',
+            width: '100vw',
+            overflow: 'hidden',
+          }}>
+            <main style={{ flex: 1, height: '100%', overflow: 'auto' }}>
+              {children}
+            </main>
+            <Sidebar />
+          </div>
+        </AppProvider>
       </body>
     </html>
   );

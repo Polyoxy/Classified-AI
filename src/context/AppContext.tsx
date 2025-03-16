@@ -1,3 +1,5 @@
+'use client';
+
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { AppSettings, Conversation, Message, TokenUsage, UserRole, AIProvider } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
@@ -109,6 +111,8 @@ interface AppContextType {
   isLoading: boolean;
   changeModel: (model: string) => void;
   resetConversations: () => void;
+  isSidebarOpen: boolean;
+  setIsSidebarOpen: (isOpen: boolean) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -128,6 +132,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'error'>('disconnected');
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // Handle Firebase Authentication
   useEffect(() => {
@@ -429,10 +434,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       systemPrompt,
       model: settings.providers[settings.activeProvider].defaultModel,
       provider: settings.activeProvider,
+      isStarred: false
     };
     
+    // Update state immediately
     setCurrentConversation(newConversation);
-    setConversations(prev => [...prev, newConversation]);
+    setConversations(prev => [newConversation, ...prev]); // Add to beginning of list
     
     // Check if we're in Electron environment
     const isElectron = typeof window !== 'undefined' && window.electron;
@@ -440,10 +447,19 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     // Save to Firebase if authenticated and not in Electron
     if (user && !isElectron) {
       try {
+        // Save to Realtime Database
         set(ref(rtdb, `users/${user.uid}/conversations/${id}`), newConversation)
           .catch(error => console.error('Error saving conversation to Realtime Database:', error));
       } catch (error) {
         console.error('Error preparing conversation for Realtime Database:', error);
+      }
+    } else if (isElectron) {
+      // Save to electron-store
+      try {
+        window.electron.store.set('conversations', conversations)
+          .catch(error => console.error('Error saving to electron-store:', error));
+      } catch (error) {
+        console.error('Error saving to electron-store:', error);
       }
     }
     
@@ -509,30 +525,26 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       timestamp: Date.now(),
     };
 
+    // Update conversation title if this is the first user message
+    const isFirstUserMessage = currentConversation.messages.filter(m => m.role === 'user').length === 0 && role === 'user';
+    const newTitle = isFirstUserMessage ? content.substring(0, 30) + (content.length > 30 ? '...' : '') : currentConversation.title;
+
     // Create updated conversation with the new message
     const updatedConversation: Conversation = {
       ...currentConversation,
+      title: newTitle,
       messages: [...currentConversation.messages, newMessage],
       updatedAt: Date.now(),
     };
 
     // Update state immediately with the new message
-    setCurrentConversation({
-      ...updatedConversation,
-      messages: updatedConversation.messages.map(msg => ({
-        ...msg,
-        id: msg.id || uuidv4() // Ensure all messages have IDs
-      }))
-    });
+    setCurrentConversation(updatedConversation);
     
-    // Update conversations list
-    setConversations(prev => 
-      prev.map(conv => 
-        conv.id === currentConversation.id 
-          ? updatedConversation 
-          : conv
-      )
-    );
+    // Update conversations list and maintain order by updatedAt
+    setConversations(prev => {
+      const withoutCurrent = prev.filter(conv => conv.id !== currentConversation.id);
+      return [updatedConversation, ...withoutCurrent];
+    });
     
     // Check if we're in Electron environment
     const isElectron = typeof window !== 'undefined' && window.electron;
@@ -545,6 +557,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           .catch(error => console.error('Error updating conversation in Realtime Database:', error));
       } catch (error) {
         console.error('Error preparing conversation update for Realtime Database:', error);
+      }
+    } else if (isElectron) {
+      // Update in electron-store
+      try {
+        window.electron.store.set('conversations', conversations)
+          .catch(error => console.error('Error saving to electron-store:', error));
+      } catch (error) {
+        console.error('Error saving to electron-store:', error);
       }
     }
   };
@@ -621,6 +641,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     isLoading,
     changeModel,
     resetConversations,
+    isSidebarOpen,
+    setIsSidebarOpen,
   };
 
   return <AppContext.Provider value={contextValue}>{children}</AppContext.Provider>;
