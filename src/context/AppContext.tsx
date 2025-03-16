@@ -82,6 +82,12 @@ const createNewConversation = (settings: AppSettings): Conversation => {
         content: customSystemPrompts[userRole],
         timestamp: Date.now(),
       },
+      {
+        id: uuidv4(),
+        role: 'assistant',
+        content: 'Welcome to Classified AI! How can I help you today?',
+        timestamp: Date.now() + 100, // Add slight timestamp offset
+      },
     ],
     createdAt: Date.now(),
     updatedAt: Date.now(),
@@ -417,6 +423,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           role: 'system',
           content: systemPrompt,
           timestamp: Date.now(),
+        },
+        {
+          id: uuidv4(),
+          role: 'assistant',
+          content: 'Welcome to Classified AI! How can I help you today?',
+          timestamp: Date.now() + 100, // Add slight timestamp offset
         }
       ],
       createdAt: Date.now(),

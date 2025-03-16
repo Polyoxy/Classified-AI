@@ -330,7 +330,8 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
         fontFamily: message.role === 'assistant' ? 'Inter, sans-serif' : 'JetBrains Mono, monospace',
         fontSize: '14px',
         color: isDarkTheme ? '#e0e0e0' : '#404040',
-        padding: '0.75rem 1rem',
+        padding: '16px 20px',  // Keep improved padding
+        margin: '24px 0',      // Keep improved margin
         borderRadius: '8px',
         backgroundColor: message.role === 'assistant' 
           ? (isDarkTheme ? 'rgba(26, 26, 26, 0.4)' : 'rgba(240, 240, 240, 0.95)')
@@ -346,9 +347,11 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
         <div style={{
           display: 'flex',
           alignItems: 'center',
-          marginBottom: '0.75rem',
+          marginBottom: '12px',  // Keep improved spacing
+          paddingBottom: '8px',  // Keep improved spacing
           gap: '0.5rem',
           justifyContent: 'space-between',
+          borderBottom: `1px solid ${isDarkTheme ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'}`,
         }}>
           <div style={{display: 'flex', alignItems: 'center'}}>
             {message.role === 'user' ? (

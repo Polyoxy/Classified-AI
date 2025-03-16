@@ -265,7 +265,7 @@ export default function Home() {
 
 const App: React.FC<{ isElectron: boolean }> = ({ isElectron }) => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const { user, isLoading } = useAppContext();
+  const { user, isLoading, settings, updateSettings } = useAppContext();
 
   // Set up analytics
   useEffect(() => {

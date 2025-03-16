@@ -399,22 +399,23 @@ const ChatContainer: React.FC = () => {
 
   const renderContent = () => {
     if (error) {
-    return (
-      <div 
-        className="flex-1 overflow-hidden"
-        style={{ 
+      return (
+        <div 
+          className="flex-1 overflow-hidden"
+          style={{ 
             backgroundColor,
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          alignItems: 'center',
-          height: '100%',
-          fontFamily: 'JetBrains Mono, monospace',
-        }}
-      >
-        <div style={{ 
-          padding: '2rem',
-          textAlign: 'center',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+            height: '100%',
+            fontFamily: 'JetBrains Mono, monospace',
+            paddingTop: isElectron ? '1.5rem' : '2rem',
+          }}
+        >
+          <div style={{ 
+            padding: '2rem',
+            textAlign: 'center',
             color: '#ff6b6b'
           }}>
             <p>Error: {error}</p>
@@ -436,6 +437,7 @@ const ChatContainer: React.FC = () => {
             height: '100%',
             fontFamily: 'Inter, sans-serif',
             padding: '2rem',
+            paddingTop: isElectron ? '1.5rem' : '2rem',
           }}
         >
           <div style={{
@@ -519,28 +521,32 @@ const ChatContainer: React.FC = () => {
               </svg>
               Start New Chat
             </button>
+          </div>
         </div>
-      </div>
-    );
-  }
-
-  return (
-    <div 
-      ref={containerRef} 
+      );
+    }
+    
+    return (
+      <div 
+        ref={containerRef} 
         className="chat-container"
-      style={{ 
+        style={{ 
           flex: 1,
           overflowY: 'auto',
           padding: '2rem',
+          paddingTop: isElectron ? '2rem' : '2rem',
           backgroundColor,
         }}
       >
-        {messages.map((message, index) => (
+        {messages
+          .filter(message => message.role !== 'system') // Filter out system messages
+          .map((message, index) => (
             <MessageItem
               key={message.id || index}
               message={message}
-          />
-        ))}
+            />
+          ))
+        }
       </div>
     );
   };
@@ -559,6 +565,7 @@ const ChatContainer: React.FC = () => {
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
+        paddingTop: isElectron ? '16px' : '0',
       }}>
         {renderContent()}
       </div>
