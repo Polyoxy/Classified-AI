@@ -82,6 +82,8 @@ const CommandInput: React.FC = () => {
   // Handle send message - now calls our new useChat hook
   const handleSendMessage = () => {
     if (input.trim() && !isProcessing) {
+      console.log('User sending message:', input.trim());
+      
       // Send message using our chat hook
       sendMessage(input.trim());
       setInput('');

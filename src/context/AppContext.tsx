@@ -516,12 +516,22 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       updatedAt: Date.now(),
     };
 
-    // Update state immediately
-    setCurrentConversation(updatedConversation);
+    // Update state immediately with the new message
+    setCurrentConversation({
+      ...updatedConversation,
+      messages: updatedConversation.messages.map(msg => ({
+        ...msg,
+        id: msg.id || uuidv4() // Ensure all messages have IDs
+      }))
+    });
     
     // Update conversations list
     setConversations(prev => 
-      prev.map(conv => conv.id === currentConversation.id ? updatedConversation : conv)
+      prev.map(conv => 
+        conv.id === currentConversation.id 
+          ? updatedConversation 
+          : conv
+      )
     );
     
     // Check if we're in Electron environment
