@@ -158,102 +158,254 @@ export const callOllama = async (
   onUpdate: (response: StreamResponse) => void
 ): Promise<TokenUsage> => {
   try {
-    // Prepare messages for Ollama format
-    const ollamaMessages = messages.map(msg => ({
-      role: msg.role,
-      content: msg.content,
-    }));
+    // Log initial call details
+    console.log('🚀 Initializing Ollama API call:', {
+      model,
+      baseUrl,
+      temperature,
+      numMessages: messages.length
+    });
+
+    // Make sure we have a proper system message to set the context
+    let hasSystemMessage = false;
+    const systemMessageContent = "You are a helpful AI assistant that provides accurate, factual information. Only answer what you know with certainty. If you don't know something, say 'I don't know' or 'I'm not sure' rather than making up information. Keep your responses concise and focused on the user's question.";
+    
+    // Prepare messages for Ollama format with improved role handling
+    const ollamaMessages = messages.map(msg => {
+      // Keep the original role
+      return {
+        role: msg.role,
+        content: msg.content,
+      };
+    });
+
+    // Only add system message if there isn't one already
+    if (!messages.some(msg => msg.role === 'system')) {
+      ollamaMessages.unshift({
+        role: 'system',
+        content: systemMessageContent
+      });
+    }
+
+    console.log('📝 Prepared messages for Ollama:', 
+      ollamaMessages.map(m => ({
+        role: m.role,
+        preview: m.content.substring(0, 50) + (m.content.length > 50 ? '...' : '')
+      })));
 
     // Estimate prompt tokens
     const promptText = messages.map(msg => msg.content).join(' ');
     const promptTokens = estimateTokens(promptText);
+    console.log('🔢 Estimated prompt tokens:', promptTokens);
     
-    // Call Ollama API with streaming
-    const response = await fetch(`${baseUrl}/api/chat`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model,
-        messages: ollamaMessages,
-        stream: true,
-        options: {
-          temperature,
-        },
-      }),
+    // Try both baseUrl formats (with and without trailing slash)
+    const cleanBaseUrl = baseUrl.endsWith('/') 
+      ? baseUrl.slice(0, -1) 
+      : baseUrl;
+    
+    console.log(`📡 Sending to Ollama API: ${cleanBaseUrl}/api/chat`);
+    console.log('Request body:', {
+      model: model || "deepseek-r1:7b",
+      messages: ollamaMessages,
+      stream: true,
+      options: { temperature }
     });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Error calling Ollama API');
+    
+    // Determine if we're in Electron
+    const isElectron = typeof window !== 'undefined' && window.electron;
+    
+    // Prepare the request body
+    const requestBody = JSON.stringify({
+      model: model || "deepseek-r1:7b", // Use provided model or fallback to deepseek
+      messages: ollamaMessages,
+      stream: true,
+      options: {
+        temperature,
+      },
+    });
+    
+    // Try different connection methods
+    let response;
+    
+    if (isElectron) {
+      // In Electron, disable CSP completely for this request by using a custom fetch
+      console.log('Using API proxy route in Electron');
+      response = await fetch(`/api/ollama?endpoint=api/chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: requestBody,
+      });
+    } else {
+      // In browser, try direct connection first, then fallback to proxy
+      try {
+        // Try multiple approaches
+        const urls = [
+          `/api/ollama?endpoint=api/chat`, // API proxy route
+          `${cleanBaseUrl}/api/chat`,      // Direct connection using baseUrl
+          `http://127.0.0.1:11434/api/chat`, // Direct IP
+          `http://localhost:11434/api/chat`  // localhost
+        ];
+        
+        let lastError;
+        for (const url of urls) {
+          try {
+            console.log(`Attempting connection to: ${url}`);
+            response = await fetch(url, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: requestBody,
+            });
+            
+            if (response.ok) {
+              console.log(`Successfully connected to ${url}`);
+              break;
+            }
+          } catch (err) {
+            lastError = err;
+            console.warn(`Failed to connect to ${url}:`, err);
+          }
+        }
+        
+        if (!response || !response.ok) {
+          throw lastError || new Error('All connection attempts to Ollama failed');
+        }
+      } catch (error) {
+        console.error('All connection attempts failed:', error);
+        throw error;
+      }
     }
 
+    if (!response.ok) {
+      let errorMsg = 'Error calling Ollama API';
+      try {
+        const error = await response.json();
+        console.error("❌ Error response from Ollama:", error);
+        errorMsg = error.error || errorMsg;
+      } catch (e) {
+        console.error("❌ Failed to parse error response:", e);
+        errorMsg = `Ollama error: ${response.status} ${response.statusText}`;
+      }
+      throw new Error(errorMsg);
+    }
+
+    console.log("✅ Successfully connected to Ollama, processing response stream");
     const reader = response.body?.getReader();
     if (!reader) throw new Error('Failed to get response reader');
 
     let accumulatedContent = '';
+    let chunkCount = 0;
 
     // Process the stream
     const processStream = async (): Promise<void> => {
-      const { done, value } = await reader.read();
-      
-      if (done) {
-        // Final update
-        const completionTokens = estimateTokens(accumulatedContent);
-        const totalTokens = promptTokens + completionTokens;
+      try {
+        const { done, value } = await reader.read();
         
-        onUpdate({
-          content: accumulatedContent,
-          done: true,
-          usage: {
-            promptTokens,
+        if (done) {
+          // Final update
+          const completionTokens = estimateTokens(accumulatedContent);
+          const totalTokens = promptTokens + completionTokens;
+          
+          console.log('🏁 Stream completed:', {
+            totalChunks: chunkCount,
+            finalLength: accumulatedContent.length,
             completionTokens,
-            totalTokens,
-          },
+            totalTokens
+          });
+          
+          onUpdate({
+            content: accumulatedContent,
+            done: true,
+            usage: {
+              promptTokens,
+              completionTokens,
+              totalTokens,
+            },
+          });
+          
+          return;
+        }
+
+        // Decode the chunk
+        const chunk = new TextDecoder().decode(value);
+        chunkCount++;
+        
+        // Split by newlines and filter out empty lines
+        const lines = chunk.split('\n').filter(line => line.trim() !== '');
+        
+        console.log(`📦 Processing chunk #${chunkCount}:`, {
+          numLines: lines.length,
+          rawChunk: chunk
         });
         
-        return;
-      }
-
-      // Decode the chunk
-      const chunk = new TextDecoder().decode(value);
-      const lines = chunk.split('\n').filter(line => line.trim() !== '');
-
-      for (const line of lines) {
-        try {
-          const json = JSON.parse(line);
-          if (json.message?.content) {
-            const content = json.message.content;
-            accumulatedContent += content;
-            onUpdate({
-              content: accumulatedContent,
-              done: false,
-            });
+        for (const line of lines) {
+          try {
+            if (line.trim() === '') continue;
+            
+            // Parse the JSON response
+            const parsedLine = JSON.parse(line);
+            console.log(`🔍 Parsed line from chunk #${chunkCount}:`, parsedLine);
+            
+            // Extract content based on Ollama's response format
+            let content = '';
+            if (parsedLine.message?.content) {
+              content = parsedLine.message.content;
+              console.log('📄 Content from message:', content);
+            } else if (parsedLine.response) {
+              content = parsedLine.response;
+              console.log('📄 Content from response:', content);
+            } else if (parsedLine.content) {
+              content = parsedLine.content;
+              console.log('📄 Content direct:', content);
+            }
+            
+            if (content) {
+              accumulatedContent += content;
+              console.log(`💬 Updated content (${accumulatedContent.length} chars)`);
+              onUpdate({
+                content: accumulatedContent,
+                done: false,
+              });
+            }
+          } catch (e) {
+            // Log parsing errors but continue processing
+            console.error(`❌ Error parsing line from chunk #${chunkCount}:`, e);
+            console.log('Problematic line:', line);
           }
-        } catch (e) {
-          console.error('Error parsing JSON from Ollama stream:', e);
         }
-      }
 
-      return processStream();
+        return processStream();
+      } catch (error) {
+        console.error('❌ Error processing stream:', error);
+        throw error;
+      }
     };
 
     await processStream();
     
-    // Calculate final token usage (Ollama doesn't provide token counts)
+    // Calculate final token usage
     const completionTokens = estimateTokens(accumulatedContent);
     const totalTokens = promptTokens + completionTokens;
     
-    // Ollama is free, so cost is 0
+    console.log('📊 Final statistics:', {
+      promptTokens,
+      completionTokens,
+      totalTokens,
+      totalChunks: chunkCount,
+      finalLength: accumulatedContent.length
+    });
+    
     return {
       promptTokens,
       completionTokens,
       totalTokens,
-      estimatedCost: 0,
+      estimatedCost: 0, // Local models have no cost
     };
   } catch (error) {
-    console.error('Error calling Ollama:', error);
+    console.error('❌ Error in Ollama API call:', error);
     throw error;
   }
 };

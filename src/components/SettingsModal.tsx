@@ -17,7 +17,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   const [userRole, setUserRole] = useState<UserRole>(settings.userRole);
   const [customPrompts, setCustomPrompts] = useState<Record<UserRole, string>>(settings.customSystemPrompts);
   const [theme, setTheme] = useState<'dark' | 'light'>(settings.theme === 'dark' ? 'dark' : 'light');
-  const [activeTab, setActiveTab] = useState<'General' | 'API Settings' | 'Appearance'>('General');
+  const [activeTab, setActiveTab] = useState<'appearance' | 'api' | 'prompts' | 'about'>('appearance');
 
   // Update state when settings change
   useEffect(() => {
@@ -53,245 +53,71 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
     });
 
     // Apply theme class to body
-    document.body.className = theme === 'dark' ? 'theme-dark' : '';
+    document.body.className = `theme-${theme}`;
 
     onClose();
   };
 
-  // Close icon SVG
-  const CloseIcon = () => (
-    <svg 
-      width="18" 
-      height="18" 
-      viewBox="0 0 24 24" 
-      fill="none" 
-      stroke="currentColor" 
-      strokeWidth="2" 
-      strokeLinecap="round" 
-      strokeLinejoin="round"
-    >
-      <line x1="18" y1="6" x2="6" y2="18"></line>
-      <line x1="6" y1="6" x2="18" y2="18"></line>
-    </svg>
-  );
-
-  if (!isOpen) return null;
+  // Handle custom prompt changes
+  const handlePromptChange = (role: UserRole, value: string) => {
+    setCustomPrompts(prev => ({
+      ...prev,
+      [role]: value
+    }));
+  };
 
   return (
-    <div 
-      className="fixed inset-0 flex items-center justify-center z-50"
-      style={{
-        backgroundColor: theme === 'dark' ? 'rgba(0, 0, 0, 0.8)' : 'rgba(0, 0, 0, 0.5)',
-        backdropFilter: 'blur(4px)',
-      }}
-    >
-      <div 
-        className="modal-content"
-        style={{
-          width: '100%',
-          maxWidth: '600px',
-          backgroundColor: theme === 'dark' ? 'var(--input-bg)' : 'white',
-          border: `1px solid ${theme === 'dark' ? 'var(--border-color)' : 'var(--border-color)'}`,
-          borderRadius: '0.5rem',
-          overflow: 'hidden',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-        }}
-      >
+    <div className="modal-overlay" onClick={(e) => {
+      if (e.target === e.currentTarget) onClose();
+    }}>
+      <div className="modal-container" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
-        <div 
-          className="modal-header"
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            padding: '1rem',
-            borderBottom: `1px solid ${theme === 'dark' ? 'var(--border-color)' : 'var(--border-color)'}`,
-          }}
-        >
-          <h2 
-            style={{
-              fontSize: '1.25rem',
-              fontWeight: 'bold',
-              color: 'var(--accent-color)',
-              margin: 0,
-            }}
-          >
-            Classified AI Settings
-          </h2>
-          <button
+        <div className="modal-header">
+          <h2 className="modal-title">Settings</h2>
+          <button 
             onClick={onClose}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: theme === 'dark' ? 'var(--text-color)' : 'var(--text-color)',
-              cursor: 'pointer',
-              padding: '0.25rem',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              transition: 'color 0.2s',
-            }}
-            onMouseOver={(e) => (e.currentTarget.style.color = 'var(--accent-color)')}
-            onMouseOut={(e) => (e.currentTarget.style.color = theme === 'dark' ? 'var(--text-color)' : 'var(--text-color)')}
+            className="modal-close"
           >
-            <CloseIcon />
+            ×
           </button>
         </div>
-        
-        {/* Tabs */}
-        <div
-          className="modal-tabs"
-          style={{
-            display: 'flex',
-            borderBottom: `1px solid ${theme === 'dark' ? 'var(--border-color)' : 'var(--border-color)'}`,
-          }}
-        >
-          {(['General', 'API Settings', 'Appearance'] as const).map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              style={{
-                padding: '0.75rem 1rem',
-                background: 'transparent',
-                border: 'none',
-                borderBottom: activeTab === tab ? `2px solid var(--accent-color)` : 'none',
-                color: activeTab === tab ? 'var(--accent-color)' : 'var(--text-color)',
-                cursor: 'pointer',
-                fontFamily: 'inherit',
-                fontSize: '0.875rem',
-                fontWeight: activeTab === tab ? 'bold' : 'normal',
-                transition: 'all 0.2s',
-              }}
-            >
-              {tab}
-            </button>
-          ))}
-        </div>
-        
-        {/* Tab Content */}
-        <div 
-          className="modal-body"
-          style={{
-            padding: '1.5rem',
-            color: 'var(--text-color)',
-            maxHeight: 'calc(80vh - 130px)',
-            overflowY: 'auto',
-            backgroundColor: theme === 'dark' ? 'var(--input-bg)' : 'white',
-          }}
-        >
-          {activeTab === 'General' && (
-            <div className="space-y-6">
-              <div>
-                <label className="form-label">User Role</label>
-                <select
-                  value={userRole}
-                  onChange={(e) => setUserRole(e.target.value as UserRole)}
-                  className="form-select"
-                >
-                  <option value="developer">Developer</option>
-                  <option value="casual">Casual Chat</option>
-                  <option value="code-helper">Code Helper</option>
-                </select>
-              </div>
-              
-              <div>
-                <label className="form-label">Temperature</label>
-                <input
-                  type="range"
-                  min="0"
-                  max="1"
-                  step="0.1"
-                  value={temperature}
-                  onChange={(e) => setTemperature(parseFloat(e.target.value))}
-                  style={{
-                    width: '100%',
-                    accentColor: 'var(--accent-color)',
-                    height: '0.5rem',
-                    borderRadius: '0.25rem',
-                  }}
-                />
-                <div style={{ 
-                  display: 'flex', 
-                  justifyContent: 'space-between', 
-                  fontSize: '0.75rem',
-                  marginTop: '0.5rem',
-                  color: 'var(--text-color)',
-                  opacity: 0.8,
-                }}>
-                  <span>0 - Precise</span>
-                  <span>{temperature}</span>
-                  <span>1 - Creative</span>
-                </div>
-              </div>
-            </div>
-          )}
 
-          {activeTab === 'API Settings' && (
-            <div className="space-y-6">
-              <div>
-                <label className="form-label">API Provider</label>
-                <select
-                  value={activeProvider}
-                  onChange={(e) => setActiveProvider(e.target.value as AIProvider)}
-                  className="form-select"
-                >
-                  <option value="openai">OpenAI</option>
-                  <option value="ollama">Ollama</option>
-                  <option value="deepseek">Deepseek</option>
-                </select>
-              </div>
-              
-              <div>
-                <label className="form-label">API Key</label>
-                <input
-                  type="password"
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  className="form-input"
-                  placeholder={`Enter your ${activeProvider} API key`}
-                />
-              </div>
-              
-              <div>
-                <label className="form-label">Default Model</label>
-                <select
-                  value={settings.providers[activeProvider].defaultModel}
-                  onChange={(e) => {
-                    const updatedProviders = { ...settings.providers };
-                    updatedProviders[activeProvider] = {
-                      ...updatedProviders[activeProvider],
-                      defaultModel: e.target.value,
-                    };
-                    updateSettings({ providers: updatedProviders });
-                  }}
-                  className="form-select"
-                >
-                  {settings.providers[activeProvider].models.map((model) => (
-                    <option key={model} value={model}>{model}</option>
-                  ))}
-                </select>
-              </div>
-              
-              {activeProvider === 'ollama' && (
-                <div>
-                  <label className="form-label">Base URL</label>
-                  <input
-                    type="text"
-                    value={baseUrl}
-                    onChange={(e) => setBaseUrl(e.target.value)}
-                    className="form-input"
-                    placeholder="http://localhost:11434"
-                  />
-                </div>
-              )}
-            </div>
-          )}
-          
-          {activeTab === 'Appearance' && (
-            <div className="space-y-6">
-              <div>
+        {/* Tabs */}
+        <div className="tabs-container">
+          <button 
+            onClick={() => setActiveTab('appearance')}
+            className={`tab-button ${activeTab === 'appearance' ? 'active' : ''}`}
+          >
+            Appearance
+          </button>
+          <button 
+            onClick={() => setActiveTab('api')}
+            className={`tab-button ${activeTab === 'api' ? 'active' : ''}`}
+          >
+            API Settings
+          </button>
+          <button 
+            onClick={() => setActiveTab('prompts')}
+            className={`tab-button ${activeTab === 'prompts' ? 'active' : ''}`}
+          >
+            System Prompts
+          </button>
+          <button 
+            onClick={() => setActiveTab('about')}
+            className={`tab-button ${activeTab === 'about' ? 'active' : ''}`}
+          >
+            About
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="modal-content">
+          {/* Appearance Tab */}
+          {activeTab === 'appearance' && (
+            <div>
+              <div className="form-group">
                 <label className="form-label">Theme</label>
-                <select
+                <select 
                   value={theme}
                   onChange={(e) => setTheme(e.target.value as 'dark' | 'light')}
                   className="form-select"
@@ -301,60 +127,231 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                 </select>
               </div>
               
-              <div>
-                <label className="form-label">Font Size: {fontSize}px</label>
-                <input
-                  type="range"
-                  min="12"
-                  max="20"
-                  step="1"
-                  value={fontSize}
-                  onChange={(e) => setFontSize(parseInt(e.target.value))}
-                  style={{
-                    width: '100%',
-                    accentColor: 'var(--accent-color)',
-                    height: '0.5rem',
-                    borderRadius: '0.25rem',
-                  }}
-                />
-                <div style={{ 
-                  display: 'flex', 
-                  justifyContent: 'space-between', 
-                  fontSize: '0.75rem',
-                  marginTop: '0.5rem',
-                  color: 'var(--text-color)',
-                  opacity: 0.8,
-                }}>
-                  <span>12px</span>
-                  <span>16px</span>
-                  <span>20px</span>
+              <div className="form-group">
+                <label className="form-label">Font Size</label>
+                <div className="slider-container">
+                  <input 
+                    type="range" 
+                    min="10" 
+                    max="20" 
+                    value={fontSize} 
+                    onChange={(e) => setFontSize(parseInt(e.target.value))}
+                  />
+                  <span className="slider-value">{fontSize}px</span>
                 </div>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Model Temperature</label>
+                <div className="slider-container">
+                  <input 
+                    type="range" 
+                    min="0" 
+                    max="1" 
+                    step="0.1" 
+                    value={temperature} 
+                    onChange={(e) => setTemperature(parseFloat(e.target.value))}
+                  />
+                  <span className="slider-value">{temperature}</span>
+                </div>
+                <p className="form-help-text">
+                  Lower values make responses more deterministic, higher values make responses more random.
+                </p>
+              </div>
+              
+              <div className="form-group">
+                <label className="form-label">User Role</label>
+                <select 
+                  value={userRole}
+                  onChange={(e) => setUserRole(e.target.value as UserRole)}
+                  className="form-select"
+                >
+                  <option value="developer">Developer</option>
+                  <option value="casual">Casual User</option>
+                  <option value="code-helper">Code Helper</option>
+                </select>
+              </div>
+            </div>
+          )}
+
+          {/* API Settings Tab */}
+          {activeTab === 'api' && (
+            <div>
+              <div className="form-group">
+                <label className="form-label">Active Provider</label>
+                <select 
+                  value={activeProvider}
+                  onChange={(e) => setActiveProvider(e.target.value as AIProvider)}
+                  className="form-select"
+                  disabled={true}
+                >
+                  <option value="ollama">Ollama (Local LLM)</option>
+                </select>
+                <p className="form-help-text">
+                  Currently focused on Ollama with deepseek-r1:7b
+                </p>
+              </div>
+              
+              {/* Ollama Quick Setup for deepseek-r1:7b */}
+              <div className="info-box">
+                <h3 className="info-box-title">
+                  Ollama Quick Setup
+                </h3>
+                <p className="info-box-content">
+                  Configure Ollama to use the locally running deepseek-r1:7b model
+                </p>
+                <button
+                  onClick={() => {
+                    const newSettings = { ...settings };
+                    newSettings.activeProvider = 'ollama';
+                    newSettings.providers.ollama.baseUrl = 'http://localhost:11434';
+                    newSettings.providers.ollama.defaultModel = 'deepseek-r1:7b';
+                    updateSettings(newSettings);
+                  }}
+                  className="btn btn-primary"
+                >
+                  Set Ollama as Active Provider
+                </button>
+                <p className="info-box-footer">
+                  Note: Make sure Ollama is running with the command: <code>ollama run deepseek-r1:7b</code>
+                </p>
+              </div>
+              
+              <div className="form-group">
+                <label className="form-label">API Key</label>
+                <input 
+                  type="password"
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  placeholder="Enter your API key"
+                  className="form-input"
+                />
+                {activeProvider === 'ollama' && (
+                  <p className="form-help-text">
+                    Ollama doesn't require an API key
+                  </p>
+                )}
+              </div>
+              
+              <div className="form-group">
+                <label className="form-label">Base URL</label>
+                <input 
+                  type="text"
+                  value={baseUrl}
+                  onChange={(e) => setBaseUrl(e.target.value)}
+                  placeholder="Enter base URL (optional)"
+                  className="form-input"
+                />
+                {activeProvider === 'ollama' && (
+                  <p className="form-help-text">
+                    Default: http://localhost:11434
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* System Prompts Tab */}
+          {activeTab === 'prompts' && (
+            <div>
+              <div className="form-group">
+                <p className="form-help-text">
+                  Customize the system prompts for each user role to control how the AI responds.
+                </p>
+              </div>
+              
+              <div className="form-group">
+                <label className="form-label">Developer Prompt</label>
+                <textarea 
+                  value={customPrompts.developer}
+                  onChange={(e) => handlePromptChange('developer', e.target.value)}
+                  className="form-textarea"
+                  style={{ minHeight: '100px', fontFamily: 'monospace' }}
+                />
+              </div>
+              
+              <div className="form-group">
+                <label className="form-label">Casual User Prompt</label>
+                <textarea 
+                  value={customPrompts.casual}
+                  onChange={(e) => handlePromptChange('casual', e.target.value)}
+                  className="form-textarea"
+                  style={{ minHeight: '100px', fontFamily: 'monospace' }}
+                />
+              </div>
+              
+              <div className="form-group">
+                <label className="form-label">Code Helper Prompt</label>
+                <textarea 
+                  value={customPrompts['code-helper']}
+                  onChange={(e) => handlePromptChange('code-helper', e.target.value)}
+                  className="form-textarea"
+                  style={{ minHeight: '100px', fontFamily: 'monospace' }}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* About Tab */}
+          {activeTab === 'about' && (
+            <div className="about-section">
+              <h3>Classified AI</h3>
+              <p>A terminal-inspired chat application for interacting with AI models.</p>
+              
+              <div className="about-features">
+                <h4>Features</h4>
+                <ul>
+                  <li>Multiple AI provider support</li>
+                  <li>Customizable system prompts</li>
+                  <li>Dark and light themes</li>
+                  <li>Offline mode support</li>
+                  <li>Firebase integration for account management</li>
+                </ul>
+              </div>
+              
+              <div className="about-version">
+                <p>Version</p>
+                <p>1.0.0</p>
+              </div>
+
+              <div className="info-box">
+                <h3 className="info-box-title">
+                  Ollama Setup
+                </h3>
+                <p className="info-box-content">
+                  Configure Ollama to use the locally running Deepseek model
+                </p>
+                <button
+                  onClick={() => {
+                    const newSettings = { ...settings };
+                    newSettings.activeProvider = 'ollama';
+                    newSettings.providers.ollama.baseUrl = 'http://localhost:11434';
+                    newSettings.providers.ollama.defaultModel = 'deepseek-r1:7b';
+                    updateSettings(newSettings);
+                  }}
+                  className="btn btn-primary"
+                >
+                  Set Ollama as Active Provider
+                </button>
+                <p className="info-box-footer">
+                  Note: Make sure Ollama is running with the command: <code>ollama run deepseek-r1:7b</code>
+                </p>
               </div>
             </div>
           )}
         </div>
 
         {/* Footer */}
-        <div
-          className="modal-footer"
-          style={{
-            display: 'flex',
-            justifyContent: 'flex-end',
-            gap: '0.75rem',
-            padding: '1rem',
-            borderTop: `1px solid ${theme === 'dark' ? 'var(--border-color)' : 'var(--border-color)'}`,
-            backgroundColor: theme === 'dark' ? 'var(--input-bg)' : 'var(--code-bg)',
-          }}
-        >
-          <button
+        <div className="modal-footer">
+          <button 
             onClick={onClose}
-            className="terminal-button"
+            className="btn btn-default"
           >
             Cancel
           </button>
-          <button
+          <button 
             onClick={handleSave}
-            className="terminal-button-primary"
+            className="btn btn-primary"
           >
             Save Changes
           </button>

@@ -8,9 +8,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "electron-dev": "concurrently \"npm run dev\" \"wait-on http://localhost:3000 && electron .\"",
+    "electron-dev": "node electron/electron-start.js",
     "electron-build": "next build && electron-builder",
-    "electron-start": "wait-on http://localhost:3000 && electron ."
+    "electron-start": "wait-on http://localhost:3000 || wait-on http://localhost:3001 && electron ."
   },
   "dependencies": {
     "@headlessui/react": "^1.7.18",
