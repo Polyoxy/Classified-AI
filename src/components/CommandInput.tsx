@@ -25,9 +25,27 @@ const pulsingLightningStyles = `
   }
 `;
 
+// Example questions to cycle through
+const EXAMPLE_QUESTIONS = [
+  "What is the meaning of life?",
+  "How do I build an app with React?",
+  "Generate a function to sort an array",
+  "Explain quantum computing",
+  "Write a poem about AI",
+  "Tell me about machine learning",
+  "What's the best way to learn coding?",
+  "Summarize blockchain technology",
+  "Help me solve this algorithm",
+  "How does GPT work?",
+];
+
 const CommandInput: React.FC = () => {
   const [input, setInput] = useState('');
-  const [showResetButton, setShowResetButton] = useState(false); // Set to false by default
+  const [showResetButton, setShowResetButton] = useState(false);
+  const [placeholder, setPlaceholder] = useState("Enter command...");
+  const [targetPlaceholder, setTargetPlaceholder] = useState("Enter command...");
+  const [placeholderIndex, setPlaceholderIndex] = useState(0);
+  
   const { 
     addMessage, 
     resetConversations, 
@@ -43,10 +61,94 @@ const CommandInput: React.FC = () => {
   const { sendMessage } = useChat();
   
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const animationTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const cycleTimerRef = useRef<NodeJS.Timeout | null>(null);
   
   // Show connection status changes and notify user
   const [prevConnectionStatus, setPrevConnectionStatus] = useState<'connected' | 'disconnected' | 'error' | null>(null);
   
+  // Function to scramble text with hacker effect
+  const scrambleText = (target: string, current: string, progress: number) => {
+    // Create a scrambled version of the text that gradually transforms from current to target
+    const result = target.split('').map((char, index) => {
+      // If we're past the progress point for this character, show the final character
+      if (index < progress * target.length) {
+        return target[index];
+      }
+      
+      // For characters we haven't "solved" yet, show a random character
+      // But occasionally show the correct one to make it look like it's being solved
+      if (Math.random() > 0.8) {
+        return target[index];
+      }
+      
+      // Get a random character - prefer letters, numbers, and some special chars
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()-_=+';
+      return chars.charAt(Math.floor(Math.random() * chars.length));
+    }).join('');
+    
+    return result;
+  };
+
+  // Animation function to gradually transform placeholder
+  const animatePlaceholder = (current: string, target: string, startTime: number) => {
+    const duration = 1500; // Animation duration in ms
+    const elapsed = Date.now() - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    
+    if (progress < 1) {
+      // Update with scrambled text
+      setPlaceholder(scrambleText(target, current, progress));
+      
+      // Continue animation
+      animationTimerRef.current = setTimeout(() => {
+        animatePlaceholder(current, target, startTime);
+      }, 50);
+    } else {
+      // Animation complete
+      setPlaceholder(target);
+      
+      // Schedule next change
+      cycleTimerRef.current = setTimeout(() => {
+        const nextIndex = (placeholderIndex + 1) % EXAMPLE_QUESTIONS.length;
+        setPlaceholderIndex(nextIndex);
+        setTargetPlaceholder(EXAMPLE_QUESTIONS[nextIndex]);
+      }, 4000); // Wait before starting next transition
+    }
+  };
+
+  // Effect to handle placeholder animation
+  useEffect(() => {
+    if (!isProcessing && targetPlaceholder !== placeholder) {
+      // Clear any existing animation
+      if (animationTimerRef.current) {
+        clearTimeout(animationTimerRef.current);
+      }
+      
+      // Start new animation
+      animatePlaceholder(placeholder, targetPlaceholder, Date.now());
+    }
+    
+    return () => {
+      // Cleanup timers
+      if (animationTimerRef.current) clearTimeout(animationTimerRef.current);
+      if (cycleTimerRef.current) clearTimeout(cycleTimerRef.current);
+    };
+  }, [targetPlaceholder, isProcessing]);
+  
+  // Start cycling through examples
+  useEffect(() => {
+    // Initial setup - start with default and then cycle
+    cycleTimerRef.current = setTimeout(() => {
+      setTargetPlaceholder(EXAMPLE_QUESTIONS[0]);
+    }, 3000);
+    
+    return () => {
+      if (cycleTimerRef.current) clearTimeout(cycleTimerRef.current);
+      if (animationTimerRef.current) clearTimeout(animationTimerRef.current);
+    };
+  }, []);
+
   useEffect(() => {
     // Remove the auto-focus when component mounts
     // Only focus if explicitly requested (e.g., after sending a message)
@@ -152,6 +254,21 @@ const CommandInput: React.FC = () => {
         textarea::selection {
           background-color: rgba(150, 150, 150, 0.3);
         }
+        
+        @keyframes blink {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.3; }
+        }
+        
+        .blinking-cursor {
+          animation: blink 1s infinite;
+          display: inline-block;
+          width: 2px;
+          height: 14px;
+          background-color: var(--text-color);
+          vertical-align: middle;
+          margin-left: 2px;
+        }
       `}</style>
       
       <div className="command-input-container" style={{
@@ -228,7 +345,7 @@ const CommandInput: React.FC = () => {
             onChange={handleInputChange}
             onKeyDown={handleKeyPress}
             disabled={isProcessing}
-            placeholder={isProcessing ? "Processing request..." : "Enter command..."}
+            placeholder={isProcessing ? "Processing request..." : placeholder}
             style={{
               backgroundColor: 'transparent',
               border: 'none',
@@ -251,6 +368,15 @@ const CommandInput: React.FC = () => {
             autoFocus={false}
             className="no-focus-visible"
           />
+          {!input && !isProcessing && (
+            <span className="blinking-cursor" style={{ 
+              position: 'absolute', 
+              right: '0', 
+              top: '50%', 
+              transform: 'translateY(-50%)',
+              display: 'inline-block',
+            }} />
+          )}
         </div>
         
         {/* Upload button */}
