@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAppContext } from '@/context/AppContext';
 import { auth } from '@/lib/firebase';
-// Import the interfaces for type assertions
 import type { ElectronStore, ElectronWindowControls } from '../types/electron-interfaces';
 
 interface StatusBarProps {
@@ -13,12 +12,10 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
     connectionStatus, 
     tokenUsage, 
     currentConversation, 
-    isProcessing,
     settings,
     changeModel,
     user,
     setUser,
-    conversations,
     isSidebarOpen,
     setIsSidebarOpen
   } = useAppContext();
@@ -29,7 +26,6 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
   const changeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const initialRenderRef = useRef(true);
   
-  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -48,7 +44,6 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
     };
   }, [isModelDropdownOpen]);
 
-  // Set the initial selected model only once when component mounts or conversation changes
   useEffect(() => {
     if (currentConversation?.model && initialRenderRef.current) {
       setSelectedModel(currentConversation.model);
@@ -56,7 +51,6 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
     }
   }, [currentConversation]);
 
-  // Clear timeout on unmount
   useEffect(() => {
     return () => {
       if (changeTimeoutRef.current) {
@@ -66,11 +60,10 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
   }, []);
 
   const handleModelChange = (model: string) => {
-    if (model === selectedModel) return; // Skip if same model selected
+    if (model === selectedModel) return;
     
     setSelectedModel(model);
     
-    // Close dropdown after a short delay to prevent spazzing
     if (changeTimeoutRef.current) {
       clearTimeout(changeTimeoutRef.current);
     }
@@ -83,17 +76,14 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
     }, 150);
   };
 
-  // Format token cost
   const formatCost = (cost: number) => {
     return `$${cost.toFixed(6)}`;
   };
 
-  // Format number with commas
   const formatNumber = (num: number) => {
     return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   };
 
-  // Get the currently active model name
   const getActiveModelName = () => {
     if (settings.activeProvider === 'ollama') {
       return settings.providers.ollama.defaultModel || 'deepseek-r1:7b';
@@ -101,7 +91,6 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
     return 'Unknown';
   };
 
-  // Get status indicator color based on connection status
   const getStatusColor = () => {
     switch (connectionStatus) {
       case 'connected':
@@ -115,21 +104,6 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
     }
   };
 
-  // Get status message
-  const getStatusMessage = () => {
-    switch (connectionStatus) {
-      case 'connected':
-        return `Connected - ${getActiveModelName()}`;
-      case 'disconnected':
-        return 'Disconnected - Check local server';
-      case 'error':
-        return 'Error connecting to model server';
-      default:
-        return 'Status unknown';
-    }
-  };
-
-  // Settings icon SVG
   const SettingsIcon = () => (
     <svg 
       width="14" 
@@ -147,64 +121,6 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
     </svg>
   );
 
-  // Save icon SVG
-  const SaveIcon = () => (
-    <svg 
-      width="14" 
-      height="14" 
-      viewBox="0 0 24 24" 
-      fill="none" 
-      stroke="currentColor" 
-      strokeWidth="2" 
-      strokeLinecap="round" 
-      strokeLinejoin="round"
-      style={{ pointerEvents: 'none' }}
-    >
-      <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
-      <polyline points="17 21 17 13 7 13 7 21"></polyline>
-      <polyline points="7 3 7 8 15 8"></polyline>
-    </svg>
-  );
-
-  // Monitor icon SVG
-  const MonitorIcon = () => (
-    <svg 
-      width="14" 
-      height="14" 
-      viewBox="0 0 24 24" 
-      fill="none" 
-      stroke="currentColor" 
-      strokeWidth="2" 
-      strokeLinecap="round" 
-      strokeLinejoin="round"
-      style={{ pointerEvents: 'none' }}
-    >
-      <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
-      <line x1="8" y1="21" x2="16" y2="21"></line>
-      <line x1="12" y1="17" x2="12" y2="21"></line>
-    </svg>
-  );
-
-  // Logout icon SVG
-  const LogoutIcon = () => (
-    <svg 
-      width="14" 
-      height="14" 
-      viewBox="0 0 24 24" 
-      fill="none" 
-      stroke="currentColor" 
-      strokeWidth="2" 
-      strokeLinecap="round" 
-      strokeLinejoin="round"
-      style={{ pointerEvents: 'none' }}
-    >
-      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-      <polyline points="16 17 21 12 16 7"></polyline>
-      <line x1="21" y1="12" x2="9" y2="12"></line>
-    </svg>
-  );
-
-  // Get models for current provider
   const getModelsForProvider = () => {
     if (!currentConversation) return [];
     
@@ -212,95 +128,64 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
     return settings.providers[provider]?.models || [];
   };
 
-  // Make sure we always have a valid model selected to display
   const getCurrentModel = () => {
     if (selectedModel) return selectedModel;
     if (currentConversation?.model) return currentConversation.model;
     
     const models = getModelsForProvider();
     if (models.length > 0) {
-      return models[0]; // Default to first model if nothing else is available
+      return models[0];
     }
     
     return 'No models available';
   };
 
-  // Check if a model is deepseek-r1:7b
-  const isLocalModel = (model: string) => {
-    return model.toLowerCase().includes('deepseek-r1') ||
-           model.toLowerCase().includes('deepseek');
-  };
-
-  // Handle logout
   const handleLogout = async () => {
-    console.log('Logout button clicked');
-    
     try {
-      // Check if we're in Electron environment
       const isElectron = typeof window !== 'undefined' && window.electron;
-      console.log('Is Electron environment:', isElectron);
-      console.log('Current user:', user);
       
-      // Store the current user's email before logging out
       if (user && user.email) {
         localStorage.setItem('lastLoginEmail', user.email);
       }
 
-      // Clear the local storage first (important for Electron)
       localStorage.removeItem('offlineUser');
       
-      // In Electron, also clear the electron-store
       if (isElectron && window.electron?.store) {
         try {
-          // Use type assertion to fix type checking
           const electronStore = window.electron.store as ElectronStore;
           await electronStore.clear();
-          console.log('Electron store cleared');
         } catch (storeError) {
           console.warn('Failed to clear electron store:', storeError);
         }
       }
       
-      // Check if user is an offline user
       const isOfflineUser = user && (user.uid.startsWith('offline-') || user.isAnonymous);
-      console.log('Is offline/anonymous user:', isOfflineUser);
       
-      // Always try to sign out from Firebase
       try {
-        console.log('Attempting Firebase signOut');
         await auth.signOut();
       } catch (firebaseError) {
         console.warn('Firebase sign out error:', firebaseError);
       }
       
-      // Also manually clear the user state (important for Electron)
       setUser(null);
       
-      console.log('Logout completed');
-      
-      // In Electron, reload the window to ensure clean state
       if (isElectron && window.electron?.windowControls) {
-        console.log('Reloading Electron app after logout');
-        // Wait a moment before reloading to ensure state is cleared
         setTimeout(() => {
           try {
-            // Use type assertion to fix type checking
             const windowControls = window.electron.windowControls as ElectronWindowControls;
             windowControls.reload();
           } catch (reloadError) {
             console.warn('Failed to reload window:', reloadError);
-            window.location.reload(); // Fallback
+            window.location.reload();
           }
         }, 500);
       } else {
-        // For non-Electron, reload the page after a delay
         setTimeout(() => {
           window.location.reload();
         }, 500);
       }
     } catch (error) {
       console.error('Error during logout:', error);
-      // If all else fails, try forcing a hard logout
       localStorage.removeItem('offlineUser');
       setUser(null);
       window.location.reload();
@@ -321,9 +206,7 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
       position: 'relative',
       minHeight: '32px',
     }}>
-      {/* Left side: Model selector and connection status */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        {/* Model selector */}
         <div 
           className="model-selector" 
           ref={dropdownRef}
@@ -382,7 +265,6 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
                   : '0 -4px 8px rgba(0,0,0,0.1)',
               }}
             >
-              {/* Model options */}
               {getModelsForProvider().map((model) => (
                 <div 
                   key={model}
@@ -412,7 +294,6 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
           )}
         </div>
         
-        {/* Connection status indicator */}
         <div className="connection-status" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <div style={{
             width: '10px',
@@ -423,7 +304,6 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
           }}></div>
           <span>Connected</span>
           
-          {/* Token usage */}
           {tokenUsage.totalTokens > 0 && (
             <>
               <span style={{ marginLeft: '12px' }}>
@@ -437,14 +317,9 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
         </div>
       </div>
       
-      {/* Right side: Action buttons */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        {/* Sidebar toggle button */}
         <button
-          onClick={() => {
-            console.log('Toggling sidebar, current state:', isSidebarOpen);
-            setIsSidebarOpen(!isSidebarOpen);
-          }}
+          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
           style={{
             backgroundColor: 'transparent',
             border: 'none',
@@ -475,39 +350,6 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
           </svg>
         </button>
         
-        {/* Reload button */}
-        <button
-          style={{
-            backgroundColor: 'transparent',
-            border: 'none',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '4px',
-            borderRadius: '4px',
-            color: 'var(--text-color)',
-          }}
-          title="Reload"
-        >
-          <svg 
-            width="16" 
-            height="16" 
-            viewBox="0 0 24 24" 
-            fill="none" 
-            stroke="currentColor" 
-            strokeWidth="2" 
-            strokeLinecap="round" 
-            strokeLinejoin="round"
-          >
-            <path d="M21 2v6h-6"></path>
-            <path d="M3 12a9 9 0 0 1 15-6.7L21 8"></path>
-            <path d="M3 22v-6h6"></path>
-            <path d="M21 12a9 9 0 0 1-15 6.7L3 16"></path>
-          </svg>
-        </button>
-        
-        {/* Settings button */}
         <button
           onClick={onOpenSettings}
           style={{

@@ -1,8 +1,13 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useAppContext } from '@/context/AppContext';
 import { callAI, StreamResponse } from '@/lib/aiService';
 import { Message } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
+
+interface AIError extends Error {
+  name: string;
+  message: string;
+}
 
 export const useChat = () => {
   const { 
@@ -16,11 +21,22 @@ export const useChat = () => {
   } = useAppContext();
 
   const [error, setError] = useState<string | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  const stopResponse = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+  }, []);
 
   const sendMessage = useCallback(async (content: string) => {
     if (!content.trim() || isProcessing || !currentConversation) return;
 
     try {
+      // Create new AbortController for this request
+      abortControllerRef.current = new AbortController();
+      
       console.log('Sending user message:', content.trim());
       
       // Add user message to the conversation
@@ -109,10 +125,11 @@ export const useChat = () => {
           messages as Message[],
           model,
           settings.activeProvider,
+          handleStreamUpdate,
           apiKey,
           providerSettings.baseUrl,
           settings.temperature,
-          handleStreamUpdate
+          abortControllerRef.current
         );
         
         // Update token usage
@@ -123,25 +140,38 @@ export const useChat = () => {
           responseLength: accumulatedContent.length 
         });
       } catch (directError) {
-        console.error('❌ Direct connection failed:', directError);
+        const error = directError as AIError;
+        // Check if the error was due to abortion
+        if (error.name === 'AbortError') {
+          console.log('Response generation was cancelled');
+          addMessage('Response generation was cancelled.', 'system');
+          return;
+        }
+        
+        console.error('❌ Direct connection failed:', error);
         
         // If in Electron environment, we can't use the API proxy route
         const isElectron = typeof window !== 'undefined' && window.electron;
         if (isElectron) {
-          throw directError;
+          throw error;
         }
       }
     } catch (error) {
-      console.error('❌ Error sending message to AI:', error);
-      setError(error instanceof Error ? error.message : String(error));
-      
-      // Add error message to conversation
-      addMessage(`Error: ${error instanceof Error ? error.message : String(error)}`, 'system');
-      
-      // Update connection status
-      setConnectionStatus('error');
+      const err = error as AIError;
+      // Don't show error message if it was just cancelled
+      if (err.name !== 'AbortError') {
+        console.error('❌ Error sending message to AI:', err);
+        setError(err.message);
+        
+        // Add error message to conversation
+        addMessage(`Error: ${err.message}`, 'system');
+        
+        // Update connection status
+        setConnectionStatus('error');
+      }
     } finally {
       setIsProcessing(false);
+      abortControllerRef.current = null;
     }
   }, [
     addMessage,
@@ -155,6 +185,7 @@ export const useChat = () => {
 
   return {
     sendMessage,
+    stopResponse,
     error,
     isProcessing
   };

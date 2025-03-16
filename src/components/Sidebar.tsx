@@ -6,20 +6,24 @@ import { Conversation } from '@/types';
 import { useRouter } from 'next/navigation';
 import { auth } from '@/lib/firebase';
 import { signOut } from 'firebase/auth';
+import { update, ref, get } from 'firebase/database';
+import { rtdb } from '@/lib/firebase';
 
 const Sidebar: React.FC = () => {
   const router = useRouter();
   const { 
-    user, 
-    setUser, 
     conversations, 
     currentConversation, 
     setCurrentConversation,
     createConversation,
-    isSidebarOpen
+    setUser,
+    user,
+    deleteConversation,
+    addMessage
   } = useAppContext();
 
   const [filter, setFilter] = useState<'all' | 'starred'>('all');
+  const [hoveredConversation, setHoveredConversation] = useState<string | null>(null);
 
   // Handle starring a conversation
   const toggleStar = (conversationId: string) => {
@@ -27,20 +31,107 @@ const Sidebar: React.FC = () => {
     if (conversation) {
       const updatedConversation = {
         ...conversation,
-        isStarred: !conversation.isStarred
+        isStarred: !conversation.isStarred,
+        updatedAt: Date.now() // Add updatedAt timestamp
       };
-      // Update in the conversations list
-      const updatedConversations = conversations.map(conv =>
+      
+      // Update in state
+      setCurrentConversation(updatedConversation);
+      
+      // Update conversations list
+      const updatedConversations = conversations.map(conv => 
         conv.id === conversationId ? updatedConversation : conv
       );
-      setCurrentConversation(updatedConversation);
-      // TODO: Add persistence logic here
+      
+      // Sort by updatedAt in descending order
+      updatedConversations.sort((a, b) => b.updatedAt - a.updatedAt);
+      
+      // Check if we're in Electron environment
+      const isElectron = typeof window !== 'undefined' && window.electron;
+      
+      // Update in Firebase if authenticated and not in Electron
+      if (user && !isElectron) {
+        try {
+          // Update in Realtime Database
+          update(ref(rtdb, `users/${user.uid}/conversations/${conversationId}`), updatedConversation)
+            .catch(error => console.error('Error updating conversation in Realtime Database:', error));
+        } catch (error) {
+          console.error('Error preparing conversation update for Realtime Database:', error);
+        }
+      } else if (isElectron) {
+        // Update in electron-store
+        try {
+          window.electron.store.set('conversations', updatedConversations)
+            .catch(error => console.error('Error saving to electron-store:', error));
+        } catch (error) {
+          console.error('Error saving to electron-store:', error);
+        }
+      }
     }
   };
 
   // Handle switching to a conversation
-  const handleConversationClick = (conversation: any) => {
-    setCurrentConversation(conversation);
+  const handleConversationClick = async (conversation: Conversation) => {
+    try {
+      console.log('Attempting to switch to conversation:', {
+        id: conversation.id,
+        title: conversation.title,
+        messageCount: conversation.messages.length
+      });
+
+      // Check if we're in Electron environment
+      const isElectron = typeof window !== 'undefined' && window.electron;
+      
+      // If using Firebase, fetch the latest version of the conversation
+      if (user && !isElectron) {
+        try {
+          console.log('Fetching latest conversation from Firebase...');
+          const convRef = ref(rtdb, `users/${user.uid}/conversations/${conversation.id}`);
+          const snapshot = await get(convRef);
+          
+          if (snapshot.exists()) {
+            const latestConversation = snapshot.val() as Conversation;
+            console.log('Latest conversation fetched:', {
+              id: latestConversation.id,
+              messageCount: latestConversation.messages.length,
+              lastMessage: latestConversation.messages[latestConversation.messages.length - 1]?.content.substring(0, 50)
+            });
+            
+            // Validate conversation data
+            if (!latestConversation.messages || !Array.isArray(latestConversation.messages)) {
+              throw new Error('Invalid conversation data: messages array is missing or invalid');
+            }
+            
+            // Update the conversation with the latest data
+            setCurrentConversation(latestConversation);
+          } else {
+            console.warn('Conversation not found in Firebase, using local version');
+            setCurrentConversation(conversation);
+          }
+        } catch (error: any) {
+          console.error('Firebase fetch error:', error);
+          // Show error in UI
+          addMessage(`Error loading conversation: ${error?.message || 'Unknown error'}`, 'system');
+          // Fallback to local version
+          setCurrentConversation(conversation);
+        }
+      } else {
+        console.log('Using local conversation data');
+        // Validate conversation data
+        if (!conversation.messages || !Array.isArray(conversation.messages)) {
+          throw new Error('Invalid conversation data: messages array is missing or invalid');
+        }
+        
+        // For Electron or local storage, use the conversation as is
+        setCurrentConversation(conversation);
+      }
+
+      console.log('Conversation switch completed');
+    } catch (error: any) {
+      console.error('Error switching conversation:', error);
+      // Show error in UI
+      addMessage(`Error switching conversation: ${error?.message || 'Unknown error'}`, 'system');
+    }
   };
 
   // Handle creating a new chat
@@ -56,11 +147,8 @@ const Sidebar: React.FC = () => {
   // Handle logout
   const handleLogout = async () => {
     try {
-      // Sign out from Firebase
       await signOut(auth);
-      // Clear user from context
       setUser(null);
-      // Redirect to auth page
       router.push('/auth');
     } catch (error) {
       console.error('Logout failed:', error);
@@ -70,21 +158,17 @@ const Sidebar: React.FC = () => {
   return (
     <div style={{
       position: 'fixed',
-      top: '36px', // Below the header
-      right: isSidebarOpen ? '0' : '-320px', // Hide off-screen when closed
-      bottom: '24px', // Above the status bar
+      top: '36px',
+      right: 0,
+      bottom: '24px',
       width: '320px',
       backgroundColor: 'var(--bg-color)',
       borderLeft: '1px solid var(--border-color)',
-      transition: 'right 0.3s ease',
       display: 'flex',
       flexDirection: 'column',
       zIndex: 1000,
       overflow: 'hidden',
-      boxShadow: isSidebarOpen ? '-2px 0 5px rgba(0, 0, 0, 0.1)' : 'none',
-      pointerEvents: 'all',
-      transform: 'translateZ(0)', // Force GPU acceleration
-      willChange: 'right', // Optimize for animations
+      boxShadow: '-2px 0 5px rgba(0, 0, 0, 0.1)',
     }}>
       {/* Command Center Header */}
       <div style={{
@@ -95,7 +179,7 @@ const Sidebar: React.FC = () => {
         alignItems: 'center',
         gap: '8px',
       }}>
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text-color)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
           <line x1="3" y1="9" x2="21" y2="9"></line>
           <line x1="9" y1="21" x2="9" y2="9"></line>
@@ -115,9 +199,9 @@ const Sidebar: React.FC = () => {
         style={{
           margin: '20px',
           padding: '10px',
-          backgroundColor: 'var(--text-color)',
-          color: 'var(--bg-color)',
-          border: 'none',
+          backgroundColor: '#2D2D2D',
+          color: 'var(--text-color)',
+          border: '1px solid var(--border-color)',
           borderRadius: '4px',
           cursor: 'pointer',
           fontSize: '14px',
@@ -126,10 +210,17 @@ const Sidebar: React.FC = () => {
           alignItems: 'center',
           justifyContent: 'center',
           gap: '8px',
-          transition: 'opacity 0.2s ease',
+          opacity: 1,
+          transition: 'all 0.2s ease',
         }}
-        onMouseOver={(e) => e.currentTarget.style.opacity = '0.9'}
-        onMouseOut={(e) => e.currentTarget.style.opacity = '1'}
+        onMouseOver={(e) => {
+          e.currentTarget.style.backgroundColor = '#3D3D3D';
+          e.currentTarget.style.borderColor = 'var(--text-color)';
+        }}
+        onMouseOut={(e) => {
+          e.currentTarget.style.backgroundColor = '#2D2D2D';
+          e.currentTarget.style.borderColor = 'var(--border-color)';
+        }}
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -143,6 +234,7 @@ const Sidebar: React.FC = () => {
         display: 'flex',
         borderBottom: '1px solid var(--border-color)',
         padding: '0 20px',
+        backgroundColor: 'var(--bg-color)',
       }}>
         <button
           onClick={() => setFilter('all')}
@@ -156,7 +248,6 @@ const Sidebar: React.FC = () => {
             opacity: filter === 'all' ? 1 : 0.7,
             cursor: 'pointer',
             fontSize: '14px',
-            transition: 'all 0.2s ease',
           }}
         >
           All
@@ -173,7 +264,6 @@ const Sidebar: React.FC = () => {
             opacity: filter === 'starred' ? 1 : 0.7,
             cursor: 'pointer',
             fontSize: '14px',
-            transition: 'all 0.2s ease',
           }}
         >
           Starred
@@ -185,130 +275,227 @@ const Sidebar: React.FC = () => {
         flex: 1,
         overflowY: 'auto',
         padding: '20px',
+        backgroundColor: 'var(--bg-color)',
       }}>
-        {filteredConversations.map((conv) => (
-          <div
-            key={conv.id}
-            onClick={() => handleConversationClick(conv)}
-            style={{
-              padding: '12px',
-              marginBottom: '8px',
-              backgroundColor: currentConversation?.id === conv.id ? 'var(--bg-color)' : 'transparent',
-              border: `1px solid ${currentConversation?.id === conv.id ? 'var(--text-color)' : 'var(--border-color)'}`,
-              borderRadius: '4px',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-            }}
-            onMouseOver={(e) => {
-              if (currentConversation?.id !== conv.id) {
-                e.currentTarget.style.backgroundColor = 'var(--bg-color)';
-                e.currentTarget.style.opacity = '0.8';
-              }
-            }}
-            onMouseOut={(e) => {
-              if (currentConversation?.id !== conv.id) {
-                e.currentTarget.style.backgroundColor = 'transparent';
-                e.currentTarget.style.opacity = '1';
-              }
-            }}
-          >
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: '4px',
-            }}>
+        {filteredConversations.length === 0 ? (
+          <div style={{
+            textAlign: 'center',
+            color: 'var(--text-color)',
+            opacity: 0.7,
+            padding: '20px',
+          }}>
+            No conversations yet
+          </div>
+        ) : (
+          filteredConversations.map((conv) => (
+            <div
+              key={conv.id}
+              onClick={() => handleConversationClick(conv)}
+              onMouseEnter={() => setHoveredConversation(conv.id)}
+              onMouseLeave={() => setHoveredConversation(null)}
+              style={{
+                padding: '12px',
+                marginBottom: '8px',
+                backgroundColor: currentConversation?.id === conv.id ? '#2D2D2D' : 'transparent',
+                border: `1px solid ${currentConversation?.id === conv.id ? 'var(--text-color)' : 'var(--border-color)'}`,
+                borderRadius: '4px',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                opacity: 1,
+                position: 'relative',
+              }}
+              onMouseOver={(e) => {
+                if (currentConversation?.id !== conv.id) {
+                  e.currentTarget.style.backgroundColor = '#2D2D2D';
+                  e.currentTarget.style.borderColor = 'var(--text-color)';
+                }
+              }}
+              onMouseOut={(e) => {
+                if (currentConversation?.id !== conv.id) {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                  e.currentTarget.style.borderColor = 'var(--border-color)';
+                }
+              }}
+            >
               <div style={{
-                fontSize: '14px',
-                fontWeight: 600,
-                color: 'var(--text-color)',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '4px',
               }}>
-                {conv.title || 'New Chat'}
+                <div style={{
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  color: 'var(--text-color)',
+                  flex: 1,
+                  marginRight: '8px',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}>
+                  {conv.title || 'New Chat'}
+                </div>
+                <div style={{
+                  display: 'flex',
+                  gap: '4px',
+                  alignItems: 'center',
+                }}>
+                  {hoveredConversation === conv.id && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (deleteConversation) {
+                          deleteConversation(conv.id);
+                          if (currentConversation?.id === conv.id) {
+                            // Find the next available conversation to switch to
+                            const remainingConvs = conversations.filter(c => c.id !== conv.id);
+                            if (remainingConvs.length > 0) {
+                              // Switch to the most recent conversation
+                              setCurrentConversation(remainingConvs[0]);
+                            } else {
+                              // If no conversations left, create a new one
+                              createConversation();
+                            }
+                          }
+                        }
+                      }}
+                      style={{
+                        backgroundColor: 'transparent',
+                        border: 'none',
+                        cursor: 'pointer',
+                        padding: '4px',
+                        color: 'var(--text-color)',
+                        opacity: 0.7,
+                        transition: 'opacity 0.2s ease',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.opacity = '1';
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.opacity = '0.7';
+                      }}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M3 6h18"></path>
+                        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                      </svg>
+                    </button>
+                  )}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleStar(conv.id);
+                    }}
+                    style={{
+                      backgroundColor: 'transparent',
+                      border: 'none',
+                      cursor: 'pointer',
+                      padding: '4px',
+                      color: 'var(--text-color)',
+                      opacity: conv.isStarred ? 1 : 0.5,
+                    }}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill={conv.isStarred ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                    </svg>
+                  </button>
+                </div>
               </div>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  toggleStar(conv.id);
-                }}
-                style={{
-                  backgroundColor: 'transparent',
-                  border: 'none',
-                  cursor: 'pointer',
-                  padding: '4px',
-                  color: conv.isStarred ? 'var(--text-color)' : 'var(--text-color)',
-                  opacity: conv.isStarred ? 1 : 0.5,
-                }}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill={conv.isStarred ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
-                </svg>
-              </button>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* User Info and Logout */}
+      <div style={{
+        borderTop: '1px solid var(--border-color)',
+        padding: '12px 20px',
+        backgroundColor: 'var(--bg-color)',
+      }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          marginBottom: '12px',
+        }}>
+          <div style={{
+            width: '32px',
+            height: '32px',
+            borderRadius: '50%',
+            backgroundColor: '#2D2D2D',
+            border: '1px solid var(--border-color)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'var(--text-color)',
+            fontSize: '14px',
+            fontWeight: 600,
+          }}>
+            {user?.email?.[0].toUpperCase() || 'A'}
+          </div>
+          <div style={{
+            flex: 1,
+            overflow: 'hidden',
+          }}>
+            <div style={{
+              fontSize: '14px',
+              fontWeight: 600,
+              color: 'var(--text-color)',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}>
+              {user?.displayName || 'Agent'}
             </div>
             <div style={{
               fontSize: '12px',
               color: 'var(--text-color)',
               opacity: 0.7,
+              whiteSpace: 'nowrap',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
             }}>
-              {conv.messages[conv.messages.length - 1]?.content.slice(0, 50) || 'No messages yet'}...
+              {user?.email || 'anonymous@classified.ai'}
             </div>
           </div>
-        ))}
-      </div>
-
-      {/* User Info Section (Bottom) */}
-      <div style={{
-        padding: '20px',
-        borderTop: '1px solid var(--border-color)',
-        backgroundColor: 'var(--bg-color)',
-        marginTop: 'auto',
-      }}>
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '8px',
-        }}>
-          <div style={{ 
-            fontSize: '14px', 
-            fontWeight: 600,
-            color: 'var(--text-color)',
-          }}>
-            {user?.displayName || 'Anonymous User'}
-          </div>
-          <div style={{ 
-            fontSize: '12px',
-            color: 'var(--text-color)',
-            opacity: 0.7,
-          }}>
-            {user?.email || 'No email'}
-          </div>
-          <button
-            onClick={handleLogout}
-            style={{
-              marginTop: '8px',
-              padding: '8px 12px',
-              backgroundColor: 'transparent',
-              border: '1px solid var(--border-color)',
-              color: 'var(--text-color)',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '12px',
-              transition: 'all 0.2s ease',
-            }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.backgroundColor = 'var(--secondary-bg)';
-              e.currentTarget.style.borderColor = 'var(--text-color)';
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.backgroundColor = 'transparent';
-              e.currentTarget.style.borderColor = 'var(--border-color)';
-            }}
-          >
-            Logout
-          </button>
         </div>
+        <button
+          onClick={handleLogout}
+          style={{
+            width: '100%',
+            padding: '8px',
+            backgroundColor: '#2D2D2D',
+            color: 'var(--text-color)',
+            border: '1px solid var(--border-color)',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontSize: '14px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            transition: 'all 0.2s ease',
+          }}
+          onMouseOver={(e) => {
+            e.currentTarget.style.backgroundColor = '#3D3D3D';
+            e.currentTarget.style.borderColor = 'var(--text-color)';
+          }}
+          onMouseOut={(e) => {
+            e.currentTarget.style.backgroundColor = '#2D2D2D';
+            e.currentTarget.style.borderColor = 'var(--border-color)';
+          }}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+            <polyline points="16 17 21 12 16 7"></polyline>
+            <line x1="21" y1="12" x2="9" y2="12"></line>
+          </svg>
+          Logout
+        </button>
       </div>
     </div>
   );

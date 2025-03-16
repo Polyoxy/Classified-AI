@@ -44,7 +44,8 @@ export const callOpenAI = async (
   model: string,
   apiKey: string,
   temperature: number,
-  onUpdate: (response: StreamResponse) => void
+  onUpdate: (response: StreamResponse) => void,
+  abortController?: AbortController
 ): Promise<TokenUsage> => {
   try {
     // Prepare messages for OpenAI format
@@ -70,6 +71,7 @@ export const callOpenAI = async (
         temperature,
         stream: true,
       }),
+      signal: abortController?.signal,
     });
 
     if (!response.ok) {
@@ -155,7 +157,8 @@ export const callOllama = async (
   model: string,
   baseUrl: string,
   temperature: number,
-  onUpdate: (response: StreamResponse) => void
+  onUpdate: (response: StreamResponse) => void,
+  abortController?: AbortController
 ): Promise<TokenUsage> => {
   try {
     // Log initial call details
@@ -241,6 +244,7 @@ export const callOllama = async (
           'Content-Type': 'application/json',
         },
         body: requestBody,
+        signal: abortController?.signal,
       });
     } else {
       // In browser, try direct connection first, then fallback to proxy
@@ -263,6 +267,7 @@ export const callOllama = async (
                 'Content-Type': 'application/json',
               },
               body: requestBody,
+              signal: abortController?.signal,
             });
             
             if (response.ok) {
@@ -535,30 +540,33 @@ export const callDeepseek = async (
   }
 };
 
-// Main function to call the appropriate AI provider
+// Main AI service function
 export const callAI = async (
   messages: Message[],
   model: string,
   provider: AIProvider,
-  apiKey: string | undefined,
-  baseUrl: string | undefined,
-  temperature: number,
-  onUpdate: (response: StreamResponse) => void
+  onUpdate: (response: StreamResponse) => void,
+  apiKey?: string,
+  baseUrl?: string,
+  temperature: number = 0.7,
+  abortController?: AbortController
 ): Promise<TokenUsage> => {
-  switch (provider) {
-    case 'openai':
-      if (!apiKey) throw new Error('OpenAI API key is required');
-      return callOpenAI(messages, model, apiKey, temperature, onUpdate);
-    
-    case 'ollama':
-      const ollamaBaseUrl = baseUrl || 'http://localhost:11434';
-      return callOllama(messages, model, ollamaBaseUrl, temperature, onUpdate);
-    
-    case 'deepseek':
-      if (!apiKey) throw new Error('Deepseek API key is required');
-      return callDeepseek(messages, model, apiKey, temperature, onUpdate);
-    
-    default:
-      throw new Error(`Unsupported AI provider: ${provider}`);
+  try {
+    switch (provider) {
+      case 'openai':
+        if (!apiKey) throw new Error('OpenAI API key is required');
+        return await callOpenAI(messages, model, apiKey, temperature, onUpdate, abortController);
+      case 'ollama':
+        if (!baseUrl) throw new Error('Ollama base URL is required');
+        return await callOllama(messages, model, baseUrl, temperature, onUpdate, abortController);
+      case 'deepseek':
+        if (!apiKey) throw new Error('Deepseek API key is required');
+        return callDeepseek(messages, model, apiKey, temperature, onUpdate);
+      default:
+        throw new Error(`Unsupported AI provider: ${provider}`);
+    }
+  } catch (error) {
+    console.error('Error in callAI:', error);
+    throw error;
   }
 }; 

@@ -7,7 +7,6 @@ import { useRouter } from 'next/navigation';
 import { 
   signInWithEmailAndPassword, 
   signInAnonymously, 
-  sendPasswordResetEmail,
   browserLocalPersistence,
   browserSessionPersistence,
   setPersistence,
@@ -19,21 +18,6 @@ import ResetPasswordPage from './ResetPasswordPage';
 
 // Define the possible authentication screens
 type AuthScreen = 'login' | 'register' | 'reset-password';
-
-// Create a mock user for offline mode
-const createOfflineUser = () => {
-  return {
-    uid: 'offline-' + Math.random().toString(36).substring(2, 15),
-    isAnonymous: true,
-    displayName: 'Guest User',
-    email: null,
-    emailVerified: false,
-    metadata: {
-      creationTime: new Date().toISOString(),
-      lastSignInTime: new Date().toISOString()
-    }
-  };
-};
 
 const AuthPage: React.FC = () => {
   const router = useRouter();
@@ -65,13 +49,8 @@ const AuthPage: React.FC = () => {
 
   // Apply theme when it changes
   useEffect(() => {
-    if (currentTheme && updateSettings) {
-      // Only update if the theme has actually changed from settings
-      if (settings?.theme !== currentTheme) {
-        updateSettings({ theme: currentTheme });
-      }
-      
-      // Apply the theme class to the body
+    if (currentTheme && updateSettings && settings?.theme !== currentTheme) {
+      updateSettings({ theme: currentTheme });
       document.body.className = `theme-${currentTheme}`;
     }
   }, [currentTheme, updateSettings, settings?.theme]);
@@ -88,8 +67,7 @@ const AuthPage: React.FC = () => {
       
       // Only set persistence if not in Electron
       if (!isElectron) {
-        const persistenceType = rememberMe ? browserLocalPersistence : browserSessionPersistence;
-        await setPersistence(auth, persistenceType);
+        await setPersistence(auth, rememberMe ? browserLocalPersistence : browserSessionPersistence);
       }
       
       // Store the email in localStorage before attempting login
@@ -103,13 +81,11 @@ const AuthPage: React.FC = () => {
       
     } catch (error: any) {
       console.error('Login error:', error);
-      let errorMessage = 'Failed to login. Please try again.';
-      if (error.code === 'auth/invalid-login-credentials') {
-        errorMessage = 'Invalid email or password. Please try again.';
-      } else if (error.code === 'auth/user-not-found') {
-        errorMessage = 'No account found with this email. Please register first.';
-      }
-      setError(errorMessage);
+      setError(
+        error.code === 'auth/invalid-login-credentials' ? 'Invalid email or password. Please try again.' :
+        error.code === 'auth/user-not-found' ? 'No account found with this email. Please register first.' :
+        'Failed to login. Please try again.'
+      );
     } finally {
       setIsLoading(false);
     }

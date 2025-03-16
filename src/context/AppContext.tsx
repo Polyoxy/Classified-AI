@@ -121,7 +121,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   // State
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [currentConversation, setCurrentConversation] = useState<Conversation | null>(null);
+  const [currentConversation, setCurrentConversationState] = useState<Conversation | null>(null);
   const [tokenUsage, setTokenUsage] = useState<TokenUsage>({
     promptTokens: 0,
     completionTokens: 0,
@@ -266,13 +266,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
               
               // Set the most recent conversation as current if available
               if (loadedConversations.length > 0 && !currentConversation) {
-                setCurrentConversation(loadedConversations[0]);
+                setCurrentConversationState(loadedConversations[0]);
               }
             } else if (loadedConversations.length === 0) {
               // Create a new conversation if none exists
               const newConv = createNewConversation(settings);
               setConversations([newConv]);
-              setCurrentConversation(newConv);
+              setCurrentConversationState(newConv);
               
               // Save to Realtime Database
               try {
@@ -300,31 +300,31 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             if (storedConversations.length > 0) {
               const mostRecent = storedConversations.reduce((latest, conv) => 
                 conv.updatedAt > latest.updatedAt ? conv : latest, storedConversations[0]);
-              setCurrentConversation(mostRecent);
+              setCurrentConversationState(mostRecent);
             } else {
               // Create a new conversation if none exists
               const newConv = createNewConversation(settings);
               setConversations([newConv]);
-              setCurrentConversation(newConv);
+              setCurrentConversationState(newConv);
             }
           } else {
             // Create a new conversation if none exists
             const newConv = createNewConversation(settings);
             setConversations([newConv]);
-            setCurrentConversation(newConv);
+            setCurrentConversationState(newConv);
           }
         } else {
           // Neither Firebase nor Electron available, create a local conversation
           const newConv = createNewConversation(settings);
           setConversations([newConv]);
-          setCurrentConversation(newConv);
+          setCurrentConversationState(newConv);
         }
       } catch (error) {
         console.error('Error loading conversations:', error);
         // Create a fallback conversation if loading fails
         const newConv = createNewConversation(settings);
         setConversations([newConv]);
-        setCurrentConversation(newConv);
+        setCurrentConversationState(newConv);
       }
     };
 
@@ -438,7 +438,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     };
     
     // Update state immediately
-    setCurrentConversation(newConversation);
+    setCurrentConversationState(newConversation);
     setConversations(prev => [newConversation, ...prev]); // Add to beginning of list
     
     // Check if we're in Electron environment
@@ -476,7 +476,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       updatedAt: Date.now(),
     };
     
-    setCurrentConversation(updatedConversation);
+    setCurrentConversationState(updatedConversation);
     setConversations((prev) =>
       prev.map((conv) =>
         conv.id === updatedConversation.id ? updatedConversation : conv
@@ -504,7 +504,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     if (currentConversation?.id === id) {
       const remaining = conversations.filter(conv => conv.id !== id);
       if (remaining.length > 0) {
-        setCurrentConversation(remaining[0]);
+        setCurrentConversationState(remaining[0]);
       } else {
         // Create a new conversation if all are deleted
         createConversation();
@@ -538,7 +538,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     };
 
     // Update state immediately with the new message
-    setCurrentConversation(updatedConversation);
+    setCurrentConversationState(updatedConversation);
     
     // Update conversations list and maintain order by updatedAt
     setConversations(prev => {
@@ -615,7 +615,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     
     // Clear conversations state
     setConversations([]);
-    setCurrentConversation(null);
+    setCurrentConversationState(null);
     
     // Create a fresh conversation
     createConversation();
@@ -641,6 +641,66 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       console.error('Error saving sidebar state:', error);
     }
   }, [isSidebarOpen]);
+
+  // Update state
+  const setCurrentConversation = (conversation: Conversation) => {
+    try {
+      console.log('Setting current conversation:', {
+        id: conversation.id,
+        title: conversation.title,
+        messageCount: conversation.messages.length
+      });
+
+      // Validate conversation data
+      if (!conversation.id || typeof conversation.id !== 'string') {
+        throw new Error('Invalid conversation: missing or invalid id');
+      }
+      if (!conversation.messages || !Array.isArray(conversation.messages)) {
+        throw new Error('Invalid conversation: missing or invalid messages array');
+      }
+
+      // Update the current conversation with proper timestamps
+      const updatedConversation = {
+        ...conversation,
+        updatedAt: Date.now(),
+        messages: conversation.messages.map(msg => ({
+          ...msg,
+          id: msg.id || uuidv4(), // Ensure all messages have IDs
+          timestamp: msg.timestamp || Date.now() // Ensure all messages have timestamps
+        }))
+      };
+      
+      console.log('Processed conversation:', {
+        id: updatedConversation.id,
+        messageCount: updatedConversation.messages.length,
+        lastMessage: updatedConversation.messages[updatedConversation.messages.length - 1]?.content.substring(0, 50)
+      });
+      
+      // Update conversations list first
+      setConversations(prev => {
+        // Remove the conversation from the list if it exists
+        const withoutCurrent = prev.filter(conv => conv.id !== conversation.id);
+        // Add the updated conversation at the beginning
+        return [updatedConversation, ...withoutCurrent];
+      });
+      
+      // Set as current conversation
+      setCurrentConversationState(updatedConversation);
+      
+      // Save to storage
+      saveConversation(updatedConversation);
+
+      console.log('Conversation switch completed successfully');
+    } catch (error: any) {
+      console.error('Error setting current conversation:', error);
+      // Create a new conversation as fallback
+      console.log('Creating new conversation as fallback');
+      const newConv = createNewConversation(settings);
+      setConversations(prev => [newConv, ...prev]);
+      setCurrentConversationState(newConv);
+      saveConversation(newConv);
+    }
+  };
 
   const contextValue: AppContextType = {
     settings,

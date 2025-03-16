@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { auth } from '@/lib/firebase';
 import { sendPasswordResetEmail } from 'firebase/auth';
+import TitleBar from './TitleBar';
 
 interface ResetPasswordPageProps {
   onBackToLogin: () => void;
@@ -12,10 +13,8 @@ const ResetPasswordPage: React.FC<ResetPasswordPageProps> = ({ onBackToLogin }) 
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   
-  // Handle password reset
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     setIsLoading(true);
     setError(null);
     setSuccess(false);
@@ -29,19 +28,41 @@ const ResetPasswordPage: React.FC<ResetPasswordPageProps> = ({ onBackToLogin }) 
       setIsLoading(false);
     }
   };
-  
-  // Handle window controls
-  const handleMinimize = () => {
-    if (window.electron?.windowControls) {
-      window.electron.windowControls.minimize();
-    }
-  };
 
-  const handleClose = () => {
-    if (window.electron?.windowControls) {
-      window.electron.windowControls.close();
-    }
-  };
+  const inputStyle = {
+    width: '100%',
+    padding: '12px',
+    backgroundColor: 'var(--input-bg)',
+    border: '1px solid var(--border-color)',
+    borderRadius: '4px',
+    color: 'var(--text-color)',
+    boxSizing: 'border-box',
+    fontFamily: 'var(--font-family-terminal)',
+  } as const;
+
+  const buttonStyle = {
+    width: '100%',
+    padding: '12px',
+    backgroundColor: '#474747',
+    color: 'white',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: isLoading ? 'wait' : 'pointer',
+    fontFamily: 'var(--font-family-terminal)',
+    fontSize: '16px',
+    fontWeight: 'bold',
+    marginBottom: '24px',
+  } as const;
+
+  const linkButtonStyle = {
+    background: 'none',
+    border: 'none',
+    color: '#474747',
+    cursor: 'pointer',
+    padding: 0,
+    textDecoration: 'none',
+    fontFamily: 'var(--font-family-terminal)',
+  } as const;
 
   return (
     <div style={{
@@ -51,85 +72,7 @@ const ResetPasswordPage: React.FC<ResetPasswordPageProps> = ({ onBackToLogin }) 
       backgroundColor: 'var(--bg-color)',
       color: 'var(--text-color)',
     }}>
-      {/* Title bar with window controls */}
-      <div 
-        className="terminal-header draggable" 
-        style={{
-          padding: '0.5rem 1rem',
-          borderBottom: '2px solid var(--border-color)',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          backgroundColor: 'var(--header-bg)',
-          height: '36px',
-          boxSizing: 'border-box',
-          // @ts-ignore
-          WebkitAppRegion: 'drag', // Make the title bar draggable in Electron
-        }}
-      >
-        <div className="terminal-title" style={{ 
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.5rem',
-        }}>
-          {/* Terminal icon SVG */}
-          <svg 
-            width="18" 
-            height="18" 
-            viewBox="0 0 24 24" 
-            fill="none" 
-            stroke="currentColor" 
-            strokeWidth="2" 
-            strokeLinecap="round" 
-            strokeLinejoin="round"
-          >
-            <polyline points="4 17 10 11 4 5"></polyline>
-            <line x1="12" y1="19" x2="20" y2="19"></line>
-          </svg>
-          <span style={{
-            fontWeight: 'bold',
-            letterSpacing: '1px',
-            fontSize: '0.875rem',
-            textTransform: 'uppercase',
-          }}>
-            CLASSIFIED AI
-          </span>
-        </div>
-        <div className="window-controls" style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '4px',
-          // @ts-ignore
-          WebkitAppRegion: 'no-drag'
-        }}>
-          <div
-            onClick={handleMinimize}
-            className="window-control minimize non-draggable"
-            title="Minimize"
-            style={{
-              width: '12px',
-              height: '12px',
-              borderRadius: '50%',
-              backgroundColor: '#f59e0b', // amber-500
-              border: 'none',
-              cursor: 'pointer',
-            }}
-          />
-          <div
-            onClick={handleClose}
-            className="window-control close non-draggable"
-            title="Close"
-            style={{
-              width: '12px',
-              height: '12px',
-              borderRadius: '50%',
-              backgroundColor: '#ef4444', // red-500
-              border: 'none',
-              cursor: 'pointer',
-            }}
-          />
-        </div>
-      </div>
+      <TitleBar title="CLASSIFIED AI" />
 
       <div style={{
         flex: 1,
@@ -137,7 +80,6 @@ const ResetPasswordPage: React.FC<ResetPasswordPageProps> = ({ onBackToLogin }) 
         justifyContent: 'center',
         alignItems: 'center',
         padding: '20px',
-        position: 'relative',
       }}>
         <div style={{
           width: '100%',
@@ -147,7 +89,6 @@ const ResetPasswordPage: React.FC<ResetPasswordPageProps> = ({ onBackToLogin }) 
           border: '1px solid var(--border-color)',
           backgroundColor: 'var(--bg-color)',
         }}>
-          {/* Title */}
           <div style={{ textAlign: 'center', marginBottom: '16px' }}>
             <h1 style={{ 
               margin: '0 0 8px 0',
@@ -168,7 +109,6 @@ const ResetPasswordPage: React.FC<ResetPasswordPageProps> = ({ onBackToLogin }) 
             </p>
           </div>
           
-          {/* Error message */}
           {error && (
             <div style={{
               padding: '10px',
@@ -181,7 +121,6 @@ const ResetPasswordPage: React.FC<ResetPasswordPageProps> = ({ onBackToLogin }) 
             </div>
           )}
           
-          {/* Success message */}
           {success && (
             <div style={{
               padding: '10px',
@@ -194,9 +133,7 @@ const ResetPasswordPage: React.FC<ResetPasswordPageProps> = ({ onBackToLogin }) 
             </div>
           )}
           
-          {/* Reset form */}
           <form onSubmit={handleResetPassword}>
-            {/* Email field */}
             <div style={{ marginBottom: '24px' }}>
               <label 
                 htmlFor="email" 
@@ -214,22 +151,12 @@ const ResetPasswordPage: React.FC<ResetPasswordPageProps> = ({ onBackToLogin }) 
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  backgroundColor: 'var(--input-bg)',
-                  border: '1px solid var(--border-color)',
-                  borderRadius: '4px',
-                  color: 'var(--text-color)',
-                  boxSizing: 'border-box',
-                  fontFamily: 'var(--font-family-terminal)',
-                }}
+                style={inputStyle}
                 placeholder="agent@example.com"
                 required
               />
             </div>
 
-            {/* OR divider */}
             <div style={{ 
               display: 'flex', 
               alignItems: 'center', 
@@ -254,29 +181,15 @@ const ResetPasswordPage: React.FC<ResetPasswordPageProps> = ({ onBackToLogin }) 
               }} />
             </div>
             
-            {/* Send Reset Email button */}
             <button
               type="submit"
               disabled={isLoading}
-              style={{
-                width: '100%',
-                padding: '12px',
-                backgroundColor: '#474747',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: isLoading ? 'wait' : 'pointer',
-                fontFamily: 'var(--font-family-terminal)',
-                fontSize: '16px',
-                fontWeight: 'bold',
-                marginBottom: '24px',
-              }}
+              style={buttonStyle}
             >
               {isLoading ? 'Sending...' : 'Send Reset Link'}
             </button>
           </form>
           
-          {/* Footer links */}
           <div style={{ 
             display: 'flex', 
             justifyContent: 'space-between',
@@ -285,15 +198,7 @@ const ResetPasswordPage: React.FC<ResetPasswordPageProps> = ({ onBackToLogin }) 
             <button
               type="button"
               onClick={onBackToLogin}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: '#474747',
-                cursor: 'pointer',
-                padding: 0,
-                textDecoration: 'none',
-                fontFamily: 'var(--font-family-terminal)',
-              }}
+              style={linkButtonStyle}
             >
               Back to Login
             </button>
@@ -301,7 +206,6 @@ const ResetPasswordPage: React.FC<ResetPasswordPageProps> = ({ onBackToLogin }) 
         </div>
       </div>
 
-      {/* Status bar */}
       <div style={{
         height: '24px',
         borderTop: '1px solid var(--border-color)',
@@ -313,7 +217,6 @@ const ResetPasswordPage: React.FC<ResetPasswordPageProps> = ({ onBackToLogin }) 
         color: 'var(--text-color)',
         fontFamily: 'var(--font-family-terminal)',
       }}>
-        {/* Left section - Hello Agent with status */}
         <div style={{ 
           display: 'flex', 
           alignItems: 'center', 
@@ -324,18 +227,10 @@ const ResetPasswordPage: React.FC<ResetPasswordPageProps> = ({ onBackToLogin }) 
             height: '8px',
             borderRadius: '50%',
             backgroundColor: '#10b981',
-            marginRight: '6px',
           }} />
           Agent::X1-7R4C3
         </div>
-
-        {/* Right section */}
-        <div style={{ 
-          marginLeft: 'auto',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '10px',
-        }}>
+        <div style={{ marginLeft: 'auto' }}>
           <span>Classified-AI by The Shine</span>
         </div>
       </div>

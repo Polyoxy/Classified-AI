@@ -43,102 +43,77 @@ const EXAMPLE_QUESTIONS = [
 
 const CommandInput: React.FC = () => {
   const [input, setInput] = useState('');
-  const [showResetButton, setShowResetButton] = useState(false);
   const [placeholder, setPlaceholder] = useState("Enter command...");
   const [targetPlaceholder, setTargetPlaceholder] = useState("Enter command...");
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
   
   const { 
-    addMessage, 
-    resetConversations, 
-    settings, 
-    currentConversation,
-    setConnectionStatus,
-    connectionStatus,
+    settings,
     isProcessing,
-    setIsProcessing
+    setIsProcessing,
   } = useAppContext();
   
-  // Use our new chat hook
-  const { sendMessage } = useChat();
+  // Use our chat hook
+  const { sendMessage, stopResponse } = useChat();
   
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const animationTimerRef = useRef<NodeJS.Timeout | null>(null);
   const cycleTimerRef = useRef<NodeJS.Timeout | null>(null);
-  
-  // Show connection status changes and notify user
-  const [prevConnectionStatus, setPrevConnectionStatus] = useState<'connected' | 'disconnected' | 'error' | null>(null);
   
   // Function to scramble text with enhanced hacker effect
   const scrambleText = (target: string, current: string, progress: number) => {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
     
     return target.split('').map((char, index) => {
-      // If character is a space or punctuation, preserve it
       if (char === ' ' || /[.,?!]/.test(char)) {
         return char;
       }
 
-      // If we're past the progress point for this character
       if (index < progress * target.length) {
         return char;
       }
       
-      // For characters we haven't "solved" yet
       const rand = Math.random();
-      
-      // Higher chance of showing the correct character as we get closer
       const closeToReveal = (index - (progress * target.length)) < 2;
       if (closeToReveal && rand > 0.6) {
         return target[index];
       }
       
-      // Use only letters for scrambling
       return rand > 0.8 ? target[index] : chars[Math.floor(Math.random() * chars.length)];
     }).join('');
   };
 
   // Animation function to gradually transform placeholder
   const animatePlaceholder = (current: string, target: string, startTime: number) => {
-    const duration = 1200; // Faster animation
+    const duration = 1200;
     const elapsed = Date.now() - startTime;
     const progress = Math.min(elapsed / duration, 1);
     
     if (progress < 1) {
-      // Update with scrambled text
       setPlaceholder(scrambleText(target, current, progress));
-      
-      // Continue animation
       animationTimerRef.current = setTimeout(() => {
         animatePlaceholder(current, target, startTime);
-      }, 20); // Even smoother updates
+      }, 20);
     } else {
-      // Animation complete
       setPlaceholder(target);
-      
-      // Schedule next change with consistent timing
       cycleTimerRef.current = setTimeout(() => {
         const nextIndex = (placeholderIndex + 1) % EXAMPLE_QUESTIONS.length;
         setPlaceholderIndex(nextIndex);
         setTargetPlaceholder(EXAMPLE_QUESTIONS[nextIndex]);
-      }, 4000); // Consistent 4-second display time
+      }, 4000);
     }
   };
 
   // Effect to handle placeholder animation
   useEffect(() => {
     if (!isProcessing && targetPlaceholder !== placeholder) {
-      // Clear any existing animation
       if (animationTimerRef.current) {
         clearTimeout(animationTimerRef.current);
       }
-      
-      // Start new animation
       animatePlaceholder(placeholder, targetPlaceholder, Date.now());
     }
     
     return () => {
-      // Cleanup timers
       if (animationTimerRef.current) clearTimeout(animationTimerRef.current);
       if (cycleTimerRef.current) clearTimeout(cycleTimerRef.current);
     };
@@ -146,7 +121,6 @@ const CommandInput: React.FC = () => {
   
   // Start cycling through examples
   useEffect(() => {
-    // Initial setup - start with default and then cycle
     cycleTimerRef.current = setTimeout(() => {
       setTargetPlaceholder(EXAMPLE_QUESTIONS[0]);
     }, 3000);
@@ -157,45 +131,9 @@ const CommandInput: React.FC = () => {
     };
   }, []);
 
-  useEffect(() => {
-    // Remove the auto-focus when component mounts
-    // Only focus if explicitly requested (e.g., after sending a message)
-    
-    // No longer checking Ollama connection automatically
-    // This prevents console spam
-    
-    // Immediately set connection status to connected
-    setConnectionStatus('connected');
-  }, [settings.activeProvider, setConnectionStatus]);
-
-  // Also run connection check whenever the conversation changes
-  useEffect(() => {
-    // Removed Ollama connection check
-  }, [currentConversation]);
-
-  // Update previous connection status after the current one changes
-  useEffect(() => {
-    if (prevConnectionStatus === null) {
-      setPrevConnectionStatus(connectionStatus);
-      return;
-    }
-    
-    // If we were previously disconnected or error, but now connected,
-    // add a system message to inform the user
-    if ((prevConnectionStatus === 'disconnected' || prevConnectionStatus === 'error') && 
-         connectionStatus === 'connected') {
-      const configuredModel = settings.providers.ollama.defaultModel;
-      addMessage(`Connection established to Ollama server. Using model: ${configuredModel}`, 'system');
-    }
-    
-    setPrevConnectionStatus(connectionStatus);
-  }, [connectionStatus, prevConnectionStatus, settings.providers.ollama.defaultModel, addMessage]);
-  
   // Handle input change and auto resize
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInput(e.target.value);
-    
-    // Auto resize
     if (inputRef.current) {
       inputRef.current.style.height = 'auto';
       inputRef.current.style.height = `${inputRef.current.scrollHeight}px`;
@@ -210,47 +148,36 @@ const CommandInput: React.FC = () => {
     }
   };
   
-  // Handle send message - now calls our new useChat hook
+  // Handle send message
   const handleSendMessage = () => {
     if (input.trim() && !isProcessing) {
-      console.log('User sending message:', input.trim());
-      
-      // Send message using our chat hook
       sendMessage(input.trim());
       setInput('');
-      
-      // Reset textarea height
       if (inputRef.current) {
         inputRef.current.style.height = 'auto';
       }
     }
   };
   
-  // Handle reset button click
-  const handleResetClick = () => {
-    resetConversations();
-    setShowResetButton(false);
-  };
-  
-  // Define the stopAIResponse function to handle stopping the AI response
-  const stopAIResponse = () => {
-    // Logic to stop the AI response
-    setIsProcessing(false);
-  };
-  
-  // Add a function to handle manual focus when user explicitly clicks in the input area
+  // Handle manual focus when user clicks in the input area
   const handleInputClick = () => {
     if (inputRef.current) {
       inputRef.current.focus();
     }
   };
   
+  // Handle cancel message
+  const handleCancelMessage = () => {
+    if (isProcessing) {
+      stopResponse();
+      setIsProcessing(false);
+    }
+  };
+  
   return (
     <>
-      {/* Add the styles to the component */}
       <style>{pulsingLightningStyles}</style>
       
-      {/* Add additional styles to hide focus rings */}
       <style>{`
         .no-focus-visible:focus,
         .no-focus-visible:focus-visible {
@@ -262,9 +189,7 @@ const CommandInput: React.FC = () => {
         textarea::selection {
           background-color: rgba(150, 150, 150, 0.3);
         }
-      `}</style>
-      
-      <style>{`
+        
         .command-button {
           transition: opacity 0.2s ease;
         }
@@ -289,31 +214,6 @@ const CommandInput: React.FC = () => {
         borderRadius: '8px',
         margin: '0.75rem 1rem 1rem 1rem',
       }}>
-        {showResetButton && (
-          <button 
-            onClick={handleResetClick}
-            style={{
-              position: 'absolute',
-              top: '-40px',
-              right: '20px',
-              backgroundColor: 'var(--button-bg)',
-              color: 'var(--button-text)',
-              border: 'none',
-              padding: '5px 10px',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              zIndex: 100,
-              fontFamily: 'var(--font-mono)',
-              fontSize: '11px',
-              letterSpacing: '0.5px',
-              fontWeight: 500,
-            }}
-          >
-            Reset All
-          </button>
-        )}
-        
-        {/* Lightning bolt icon with animation class */}
         <div className="command-prompt" style={{
           color: 'var(--text-color)',
           marginRight: '0.75rem',
@@ -323,22 +223,39 @@ const CommandInput: React.FC = () => {
           height: '24px',
           opacity: 0.8,
         }}>
-          <svg 
-            className="lightning-icon"
-            width="16" 
-            height="16" 
-            viewBox="0 0 24 24" 
-            fill="none" 
-            stroke="currentColor" 
-            strokeWidth="2" 
-            strokeLinecap="round" 
-            strokeLinejoin="round"
-          >
-            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
-          </svg>
+          {isProcessing ? (
+            <svg 
+              className="lightning-icon"
+              width="16" 
+              height="16" 
+              viewBox="0 0 24 24" 
+              fill="none" 
+              stroke="currentColor" 
+              strokeWidth="2" 
+              strokeLinecap="round" 
+              strokeLinejoin="round"
+            >
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="16"></line>
+              <line x1="8" y1="12" x2="16" y2="12"></line>
+            </svg>
+          ) : (
+            <svg 
+              className="lightning-icon"
+              width="16" 
+              height="16" 
+              viewBox="0 0 24 24" 
+              fill="none" 
+              stroke="currentColor" 
+              strokeWidth="2" 
+              strokeLinecap="round" 
+              strokeLinejoin="round"
+            >
+              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
+            </svg>
+          )}
         </div>
         
-        {/* Wrap the textarea in a div that handles click events */}
         <div 
           onClick={handleInputClick}
           style={{ 
@@ -378,72 +295,70 @@ const CommandInput: React.FC = () => {
           />
         </div>
         
-        {/* Upload button */}
-        <button
-          className="command-button"
-          style={{
-            backgroundColor: 'transparent',
-            border: 'none',
-            color: 'var(--text-color)',
-            cursor: 'pointer',
-            padding: '0.25rem',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            marginLeft: '0.5rem',
-            opacity: 0.6,
-          }}
-          title="Upload file"
-        >
-          <svg 
-            width="16" 
-            height="16" 
-            viewBox="0 0 24 24" 
-            fill="none" 
-            stroke="currentColor" 
-            strokeWidth="2" 
-            strokeLinecap="round" 
-            strokeLinejoin="round"
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          {isProcessing && (
+            <button
+              onClick={handleCancelMessage}
+              className="command-button"
+              style={{
+                backgroundColor: 'transparent',
+                border: 'none',
+                color: 'var(--text-color)',
+                cursor: 'pointer',
+                padding: '0.25rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                opacity: 0.6,
+              }}
+              title="Stop generating"
+            >
+              <svg 
+                width="16" 
+                height="16" 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="2" 
+                strokeLinecap="round" 
+                strokeLinejoin="round"
+              >
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+              </svg>
+            </button>
+          )}
+          <button
+            onClick={handleSendMessage}
+            disabled={!input.trim() || isProcessing}
+            className={`command-button ${(!input.trim() || isProcessing) ? 'command-button-disabled' : ''}`}
+            style={{
+              backgroundColor: 'transparent',
+              border: 'none',
+              color: 'var(--text-color)',
+              cursor: input.trim() && !isProcessing ? 'pointer' : 'not-allowed',
+              padding: '0.25rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              opacity: input.trim() && !isProcessing ? 0.6 : 0.3,
+            }}
+            title="Send message"
           >
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-            <polyline points="17 8 12 3 7 8"></polyline>
-            <line x1="12" y1="3" x2="12" y2="15"></line>
-          </svg>
-        </button>
-        
-        {/* Send button */}
-        <button
-          onClick={handleSendMessage}
-          disabled={!input.trim() || isProcessing}
-          className={`command-button ${(!input.trim() || isProcessing) ? 'command-button-disabled' : ''}`}
-          style={{
-            backgroundColor: 'transparent',
-            border: 'none',
-            color: 'var(--text-color)',
-            cursor: input.trim() && !isProcessing ? 'pointer' : 'not-allowed',
-            padding: '0.25rem',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            marginLeft: '0.5rem',
-            opacity: input.trim() && !isProcessing ? 0.6 : 0.3,
-          }}
-          title="Send message"
-        >
-          <svg 
-            width="16" 
-            height="16" 
-            viewBox="0 0 24 24" 
-            fill="none" 
-            stroke="currentColor" 
-            strokeWidth="2" 
-            strokeLinecap="round" 
-            strokeLinejoin="round"
-          >
-            <line x1="22" y1="2" x2="11" y2="13"></line>
-            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-          </svg>
-        </button>
+            <svg 
+              width="16" 
+              height="16" 
+              viewBox="0 0 24 24" 
+              fill="none" 
+              stroke="currentColor" 
+              strokeWidth="2" 
+              strokeLinecap="round" 
+              strokeLinejoin="round"
+            >
+              <line x1="22" y1="2" x2="11" y2="13"></line>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+            </svg>
+          </button>
+        </div>
       </div>
     </>
   );

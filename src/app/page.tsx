@@ -393,26 +393,17 @@ const AppContent: React.FC<{
   isSettingsOpen, 
   setIsSettingsOpen 
 }) => {
-  const { settings } = useAppContext();
-  // Check if we're in Electron environment
+  const { settings, isSidebarOpen } = useAppContext();
   const [isElectron, setIsElectron] = useState(false);
   
-  // Detect Electron environment
   useEffect(() => {
     if (typeof window !== 'undefined' && window.electron) {
       setIsElectron(true);
     }
   }, []);
   
-  // Apply theme class to body
   useEffect(() => {
-    // Apply the correct theme class based on the settings
     document.body.className = `theme-${settings.theme}`;
-    
-    // No need to set individual CSS variables as they're defined in the theme classes
-    // This ensures consistent theme application across the application
-    
-    // Force a re-render of the UI when theme changes
     const metaThemeColor = document.querySelector('meta[name="theme-color"]');
     if (metaThemeColor) {
       metaThemeColor.setAttribute(
@@ -424,7 +415,6 @@ const AppContent: React.FC<{
   
   return (
     <>
-      {/* Chat container */}
       <div style={{ 
         flex: 1, 
         overflow: 'hidden', 
@@ -434,15 +424,15 @@ const AppContent: React.FC<{
         borderTop: isElectron ? '1px solid var(--border-color)' : 'none',
         borderBottom: 'none',
         borderLeft: 'none',
-        borderRight: 'none'
+        borderRight: 'none',
+        marginRight: isSidebarOpen ? '320px' : '0',
+        transition: 'margin-right 0.3s ease',
       }}>
         <ChatContainer />
       </div>
       
-      {/* Command input */}
       <CommandInput />
       
-      {/* Status bar */}
       <StatusBar onOpenSettings={() => setIsSettingsOpen()} />
     </>
   );

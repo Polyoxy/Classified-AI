@@ -1,56 +1,58 @@
 import React from 'react';
 import { useAppContext } from '@/context/AppContext';
 
+type Theme = 'dark' | 'light';
+
+interface ThemeOptionProps {
+  theme: Theme;
+  isActive: boolean;
+  onClick: () => void;
+}
+
+const ThemeOption: React.FC<ThemeOptionProps> = ({ theme, isActive, onClick }) => {
+  const style = {
+    width: '20px',
+    height: '20px',
+    borderRadius: '3px',
+    backgroundColor: theme === 'light' ? '#FFFFFF' : '#1E1E1E',
+    border: isActive
+      ? `2px solid ${theme === 'light' ? '#474747' : '#333333'}`
+      : `1px solid ${theme === 'light' ? '#CCCCCC' : '#474747'}`,
+    cursor: 'pointer',
+    transition: 'transform 0.2s',
+  } as const;
+
+  return (
+    <div
+      className={`theme-option theme-${theme}`}
+      title={`${theme.charAt(0).toUpperCase() + theme.slice(1)} Theme`}
+      onClick={onClick}
+      style={style}
+      onMouseOver={(e) => (e.currentTarget.style.transform = 'scale(1.1)')}
+      onMouseOut={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+    />
+  );
+};
+
 const ThemeSelector: React.FC = () => {
   const { settings, updateSettings } = useAppContext();
 
-  const handleThemeChange = (theme: 'dark' | 'light') => {
+  const handleThemeChange = (theme: Theme) => {
     updateSettings({ ...settings, theme });
-    
-    // Apply theme class to body
     document.body.className = `theme-${theme}`;
   };
 
   return (
-    <div className="theme-selector" style={{
-      display: 'flex',
-      gap: '10px'
-    }}>
-      <div
-        className="theme-option theme-light"
-        title="Light Theme"
+    <div style={{ display: 'flex', gap: '10px' }}>
+      <ThemeOption
+        theme="light"
+        isActive={settings.theme === 'light'}
         onClick={() => handleThemeChange('light')}
-        style={{
-          width: '20px',
-          height: '20px',
-          borderRadius: '3px',
-          backgroundColor: '#FFFFFF',
-          border: settings.theme === 'light' 
-            ? '2px solid #474747' 
-            : '1px solid #CCCCCC',
-          cursor: 'pointer',
-          transition: 'transform 0.2s'
-        }}
-        onMouseOver={(e) => (e.currentTarget.style.transform = 'scale(1.1)')}
-        onMouseOut={(e) => (e.currentTarget.style.transform = 'scale(1)')}
       />
-      <div
-        className="theme-option theme-dark"
-        title="Dark Theme"
+      <ThemeOption
+        theme="dark"
+        isActive={settings.theme === 'dark'}
         onClick={() => handleThemeChange('dark')}
-        style={{
-          width: '20px',
-          height: '20px',
-          borderRadius: '3px',
-          backgroundColor: '#1E1E1E',
-          border: settings.theme === 'dark' 
-            ? '2px solid #333333' 
-            : '1px solid #474747',
-          cursor: 'pointer',
-          transition: 'transform 0.2s'
-        }}
-        onMouseOver={(e) => (e.currentTarget.style.transform = 'scale(1.1)')}
-        onMouseOut={(e) => (e.currentTarget.style.transform = 'scale(1)')}
       />
     </div>
   );

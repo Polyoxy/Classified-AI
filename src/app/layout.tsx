@@ -75,26 +75,15 @@ export default function RootLayout({
             position: 'relative',
           }}>
             <main style={{ 
-              flex: 1, 
-              height: '100%', 
+              flex: 1,
+              height: '100%',
               overflow: 'auto',
               position: 'relative',
-              zIndex: 1,
+              marginRight: '320px', // Fixed margin for sidebar
             }}>
               {children}
             </main>
-            <div style={{
-              position: 'fixed',
-              top: 0,
-              right: 0,
-              bottom: 0,
-              zIndex: 1000,
-              pointerEvents: 'none',
-              transform: 'translateZ(0)', // Force GPU acceleration
-              willChange: 'transform', // Optimize for animations
-            }}>
-              <Sidebar />
-            </div>
+            <Sidebar />
           </div>
         </AppProvider>
       </body>
