@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useAppContext } from '@/context/AppContext';
 import { Message } from '@/types';
 import ReactMarkdown from 'react-markdown';
@@ -13,8 +13,150 @@ interface MessageItemProps {
   isLastMessage: boolean;
 }
 
+// Add ContextArea component at the top, outside of MessageItem
+const ContextArea: React.FC<{ 
+  isDarkTheme: boolean; 
+  onAddMessage: (content: string, role: 'user' | 'assistant' | 'system') => void 
+}> = ({ isDarkTheme, onAddMessage }) => {
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFiles = async (files: FileList | File[]) => {
+    const fileArray = Array.from(files);
+    if (fileArray.length === 0) return;
+
+    try {
+      for (const file of fileArray) {
+        const text = await file.text();
+        const fileExtension = file.name.split('.').pop() || '';
+        const content = `**Context from ${file.name}:**\n\`\`\`${fileExtension}\n${text}\n\`\`\``;
+        onAddMessage(content, 'user');
+      }
+    } catch (error) {
+      console.error('Error reading files:', error);
+      onAddMessage(`Error reading file: ${error}`, 'system');
+    }
+  };
+
+  const handleClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      handleFiles(files);
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      handleFiles(files);
+      e.target.value = ''; // Reset input
+    }
+  };
+
+  return (
+    <div 
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        padding: '6px 10px',
+        marginBottom: '4px',
+        borderRadius: '6px',
+        fontSize: '12px',
+        color: isDarkTheme ? '#909090' : '#606060',
+        backgroundColor: isDarkTheme 
+          ? (isDragging ? 'rgba(255, 255, 255, 0.05)' : 'rgba(26, 26, 26, 0.4)') 
+          : (isDragging ? 'rgba(0, 0, 0, 0.05)' : 'rgba(245, 245, 245, 0.6)'),
+        border: `1px solid ${isDarkTheme 
+          ? (isDragging ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.05)') 
+          : (isDragging ? 'rgba(0, 0, 0, 0.1)' : 'rgba(0, 0, 0, 0.05)')}`,
+        cursor: 'pointer',
+        transition: 'all 0.2s ease',
+        opacity: isDragging ? 1 : 0.85,
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.opacity = '1';
+        e.currentTarget.style.backgroundColor = isDarkTheme 
+          ? 'rgba(255, 255, 255, 0.03)' 
+          : 'rgba(0, 0, 0, 0.03)';
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.opacity = '0.85';
+        e.currentTarget.style.backgroundColor = isDarkTheme 
+          ? 'rgba(26, 26, 26, 0.4)' 
+          : 'rgba(245, 245, 245, 0.6)';
+      }}
+      onClick={handleClick}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '4px',
+        borderRadius: '4px',
+        backgroundColor: isDarkTheme 
+          ? 'rgba(255, 255, 255, 0.05)' 
+          : 'rgba(0, 0, 0, 0.05)',
+      }}>
+        <svg 
+          width="14" 
+          height="14" 
+          viewBox="0 0 24 24" 
+          fill="none" 
+          stroke="currentColor" 
+          strokeWidth="2" 
+          strokeLinecap="round" 
+          strokeLinejoin="round"
+        >
+          <path d="M4 22h14a2 2 0 0 0 2-2V7.5L14.5 2H6a2 2 0 0 0-2 2v4"></path>
+          <polyline points="14 2 14 8 20 8"></polyline>
+          <path d="M3 15h6"></path>
+          <path d="M6 12v6"></path>
+        </svg>
+      </div>
+      <span style={{ letterSpacing: '0.3px', fontWeight: 500 }}>
+        Drop files or click to add context
+      </span>
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        style={{ display: 'none' }}
+        onChange={handleFileChange}
+        accept=".txt,.js,.jsx,.ts,.tsx,.json,.md,.py,.html,.css,.scss,.less,.yaml,.yml,.toml,.ini,.env,.sh,.bash,.zsh,.fish,.sql,.graphql,.prisma"
+      />
+    </div>
+  );
+};
+
 const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
-  const { settings } = useAppContext();
+  const { settings, addMessage } = useAppContext();
   const isDarkTheme = settings?.theme === 'dark';
   const [showThinking, setShowThinking] = useState(true); // Default to open for better visibility
   const [copySuccess, setCopySuccess] = useState(false);
@@ -403,174 +545,182 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
     }
   };
 
+  // Create a wrapper function for addMessage that includes proper message formatting
+  const handleAddMessage = (content: string, role: 'user' | 'assistant' | 'system') => {
+    addMessage(content, role);
+  };
+
   return (
-    <div style={{...containerStyle, position: 'relative' as const}}>
-      {/* Role label with classified analysis integrated */}
-      <div style={roleLabelStyle}>
-        <div style={{
-          display: 'flex', 
-          alignItems: 'center', 
-          width: '100%', 
-          justifyContent: 'space-between'
-        }}>
-          {/* Role indicator */}
-          <div style={{display: 'flex', alignItems: 'center'}}>
-            {message.role === 'user' ? (
-              <>
-                <span style={{marginRight: '0.5rem'}}>&#62;</span>
-                <span style={roleBadgeStyle}>USER</span>
-              </>
-            ) : (
-              <>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{marginRight: '0.5rem'}}>
-                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                  <circle cx="8.5" cy="8.5" r="1.5"></circle>
-                  <circle cx="15.5" cy="8.5" r="1.5"></circle>
-                  <path d="M9 15a3 3 0 0 0 6 0"></path>
-                </svg>
-                <span style={roleBadgeStyle}>AGENT</span>
-              </>
-            )}
-          </div>
-
-          {/* Classified Analysis toggle (only for assistant messages) */}
-          {hasThinking && (
-            <div 
-              style={{
-                ...analysisBadgeStyle,
-                backgroundColor: showThinking 
-                  ? (isDarkTheme ? '#2a2a2a' : '#d0d0d0') 
-                  : (isDarkTheme ? '#1a1a1a' : '#e0e0e0'),
-              }}
-              onClick={toggleThinking}
-            >
-              <svg 
-                width="12" 
-                height="12" 
-                viewBox="0 0 24 24" 
-                fill="none" 
-                stroke={isDarkTheme ? '#909090' : '#606060'} 
-                strokeWidth="2" 
-                strokeLinecap="round" 
-                strokeLinejoin="round"
-              >
-                <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path>
-                <circle cx="12" cy="12" r="3"></circle>
-              </svg>
-              <span style={{color: isDarkTheme ? '#b0b0b0' : '#505050', letterSpacing: '0.5px'}}>ANALYSIS</span>
-              <svg 
-                width="10" 
-                height="10" 
-                viewBox="0 0 24 24" 
-                fill="none" 
-                stroke="currentColor" 
-                strokeWidth="2" 
-                strokeLinecap="round" 
-                strokeLinejoin="round" 
-                style={{
-                  transform: showThinking ? 'rotate(180deg)' : 'rotate(0deg)',
-                  transition: 'transform 0.3s ease'
-                }}
-              >
-                <polyline points="6 9 12 15 18 9"></polyline>
-              </svg>
+    <>
+      {message.role === 'user' && <ContextArea isDarkTheme={isDarkTheme} onAddMessage={handleAddMessage} />}
+      <div style={{...containerStyle, position: 'relative' as const}}>
+        {/* Role label with classified analysis integrated */}
+        <div style={roleLabelStyle}>
+          <div style={{
+            display: 'flex', 
+            alignItems: 'center', 
+            width: '100%', 
+            justifyContent: 'space-between'
+          }}>
+            {/* Role indicator */}
+            <div style={{display: 'flex', alignItems: 'center'}}>
+              {message.role === 'user' ? (
+                <>
+                  <span style={{marginRight: '0.5rem'}}>&#62;</span>
+                  <span style={roleBadgeStyle}>USER</span>
+                </>
+              ) : (
+                <>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{marginRight: '0.5rem'}}>
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                    <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                    <circle cx="15.5" cy="8.5" r="1.5"></circle>
+                    <path d="M9 15a3 3 0 0 0 6 0"></path>
+                  </svg>
+                  <span style={roleBadgeStyle}>AGENT</span>
+                </>
+              )}
             </div>
-          )}
-        </div>
-      </div>
 
-      {/* Analysis content - also render with markdown */}
-      {hasThinking && (
-        <div style={thinkingContainerStyle}>
-          <style>{dotsAnimation}</style>
-          <div style={thinkingAnimationStyle}>
-            {isThinkingComplete ? (
-              <span>Analysis</span>
-            ) : (
-              <>
-                <span>Analyzing</span>
-                <span style={{ 
-                  display: 'inline-block', 
-                  marginLeft: '2px',
-                  fontWeight: 500,
-                  fontSize: '11px', 
-                  animation: 'thinking-dots 1.5s infinite 0s'
-                }}>.</span>
-                <span style={{ 
-                  display: 'inline-block',
-                  fontWeight: 500,
-                  fontSize: '11px',  
-                  animation: 'thinking-dots 1.5s infinite 0.3s'
-                }}>.</span>
-                <span style={{ 
-                  display: 'inline-block',
-                  fontWeight: 500,
-                  fontSize: '11px',  
-                  animation: 'thinking-dots 1.5s infinite 0.6s'
-                }}>.</span>
-              </>
+            {/* Classified Analysis toggle (only for assistant messages) */}
+            {hasThinking && (
+              <div 
+                style={{
+                  ...analysisBadgeStyle,
+                  backgroundColor: showThinking 
+                    ? (isDarkTheme ? '#2a2a2a' : '#d0d0d0') 
+                    : (isDarkTheme ? '#1a1a1a' : '#e0e0e0'),
+                }}
+                onClick={toggleThinking}
+              >
+                <svg 
+                  width="12" 
+                  height="12" 
+                  viewBox="0 0 24 24" 
+                  fill="none" 
+                  stroke={isDarkTheme ? '#909090' : '#606060'} 
+                  strokeWidth="2" 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round"
+                >
+                  <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+                <span style={{color: isDarkTheme ? '#b0b0b0' : '#505050', letterSpacing: '0.5px'}}>ANALYSIS</span>
+                <svg 
+                  width="10" 
+                  height="10" 
+                  viewBox="0 0 24 24" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  strokeWidth="2" 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                  style={{
+                    transform: showThinking ? 'rotate(180deg)' : 'rotate(0deg)',
+                    transition: 'transform 0.3s ease'
+                  }}
+                >
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </div>
             )}
           </div>
+        </div>
+
+        {/* Analysis content - also render with markdown */}
+        {hasThinking && (
+          <div style={thinkingContainerStyle}>
+            <style>{dotsAnimation}</style>
+            <div style={thinkingAnimationStyle}>
+              {isThinkingComplete ? (
+                <span>Analysis</span>
+              ) : (
+                <>
+                  <span>Analyzing</span>
+                  <span style={{ 
+                    display: 'inline-block', 
+                    marginLeft: '2px',
+                    fontWeight: 500,
+                    fontSize: '11px', 
+                    animation: 'thinking-dots 1.5s infinite 0s'
+                  }}>.</span>
+                  <span style={{ 
+                    display: 'inline-block',
+                    fontWeight: 500,
+                    fontSize: '11px',  
+                    animation: 'thinking-dots 1.5s infinite 0.3s'
+                  }}>.</span>
+                  <span style={{ 
+                    display: 'inline-block',
+                    fontWeight: 500,
+                    fontSize: '11px',  
+                    animation: 'thinking-dots 1.5s infinite 0.6s'
+                  }}>.</span>
+                </>
+              )}
+            </div>
+            <ReactMarkdown
+              components={thinkingMarkdownComponents}
+              remarkPlugins={[remarkGfm]}
+              rehypePlugins={[rehypeRaw, rehypeSanitize]}
+            >
+              {thinking}
+            </ReactMarkdown>
+          </div>
+        )}
+
+        {/* Message content and footer container */}
+        <div style={{
+          ...messageContentStyle,
+        }}>
           <ReactMarkdown
-            components={thinkingMarkdownComponents}
+            components={messageMarkdownComponents}
             remarkPlugins={[remarkGfm]}
             rehypePlugins={[rehypeRaw, rehypeSanitize]}
           >
-            {thinking}
+            {response}
           </ReactMarkdown>
-        </div>
-      )}
 
-      {/* Message content and footer container */}
-      <div style={{
-        ...messageContentStyle,
-      }}>
-        <ReactMarkdown
-          components={messageMarkdownComponents}
-          remarkPlugins={[remarkGfm]}
-          rehypePlugins={[rehypeRaw, rehypeSanitize]}
-        >
-          {response}
-        </ReactMarkdown>
-
-        {/* Footer with timestamp and copy button */}
-        <div style={timestampStyle}>
-          <span>{formatTime(message.timestamp || Date.now())}</span>
-          
-          {/* Add copy button for assistant messages */}
-          {message.role === 'assistant' && (
-            <button
-              onClick={handleCopy}
-              className="command-button"
-              style={{
-                ...copyButtonStyle,
-                color: copySuccess 
-                  ? (isDarkTheme ? '#81c784' : '#4caf50')
-                  : (isDarkTheme ? 'rgba(224, 224, 224, 0.5)' : 'rgba(64, 64, 64, 0.5)'),
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-              }}
-              title="Copy response"
-            >
-              {copySuccess ? (
-                <>
+          {/* Footer with timestamp and copy button */}
+          <div style={timestampStyle}>
+            <span>{formatTime(message.timestamp || Date.now())}</span>
+            
+            {/* Add copy button for assistant messages */}
+            {message.role === 'assistant' && (
+              <button
+                onClick={handleCopy}
+                className="command-button"
+                style={{
+                  ...copyButtonStyle,
+                  color: copySuccess 
+                    ? (isDarkTheme ? '#81c784' : '#4caf50')
+                    : (isDarkTheme ? 'rgba(224, 224, 224, 0.5)' : 'rgba(64, 64, 64, 0.5)'),
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                }}
+                title="Copy response"
+              >
+                {copySuccess ? (
+                  <>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                    <span style={{ fontSize: '11px', letterSpacing: '0.5px' }}>Copied</span>
+                  </>
+                ) : (
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="20 6 9 17 4 12"></polyline>
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
                   </svg>
-                  <span style={{ fontSize: '11px', letterSpacing: '0.5px' }}>Copied</span>
-                </>
-              ) : (
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                </svg>
-              )}
-            </button>
-          )}
+                )}
+              </button>
+            )}
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 };
 
