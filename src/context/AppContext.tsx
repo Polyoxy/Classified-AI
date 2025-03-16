@@ -33,7 +33,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   theme: 'dark',
   fontSize: 14,
   userRole: 'developer',
-  temperature: 0.7,
+  temperature: 0.3,
   customSystemPrompts: {
     developer: 'You are a helpful AI assistant for developers.',
     casual: 'You are a friendly AI assistant.',
