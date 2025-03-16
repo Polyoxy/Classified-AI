@@ -33,6 +33,9 @@ const ChatContainer: React.FC = () => {
     );
   }
 
+  // Debug: log the current conversation messages
+  console.log('Current conversation messages:', currentConversation.messages);
+
   return (
     <div 
       ref={containerRef}
@@ -63,16 +66,24 @@ const ChatContainer: React.FC = () => {
       )}
 
       {/* Display messages */}
-      {currentConversation.messages.map((message, index) => (
-        // Only skip system messages that are not error messages
-        (message.role !== 'system' || message.content.startsWith('Error')) ? (
+      {currentConversation.messages.map((message, index) => {
+        // Skip initial system messages except errors
+        if (message.role === 'system' && 
+            !message.content.startsWith('Error') && 
+            index === 0 && 
+            currentConversation.messages.length > 1) {
+          return null;
+        }
+        
+        // Render all other messages
+        return (
           <MessageItem
             key={message.id || index}
             role={message.role}
             content={message.content}
           />
-        ) : null
-      ))}
+        );
+      })}
 
       {/* Scrolling spacer */}
       <div style={{ height: '1rem' }} />

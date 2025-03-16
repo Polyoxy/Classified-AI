@@ -166,7 +166,11 @@ export const callOllama = async (
       numMessages: messages.length
     });
 
-    // Prepare messages for Ollama format
+    // Make sure we have a proper system message to set the context
+    let hasSystemMessage = false;
+    const systemMessageContent = "You are a helpful AI assistant that provides accurate, factual information. Only answer what you know with certainty. If you don't know something, say 'I don't know' or 'I'm not sure' rather than making up information. Keep your responses concise and focused on the user's question.";
+    
+    // Prepare messages for Ollama format with improved role handling
     const ollamaMessages = messages.map(msg => {
       // Properly map each role
       let role = 'user'; // Default to user
@@ -174,6 +178,7 @@ export const callOllama = async (
       if (msg.role === 'assistant') {
         role = 'assistant';
       } else if (msg.role === 'system') {
+        hasSystemMessage = true;
         role = 'system';
       }
       
@@ -182,6 +187,14 @@ export const callOllama = async (
         content: msg.content,
       };
     });
+
+    // Add a system message if none exists
+    if (!hasSystemMessage) {
+      ollamaMessages.unshift({
+        role: 'system',
+        content: systemMessageContent
+      });
+    }
 
     console.log('📝 Prepared messages for Ollama:', ollamaMessages);
 

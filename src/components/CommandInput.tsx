@@ -12,7 +12,8 @@ const CommandInput: React.FC = () => {
     currentConversation,
     setConnectionStatus,
     connectionStatus,
-    isProcessing
+    isProcessing,
+    setIsProcessing
   } = useAppContext();
   
   // Use our new chat hook
@@ -96,6 +97,12 @@ const CommandInput: React.FC = () => {
   const handleResetClick = () => {
     resetConversations();
     setShowResetButton(false);
+  };
+  
+  // Define the stopAIResponse function to handle stopping the AI response
+  const stopAIResponse = () => {
+    // Logic to stop the AI response
+    setIsProcessing(false);
   };
   
   return (
@@ -251,6 +258,10 @@ const CommandInput: React.FC = () => {
           <polyline points="17 8 12 3 7 8"></polyline>
           <line x1="12" y1="3" x2="12" y2="15"></line>
         </svg>
+      </button>
+      
+      <button onClick={stopAIResponse} disabled={!isProcessing} className="stop-button">
+        Stop
       </button>
     </div>
   );

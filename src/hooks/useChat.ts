@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { useAppContext } from '@/context/AppContext';
 import { callAI, StreamResponse } from '@/lib/aiService';
 import { Message } from '@/types';
+import { v4 as uuidv4 } from 'uuid';
 
 export const useChat = () => {
   const { 
@@ -20,7 +21,15 @@ export const useChat = () => {
     if (!content.trim() || isProcessing || !currentConversation) return;
 
     try {
+      console.log('Sending user message:', content.trim());
+      
       // Add user message to the conversation
+      const userMessage: Message = {
+        id: uuidv4(),
+        role: 'user',
+        content: content.trim(),
+        timestamp: Date.now(),
+      };
       addMessage(content.trim(), 'user');
       
       setIsProcessing(true);
@@ -47,13 +56,17 @@ export const useChat = () => {
         .map(msg => ({
           role: msg.role,
           content: msg.content
-        })) as Message[];
+        }));
       
       console.log('🚀 Sending message to AI:', { 
         provider: settings.activeProvider,
         model,
         messages: messages.length
       });
+
+      // Log the actual conversation for debugging
+      console.log('Full conversation being sent to AI:', 
+        messages.map(m => `${m.role}: ${m.content.substring(0, 30)}${m.content.length > 30 ? '...' : ''}`));
 
       // Update connection status to connected
       setConnectionStatus('connected');
@@ -75,7 +88,7 @@ export const useChat = () => {
       try {
         // Call the AI service with direct connection first
         const tokenUsage = await callAI(
-          messages,
+          messages as Message[],
           model,
           settings.activeProvider,
           apiKey,

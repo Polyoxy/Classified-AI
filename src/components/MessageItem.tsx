@@ -74,13 +74,15 @@ const MessageItem: React.FC<MessageItemProps> = ({ role, content }) => {
   const getUserColors = () => {
     if (isDarkTheme) {
       return {
-        prefix: 'var(--accent-color, #E34234)', // Changed to vermillion orange
-        bg: '#1a1a1a'      // Slightly lighter than main bg
+        prefix: 'var(--accent-color, #E34234)', // Vermillion orange for prefix
+        bg: '#2a2a2a',      // Darker background for user messages
+        border: '1px solid #3a3a3a'  // Border to make user messages stand out
       };
     } else {
       return {
-        prefix: 'var(--accent-color, #E34234)', // Changed to vermillion orange
-        bg: '#f8f8f8'      // Light gray
+        prefix: 'var(--accent-color, #E34234)', // Vermillion orange for prefix
+        bg: '#f0f0f0',      // Light gray background for user messages
+        border: '1px solid #e0e0e0'  // Border to make user messages stand out
       };
     }
   };
@@ -88,13 +90,15 @@ const MessageItem: React.FC<MessageItemProps> = ({ role, content }) => {
   const getAIColors = () => {
     if (isDarkTheme) {
       return {
-        prefix: 'var(--accent-color, #E34234)', // Changed to vermillion orange
-        bg: '#121212'      // Dark bg
+        prefix: 'var(--accent-color, #E34234)', // Vermillion orange for prefix
+        bg: '#121212',      // Dark background
+        border: 'none'
       };
     } else {
       return {
-        prefix: 'var(--accent-color, #E34234)', // Changed to vermillion orange
-        bg: '#ffffff'      // White
+        prefix: 'var(--accent-color, #E34234)', // Vermillion orange for prefix
+        bg: '#ffffff',      // White background
+        border: 'none'
       };
     }
   };
@@ -107,6 +111,7 @@ const MessageItem: React.FC<MessageItemProps> = ({ role, content }) => {
     marginBottom: '1rem',
     padding: '0.75rem',
     backgroundColor: colors.bg,
+    border: colors.border,
     color: 'var(--text-color)',
     fontFamily: 'var(--font-mono, "JetBrains Mono", monospace)',
     fontSize: `${settings?.fontSize || 14}px`,

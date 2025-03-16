@@ -402,15 +402,44 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   // Create a new conversation
   const createConversation = () => {
-    const newConversation = createNewConversation(settings);
+    const id = uuidv4();
+    const systemMessage = "You are a helpful AI assistant that provides accurate, factual information. Only answer what you know with certainty. If you don't know something, say 'I don't know' or 'I'm not sure' rather than making up information. Keep your responses concise and focused on the user's question.";
     
-    // No longer adding initial welcome message
+    const newConversation: Conversation = {
+      id,
+      title: `New Chat ${new Date().toLocaleString()}`,
+      model: settings.providers[settings.activeProvider].defaultModel,
+      provider: settings.activeProvider,
+      systemPrompt: systemMessage,
+      messages: [
+        {
+          id: uuidv4(),
+          role: 'system',
+          content: systemMessage,
+          timestamp: Date.now(),
+        }
+      ],
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
     
-    setConversations((prev) => [newConversation, ...prev]);
+    setConversations(prev => [newConversation, ...prev]);
     setCurrentConversation(newConversation);
     
-    // Save to Firebase or electron-store
-    saveConversation(newConversation);
+    // Check if we're in Electron environment
+    const isElectron = typeof window !== 'undefined' && window.electron;
+    
+    // Save to Firebase if authenticated and not in Electron
+    if (user && !isElectron) {
+      try {
+        set(ref(rtdb, `users/${user.uid}/conversations/${id}`), newConversation)
+          .catch(error => console.error('Error saving conversation to Realtime Database:', error));
+      } catch (error) {
+        console.error('Error preparing conversation for Realtime Database:', error);
+      }
+    }
+    
+    return newConversation;
   };
 
   // Change the model of the current conversation
