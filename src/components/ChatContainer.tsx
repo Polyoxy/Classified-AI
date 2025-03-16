@@ -3,8 +3,9 @@ import { useAppContext } from '@/context/AppContext';
 import MessageItem from './MessageItem';
 
 const ChatContainer: React.FC = () => {
-  const { currentConversation } = useAppContext();
+  const { currentConversation, settings } = useAppContext();
   const containerRef = useRef<HTMLDivElement>(null);
+  const isDarkTheme = settings?.theme === 'dark';
 
   // Auto-scroll when new messages arrive
   useEffect(() => {
@@ -15,9 +16,24 @@ const ChatContainer: React.FC = () => {
 
   if (!currentConversation) {
     return (
-      <div className="flex-1 overflow-hidden bg-background">
-        <div className="h-full flex items-center justify-center">
-          <p className="text-muted-foreground">Select or start a conversation</p>
+      <div 
+        className="flex-1 overflow-hidden"
+        style={{ 
+          backgroundColor: isDarkTheme ? '#121212' : '#f8f8f8',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          alignItems: 'center',
+          height: '100%',
+          fontFamily: 'JetBrains Mono, monospace',
+        }}
+      >
+        <div style={{ 
+          padding: '2rem',
+          textAlign: 'center',
+          color: isDarkTheme ? '#a0a0a0' : '#666666'
+        }}>
+          <p>Start a new conversation</p>
         </div>
       </div>
     );
@@ -26,12 +42,19 @@ const ChatContainer: React.FC = () => {
   return (
     <div 
       ref={containerRef} 
-      className="flex-1 overflow-y-auto bg-background p-4"
-      style={{ height: 'calc(100vh - 160px)' }} // Adjust height to leave space for input
+      className="flex-1 overflow-y-auto"
+      style={{ 
+        backgroundColor: isDarkTheme ? '#121212' : '#f8f8f8',
+        height: 'calc(100vh - 160px)',
+        padding: '1rem',
+        fontFamily: 'JetBrains Mono, monospace',
+      }}
     >
       {currentConversation.messages.map((message, index) => {
-        // Skip system messages
-        if (message.role === 'system') return null;
+        // Skip system messages unless they're error messages
+        if (message.role === 'system' && !message.content.startsWith('Error')) {
+          return null;
+        }
         
         return (
           <MessageItem
