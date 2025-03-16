@@ -254,21 +254,6 @@ const CommandInput: React.FC = () => {
         textarea::selection {
           background-color: rgba(150, 150, 150, 0.3);
         }
-        
-        @keyframes blink {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.3; }
-        }
-        
-        .blinking-cursor {
-          animation: blink 1s infinite;
-          display: inline-block;
-          width: 2px;
-          height: 14px;
-          background-color: var(--text-color);
-          vertical-align: middle;
-          margin-left: 2px;
-        }
       `}</style>
       
       <div className="command-input-container" style={{
@@ -368,15 +353,6 @@ const CommandInput: React.FC = () => {
             autoFocus={false}
             className="no-focus-visible"
           />
-          {!input && !isProcessing && (
-            <span className="blinking-cursor" style={{ 
-              position: 'absolute', 
-              right: '0', 
-              top: '50%', 
-              transform: 'translateY(-50%)',
-              display: 'inline-block',
-            }} />
-          )}
         </div>
         
         {/* Upload button */}
