@@ -17,7 +17,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   const [userRole, setUserRole] = useState<UserRole>(settings.userRole);
   const [customPrompts, setCustomPrompts] = useState<Record<UserRole, string>>(settings.customSystemPrompts);
   const [theme, setTheme] = useState<'dark' | 'light'>(settings.theme === 'dark' ? 'dark' : 'light');
-  const [activeTab, setActiveTab] = useState<'appearance' | 'api' | 'prompts' | 'about'>('appearance');
+  const [activeTab, setActiveTab] = useState<'appearance' | 'api' | 'about'>('appearance');
 
   // Update state when settings change
   useEffect(() => {
@@ -58,14 +58,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
     onClose();
   };
 
-  // Handle custom prompt changes
-  const handlePromptChange = (role: UserRole, value: string) => {
-    setCustomPrompts(prev => ({
-      ...prev,
-      [role]: value
-    }));
-  };
-
   return (
     <div className="modal-overlay" onClick={(e) => {
       if (e.target === e.currentTarget) onClose();
@@ -95,12 +87,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
             className={`tab-button ${activeTab === 'api' ? 'active' : ''}`}
           >
             API Settings
-          </button>
-          <button 
-            onClick={() => setActiveTab('prompts')}
-            className={`tab-button ${activeTab === 'prompts' ? 'active' : ''}`}
-          >
-            System Prompts
           </button>
           <button 
             onClick={() => setActiveTab('about')}
@@ -192,7 +178,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                 </p>
               </div>
               
-              {/* Ollama Quick Setup for deepseek-r1:7b */}
               <div className="info-box">
                 <h3 className="info-box-title">
                   Ollama Quick Setup
@@ -247,47 +232,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                     Default: http://localhost:11434
                   </p>
                 )}
-              </div>
-            </div>
-          )}
-
-          {/* System Prompts Tab */}
-          {activeTab === 'prompts' && (
-            <div>
-              <div className="form-group">
-                <p className="form-help-text">
-                  Customize the system prompts for each user role to control how the AI responds.
-                </p>
-              </div>
-              
-              <div className="form-group">
-                <label className="form-label">Developer Prompt</label>
-                <textarea 
-                  value={customPrompts.developer}
-                  onChange={(e) => handlePromptChange('developer', e.target.value)}
-                  className="form-textarea"
-                  style={{ minHeight: '100px', fontFamily: 'monospace' }}
-                />
-              </div>
-              
-              <div className="form-group">
-                <label className="form-label">Casual User Prompt</label>
-                <textarea 
-                  value={customPrompts.casual}
-                  onChange={(e) => handlePromptChange('casual', e.target.value)}
-                  className="form-textarea"
-                  style={{ minHeight: '100px', fontFamily: 'monospace' }}
-                />
-              </div>
-              
-              <div className="form-group">
-                <label className="form-label">Code Helper Prompt</label>
-                <textarea 
-                  value={customPrompts['code-helper']}
-                  onChange={(e) => handlePromptChange('code-helper', e.target.value)}
-                  className="form-textarea"
-                  style={{ minHeight: '100px', fontFamily: 'monospace' }}
-                />
               </div>
             </div>
           )}

@@ -154,14 +154,14 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
   // Timestamp style
   const timestampStyle = {
     fontSize: '12px',
-    color: isDarkTheme ? '#808080' : '#a0a0a0',
-    marginTop: '0.25rem',
-    paddingBottom: message.role === 'assistant' ? '0.25rem' : '0',
-    borderBottom: message.role === 'assistant' ? `1px solid ${isDarkTheme ? 'rgba(42, 42, 42, 0.15)' : 'rgba(224, 224, 224, 0.3)'}` : 'none',
+    color: isDarkTheme ? 'rgba(224, 224, 224, 0.5)' : 'rgba(64, 64, 64, 0.5)',
+    marginTop: '0.5rem',
+    paddingTop: '0.5rem',
+    borderTop: `1px solid ${isDarkTheme ? 'rgba(42, 42, 42, 0.3)' : 'rgba(224, 224, 224, 0.5)'}`,
     display: 'flex',
     justifyContent: 'flex-end',
     alignItems: 'center',
-    gap: '12px',
+    gap: '16px',
   };
 
   // Toggle thinking display
@@ -315,20 +315,20 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
 
   // Add copy button style
   const copyButtonStyle = {
-    position: 'absolute' as const,
-    bottom: '8px',
-    right: '8px',
     cursor: 'pointer',
     padding: '4px',
     borderRadius: '4px',
     backgroundColor: 'transparent',
     border: 'none',
-    color: isDarkTheme ? '#808080' : '#a0a0a0',
+    color: isDarkTheme ? 'rgba(224, 224, 224, 0.5)' : 'rgba(64, 64, 64, 0.5)',
     transition: 'all 0.2s ease',
     display: 'flex',
     alignItems: 'center',
-    gap: '4px',
+    gap: '6px',
     fontSize: '12px',
+    '&:hover': {
+      color: isDarkTheme ? 'rgba(224, 224, 224, 0.8)' : 'rgba(64, 64, 64, 0.8)',
+    }
   };
 
   return (
@@ -474,9 +474,10 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
               onClick={handleCopy}
               style={{
                 ...copyButtonStyle,
-                position: 'static',
-                color: copySuccess ? '#4CAF50' : (isDarkTheme ? '#808080' : '#a0a0a0'),
-                padding: '4px 8px',
+                color: copySuccess 
+                  ? (isDarkTheme ? '#81c784' : '#4caf50')
+                  : (isDarkTheme ? 'rgba(224, 224, 224, 0.5)' : 'rgba(64, 64, 64, 0.5)'),
+                padding: '4px',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '4px',
@@ -488,7 +489,7 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <polyline points="20 6 9 17 4 12"></polyline>
                   </svg>
-                  <span>Copied!</span>
+                  <span style={{ fontSize: '12px' }}>Copied</span>
                 </>
               ) : (
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
