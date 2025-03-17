@@ -20,6 +20,14 @@ const checkOllamaServer = async () => {
   }
 };
 
+// Add helper function to clean AI responses
+const cleanResponse = (content: string): string => {
+  if (!content) return '';
+  
+  // Remove all <think> blocks (including their content)
+  return content.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+};
+
 interface AIError extends Error {
   name: string;
   message: string;
@@ -132,10 +140,12 @@ export const useChat = () => {
       // Stream handler for the response
       let accumulatedContent = '';
       const handleStreamUpdate = (response: StreamResponse) => {
-        accumulatedContent = response.content;
+        // Clean the content by removing thinking blocks
+        const cleanedContent = cleanResponse(response.content);
+        accumulatedContent = cleanedContent;
         
         // Add the response to the conversation
-        addMessage(accumulatedContent, 'assistant');
+        addMessage(cleanedContent, 'assistant');
 
         // Update token usage if available
         if (response.done && response.usage) {

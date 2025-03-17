@@ -58,6 +58,17 @@ const useChat = () => {
     return data.content;
   };
 
+  // Helper function to clean AI responses
+  const cleanResponse = (content: string): string => {
+    if (!content) return '';
+    
+    // Remove all <think> blocks (including their content)
+    return content.replace(/<think>[\s\S]*?<\/think>/g, '')
+      // Also remove any header tags that might be in the response
+      .replace(/<\|start_header_id\|>.*?<\|end_header_id\|>/g, '')
+      .trim();
+  };
+
   // Helper function to send to Ollama
   const sendToOllama = async (messages: Message[]) => {
     try {
@@ -129,8 +140,8 @@ const useChat = () => {
         throw new Error('Invalid response format from Ollama');
       }
 
-      // Clean up the response content
-      const cleanContent = content.trim();
+      // Clean up the response content and remove thinking tags
+      const cleanContent = cleanResponse(content.trim());
       
       // Update conversation with the response
       addMessage(cleanContent, 'assistant');
@@ -205,27 +216,12 @@ const useChat = () => {
       
       // Function to handle streaming updates
       const handleStreamUpdate = (content: string) => {
-        // Clean up any header tags in the content
-        let cleanedContent = content;
-        
-        // Remove header tags if present
-        if (cleanedContent.includes('<|start_header_id|>') && cleanedContent.includes('<|end_header_id|>')) {
-          // Extract content after header tags
-          const endHeaderIndex = cleanedContent.indexOf('<|end_header_id|>') + '<|end_header_id|>'.length;
-          cleanedContent = cleanedContent.substring(endHeaderIndex).trim();
-        }
-        
-        // Clean any other header tag variations
-        cleanedContent = cleanedContent
-          .replace(/<\|start_header_id\|>assistant<\|end_header_id\|>/g, '')
-          .replace(/<\|start_header_id\|>.*?<\|end_header_id\|>/g, '')
-          .trim();
-          
+        // Clean up any header tags and thinking blocks in the content
+        const cleanedContent = cleanResponse(content);
         accumulatedContent = cleanedContent;
         
-        // Don't show "<think>" content in the UI directly
-        const displayContent = cleanedContent.replace(/<think>[\s\S]*?<\/think>/, '').trim();
-        setPartialResponse(displayContent || '...');
+        // Display the cleaned content
+        setPartialResponse(cleanedContent || '...');
       };
       
       // Get the current model from settings
@@ -264,7 +260,7 @@ const useChat = () => {
         assistantMessage = {
           id: assistantMessageId,
           role: 'assistant' as MessageRole,
-          content: apiResponse || "I'm sorry, I couldn't process that request.",
+          content: cleanResponse(apiResponse) || "I'm sorry, I couldn't process that request.",
           timestamp: Date.now(),
         };
       

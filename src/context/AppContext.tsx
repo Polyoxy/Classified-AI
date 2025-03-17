@@ -638,10 +638,23 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
+  // Helper function to clean AI responses
+  const cleanResponse = (content: string): string => {
+    if (!content || typeof content !== 'string') return '';
+    
+    // Remove all <think> blocks (including their content)
+    return content.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+  };
+
   // Add a message to the current conversation
   const addMessage = (content: string | null, role: MessageRole) => {
     // Ensure content is a string and handle null/undefined
-    const safeContent = typeof content === 'string' ? content : JSON.stringify(content);
+    let safeContent = typeof content === 'string' ? content : JSON.stringify(content);
+    
+    // Clean assistant messages to remove thinking
+    if (role === 'assistant') {
+      safeContent = cleanResponse(safeContent);
+    }
     
     console.log(`Adding ${role} message:`, 
       safeContent ? (safeContent.length > 50 ? safeContent.substring(0, 50) + '...' : safeContent) : '(empty message)'

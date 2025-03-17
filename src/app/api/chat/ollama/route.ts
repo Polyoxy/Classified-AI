@@ -14,6 +14,17 @@ const OLLAMA_SERVERS = [
   'http://localhost:11434'
 ];
 
+// Helper function to clean AI responses
+const cleanResponse = (content: string): string => {
+  if (!content) return '';
+  
+  // Remove all <think> blocks (including their content)
+  return content.replace(/<think>[\s\S]*?<\/think>/g, '')
+    // Also remove any header tags that might be in the response
+    .replace(/<\|start_header_id\|>.*?<\|end_header_id\|>/g, '')
+    .trim();
+};
+
 // Helper function to safely parse JSON chunks
 const safeJSONParse = (text: string) => {
   try {
@@ -59,7 +70,8 @@ const processStreamingResponse = (responseText: string) => {
       .join('')
       .trim();
 
-    return content;
+    // Clean the response before returning
+    return cleanResponse(content);
   } catch (error) {
     console.error('[API] Error processing streaming response:', error);
     return null;

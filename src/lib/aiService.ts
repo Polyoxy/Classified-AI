@@ -1,5 +1,16 @@
 import { AIProvider, Message, TokenUsage } from '@/types';
 
+// Helper function to clean AI responses by removing thinking blocks
+export const cleanAiResponse = (content: string): string => {
+  if (!content) return '';
+  
+  // Remove all <think> blocks (including their content)
+  return content.replace(/<think>[\s\S]*?<\/think>/g, '')
+    // Also remove any header tags that might be in the response
+    .replace(/<\|start_header_id\|>.*?<\|end_header_id\|>/g, '')
+    .trim();
+};
+
 // Estimated cost per 1000 tokens (in USD)
 const COST_PER_1K_TOKENS = {
   'gpt-3.5-turbo': { input: 0.0005, output: 0.0015 },
