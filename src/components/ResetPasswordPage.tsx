@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { auth } from '@/lib/firebase';
 import { sendPasswordResetEmail } from 'firebase/auth';
-import TitleBar from './TitleBar';
 
 interface ResetPasswordPageProps {
   onBackToLogin: () => void;
@@ -72,8 +71,6 @@ const ResetPasswordPage: React.FC<ResetPasswordPageProps> = ({ onBackToLogin }) 
       backgroundColor: 'var(--bg-color)',
       color: 'var(--text-color)',
     }}>
-      <TitleBar title="CLASSIFIED AI" />
-
       <div style={{
         flex: 1,
         display: 'flex',

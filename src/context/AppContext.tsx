@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { AppSettings, Conversation, Message, TokenUsage, UserRole, AIProvider } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
-import { auth, rtdb } from '@/lib/firebase';
+import { auth, rtdb, dbCache } from '@/lib/firebase';
 import {
   ref,
   onValue,
@@ -13,10 +13,15 @@ import {
   remove,
   get,
   query,
-  orderByChild
+  orderByChild,
+  limitToLast,
+  startAfter
 } from 'firebase/database';
 import { 
   onAuthStateChanged, 
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signOut as firebaseSignOut,
   signInAnonymously, 
   User 
 } from 'firebase/auth';
@@ -72,6 +77,22 @@ const createNewConversation = (settings: AppSettings): Conversation => {
   const { activeProvider, providers, userRole, customSystemPrompts } = settings;
   const provider = providers[activeProvider];
   
+  const welcomeMessage = `
+# Welcome to Classified AI! 👋
+
+I'm here to help you with:
+- Coding assistance and debugging
+- Technical explanations
+- Project planning and architecture
+- Learning new technologies
+
+## Quick Tips:
+- Be specific in your questions
+- Provide context when sharing code
+- Ask follow-up questions for clarification
+
+How can I assist you today?`;
+  
   return {
     id: uuidv4(),
     title: 'New Conversation',
@@ -85,7 +106,7 @@ const createNewConversation = (settings: AppSettings): Conversation => {
       {
         id: uuidv4(),
         role: 'assistant',
-        content: 'Welcome to Classified AI! How can I help you today?',
+        content: welcomeMessage,
         timestamp: Date.now() + 100, // Add slight timestamp offset
       },
     ],
@@ -119,6 +140,9 @@ interface AppContextType {
   resetConversations: () => void;
   isSidebarOpen: boolean;
   setIsSidebarOpen: (isOpen: boolean) => void;
+  signIn: (email: string, password: string) => Promise<User>;
+  signUp: (email: string, password: string, displayName?: string) => Promise<User>;
+  signOut: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -140,78 +164,102 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [isLoading, setIsLoading] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
 
-  // Simplified auth/user setup for Electron only
-  useEffect(() => {
-    const setupElectronUser = async () => {
-      try {
-        // Check if we're in Electron environment
-        const isElectron = typeof window !== 'undefined' && window.electron;
-        
-        if (!isElectron) {
-          console.log('Not in Electron environment, app is designed for Electron only');
-          setIsLoading(false);
-          return;
-        }
-        
-        console.log('Setting up electron user session');
-        
-        // Create or use a pseudo-user for Electron
-        const electronUser = {
-          uid: 'electron-user',
-          displayName: 'Electron User',
-          email: 'user@electron.app',
-          isAnonymous: false
-        };
-        
-        // Set user info
-        setUser(electronUser as unknown as User);
-        setIsLoading(false);
-      } catch (error) {
-        console.error('Error setting up electron user:', error);
-        setIsLoading(false);
-      }
-    };
-    
-    setupElectronUser();
-  }, []);
-
-  // Load settings from electron-store on mount
-  useEffect(() => {
-    const loadSettings = async () => {
-      try {
-        const isElectron = typeof window !== 'undefined' && window.electron;
-        
-        if (!isElectron) {
-          console.log('Not in Electron environment, app is designed for Electron only');
-          return;
-        }
-        
-        // Use electron-store in Electron environment
-        const storedSettings = await window.electron.store.get('settings');
-        if (storedSettings) {
-          setSettings(prev => ({ ...prev, ...storedSettings }));
-          
-          // Apply theme to document body
-          if (storedSettings.theme) {
-            document.body.className = `theme-${storedSettings.theme}`;
-            const metaThemeColor = document.querySelector('meta[name="theme-color"]');
-            if (metaThemeColor) {
-              metaThemeColor.setAttribute(
-                'content',
-                storedSettings.theme === 'dark' ? '#121212' : '#f8f9fa'
-              );
-            }
-          }
-        }
-      } catch (error) {
-        console.error('Error loading settings:', error);
-      }
-    };
-
-    if (!isLoading) {
-      loadSettings();
+  // Authentication functions
+  const signIn = async (email: string, password: string): Promise<User> => {
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      return userCredential.user;
+    } catch (error) {
+      console.error('Error signing in:', error);
+      throw error;
     }
-  }, [isLoading]);
+  };
+
+  const signUp = async (email: string, password: string, displayName?: string): Promise<User> => {
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      
+      // Initialize user data in Realtime Database
+      const newUser = userCredential.user;
+      
+      // Create user profile 
+      await set(ref(rtdb, `users/${newUser.uid}/profile`), {
+        email: newUser.email,
+        displayName: displayName || email.split('@')[0],
+        createdAt: Date.now()
+      });
+      
+      // Initialize user settings
+      await set(ref(rtdb, `users/${newUser.uid}/settings`), DEFAULT_SETTINGS);
+      
+      return newUser;
+    } catch (error) {
+      console.error('Error signing up:', error);
+      throw error;
+    }
+  };
+
+  const signOut = async (): Promise<void> => {
+    try {
+      await firebaseSignOut(auth);
+      // Clear local cache
+      dbCache.clear();
+      // Reset state
+      setUser(null);
+      setConversations([]);
+      setCurrentConversationState(null);
+    } catch (error) {
+      console.error('Error signing out:', error);
+      throw error;
+    }
+  };
+
+  // Listen for auth state changes
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        // User is signed in
+        console.log('User is signed in:', firebaseUser.uid);
+        setUser(firebaseUser);
+        
+        // Check if user profile exists, create if not
+        const userProfileRef = ref(rtdb, `users/${firebaseUser.uid}/profile`);
+        const profileSnapshot = await get(userProfileRef);
+        
+        if (!profileSnapshot.exists()) {
+          // Create user profile if it doesn't exist
+          await set(userProfileRef, {
+            email: firebaseUser.email,
+            displayName: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
+            createdAt: Date.now()
+          });
+        }
+      } else {
+        // User is signed out
+        console.log('No user is signed in');
+        setUser(null);
+        
+        // Load from localStorage for non-authenticated users
+        try {
+          const storedSettingsJson = localStorage.getItem('settings');
+          if (storedSettingsJson) {
+            setSettings(prev => ({ 
+              ...prev, 
+              ...JSON.parse(storedSettingsJson) 
+            }));
+          }
+        } catch (error) {
+          console.error('Error loading settings from localStorage:', error);
+        }
+      }
+      
+      // Auth state is now resolved
+      setIsLoading(false);
+    });
+    
+    // Return the unsubscribe function to clean up the observer
+    return () => unsubscribe();
+  }, []);
 
   // Apply theme when settings change
   useEffect(() => {
@@ -227,45 +275,131 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   }, [settings.theme]);
 
-  // Load conversations from electron-store
+  // Load conversations effect - optimized for Firebase free tier
   useEffect(() => {
     const loadConversations = async () => {
       try {
-        const isElectron = typeof window !== 'undefined' && window.electron;
-        
-        if (!isElectron) {
-          console.log('Not in Electron environment, app is designed for Electron only');
-          return;
-        }
-        
-        // Load from electron-store
-        const storedConversations = await window.electron.store.get('conversations');
-        
-        if (storedConversations && Array.isArray(storedConversations) && storedConversations.length > 0) {
-          // Sort by updatedAt in descending order
-          const sortedConversations = [...storedConversations].sort((a, b) => b.updatedAt - a.updatedAt);
+        if (user) {
+          console.log('Loading conversations for user:', user.uid);
+          // If we have a user, try to load conversations from Firebase with pagination
+          const cacheKey = `conversations_${user.uid}`;
           
-          setConversations(sortedConversations);
+          // Check cache first to reduce database reads
+          const cachedConversations = dbCache.get(cacheKey);
+          if (cachedConversations && cachedConversations.length > 0) {
+            console.log('Using cached conversations:', cachedConversations.length);
+            setConversations(cachedConversations);
+            
+            // Set the most recent conversation as current if available
+            if (!currentConversation && cachedConversations.length > 0) {
+              setCurrentConversationState(cachedConversations[0]);
+            }
+            return;
+          }
           
-          // Set the most recent conversation as current if available
-          if (!currentConversation) {
-            setCurrentConversationState(sortedConversations[0]);
+          // Load conversations with pagination (limit to last 20 for free tier efficiency)
+          console.log('Fetching conversations from Firebase');
+          const conversationsRef = query(
+            ref(rtdb, `users/${user.uid}/conversations`),
+            orderByChild('updatedAt'),
+            limitToLast(30) // Increased limit to get more conversations
+          );
+          
+          // Set up a one-time listener to minimize bandwidth usage
+          const snapshot = await get(conversationsRef);
+          
+          if (snapshot.exists()) {
+            // Convert the object to an array and sort by updatedAt
+            const conversationsData = snapshot.val();
+            // Make sure we have valid IDs in our conversations
+            const conversationsArray = Object.entries(conversationsData).map(([id, convData]) => {
+              const conv = convData as Conversation;
+              // Ensure ID is included in the conversation object
+              if (!conv.id || conv.id !== id) {
+                conv.id = id;
+              }
+              return conv;
+            });
+            
+            const sortedConversations = conversationsArray.sort((a, b) => b.updatedAt - a.updatedAt);
+            console.log('Loaded conversations from Firebase:', sortedConversations.length);
+            
+            // Update state
+            setConversations(sortedConversations);
+            
+            // Update cache to reduce future reads
+            dbCache.set(cacheKey, sortedConversations, 60000); // Cache for 1 minute
+            
+            // Set the most recent conversation as current if available
+            if (!currentConversation && sortedConversations.length > 0) {
+              setCurrentConversationState(sortedConversations[0]);
+              
+              // Pre-cache this conversation to avoid loading delay
+              const fullConvKey = `conversation_${user.uid}_${sortedConversations[0].id}`;
+              dbCache.set(fullConvKey, sortedConversations[0], 300000); // Cache for 5 minutes
+            }
+          } else {
+            console.log('No conversations found, creating new one');
+            // No conversations found, create a new one
+            const newConv = createNewConversation(settings);
+            setConversations([newConv]);
+            setCurrentConversationState(newConv);
+            
+            // Save to database
+            const newConvRef = ref(rtdb, `users/${user.uid}/conversations/${newConv.id}`);
+            await set(newConvRef, newConv);
+            
+            // Update cache
+            dbCache.set(cacheKey, [newConv], 60000);
           }
         } else {
-          // Create a new conversation if none exists
+          // No user, load from localStorage
+          loadFromLocalStorage();
+        }
+      } catch (error) {
+        console.error('Error loading conversations:', error);
+        // Fall back to localStorage
+        loadFromLocalStorage();
+      }
+    };
+
+    const loadFromLocalStorage = () => {
+      try {
+        const storedConversationsJson = localStorage.getItem('conversations');
+        
+        if (storedConversationsJson) {
+          const storedConversations = JSON.parse(storedConversationsJson) as Conversation[];
+          
+          if (Array.isArray(storedConversations) && storedConversations.length > 0) {
+            // Sort by updatedAt in descending order
+            const sortedConversations = [...storedConversations].sort((a, b) => b.updatedAt - a.updatedAt);
+            
+            setConversations(sortedConversations);
+            
+            // Set the most recent conversation as current if available
+            if (!currentConversation) {
+              setCurrentConversationState(sortedConversations[0]);
+            }
+          } else {
+            // Create a new conversation if none exists
+            const newConv = createNewConversation(settings);
+            setConversations([newConv]);
+            setCurrentConversationState(newConv);
+            
+            // Save to localStorage
+            localStorage.setItem('conversations', JSON.stringify([newConv]));
+          }
+        } else {
+          // No stored conversations, create a new one
           const newConv = createNewConversation(settings);
           setConversations([newConv]);
           setCurrentConversationState(newConv);
           
-          // Save to electron-store
-          try {
-            await window.electron.store.set('conversations', [newConv]);
-          } catch (error) {
-            console.error('Error saving conversation to electron-store:', error);
-          }
+          // Save to localStorage
+          localStorage.setItem('conversations', JSON.stringify([newConv]));
         }
-      } catch (error) {
-        console.error('Error loading conversations:', error);
+      } catch (localStorageError) {
+        console.error('Error loading from localStorage:', localStorageError);
         // Create a fallback conversation if loading fails
         const newConv = createNewConversation(settings);
         setConversations([newConv]);
@@ -276,97 +410,118 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     if (!isLoading) {
       loadConversations();
     }
-  }, [settings, isLoading, currentConversation]);
+  }, [isLoading, settings, currentConversation, user]);
 
-  // Save conversations when they change
+  // Save conversations effect - optimized for Firebase free tier
   useEffect(() => {
     const saveConversations = async () => {
+      if (isLoading || conversations.length === 0) return;
+      
       try {
-        const isElectron = typeof window !== 'undefined' && window.electron;
+        // Ensure we're not saving any temporary or error messages
+        const cleanedConversations = conversations.map(conv => ({
+          ...conv,
+          messages: conv.messages.filter(msg => 
+            !(msg.role === 'system' && msg.content.includes('Response generation was cancelled'))
+          )
+        }));
         
-        if (!isElectron) {
-          return;
+        if (user) {
+          // Save to Firebase if user is authenticated - batch update
+          try {
+            // Only update conversations that have changed to reduce writes
+            const updates: Record<string, any> = {};
+            
+            for (const conv of cleanedConversations) {
+              // Check if we need to update this conversation
+              const cacheKey = `conversation_${user.uid}_${conv.id}`;
+              const cachedConv = dbCache.get(cacheKey);
+              
+              if (!cachedConv || cachedConv.updatedAt !== conv.updatedAt) {
+                // Update if not in cache or has changed
+                updates[`users/${user.uid}/conversations/${conv.id}`] = conv;
+                
+                // Update cache
+                dbCache.set(cacheKey, conv, 60000); // Cache for 1 minute
+              }
+            }
+            
+            // Only send updates if there are changes to save
+            if (Object.keys(updates).length > 0) {
+              await update(ref(rtdb), updates);
+            }
+          } catch (dbError) {
+            console.error('Error saving conversations to database:', dbError);
+            // Fall back to localStorage if database save fails
+            localStorage.setItem('conversations', JSON.stringify(cleanedConversations));
+          }
+        } else {
+          // Save to localStorage if no user
+          localStorage.setItem('conversations', JSON.stringify(cleanedConversations));
         }
         
-        if (conversations.length > 0) {
-          // Ensure we're not saving any temporary or error messages
-          const cleanedConversations = conversations.map(conv => ({
-            ...conv,
-            messages: conv.messages.filter(msg => 
-              !(msg.role === 'system' && msg.content.includes('Response generation was cancelled'))
-            )
-          }));
-
-          // Sort conversations by updatedAt before saving
-          const sortedConversations = [...cleanedConversations].sort((a, b) => b.updatedAt - a.updatedAt);
-          
-          // Save to electron-store
-          await window.electron.store.set('conversations', sortedConversations);
-          
-          // Save current conversation ID if it exists
-          if (currentConversation) {
-            await window.electron.store.set('currentConversationId', currentConversation.id);
-          }
-          
-          console.log('Successfully saved conversations to electron-store:', {
-            conversationCount: sortedConversations.length,
-            currentId: currentConversation?.id
-          });
+        // Save current conversation ID if it exists
+        if (currentConversation) {
+          localStorage.setItem('currentConversationId', currentConversation.id);
         }
       } catch (error) {
         console.error('Error saving conversations:', error);
       }
     };
 
-    if (!isLoading) {
-      saveConversations();
-    }
-  }, [conversations, currentConversation, isLoading]);
+    // Debounce saving to reduce database writes (free tier optimization)
+    const timeoutId = setTimeout(() => {
+      if (!isLoading) {
+        saveConversations();
+      }
+    }, 1000);
 
-  // Save settings to electron-store when they change
+    return () => clearTimeout(timeoutId);
+  }, [conversations, currentConversation, isLoading, user]);
+
+  // Update settings save effect
   useEffect(() => {
     const saveSettings = async () => {
+      if (isLoading) return;
+      
       try {
-        const isElectron = typeof window !== 'undefined' && window.electron;
+        // Save settings to localStorage for all users
+        localStorage.setItem('settings', JSON.stringify(settings));
         
-        if (!isElectron) {
-          return;
+        // Save to user's profile if authenticated
+        if (user) {
+          try {
+            const cacheKey = `settings_${user.uid}`;
+            const cachedSettings = dbCache.get(cacheKey);
+            
+            // Only update if settings have changed
+            if (!cachedSettings || JSON.stringify(cachedSettings) !== JSON.stringify(settings)) {
+              await set(ref(rtdb, `users/${user.uid}/settings`), settings);
+              
+              // Update cache
+              dbCache.set(cacheKey, settings, 300000); // Cache for 5 minutes
+            }
+          } catch (dbError) {
+            console.error('Error saving settings to database:', dbError);
+          }
         }
-        
-        // Save to electron-store
-        await window.electron.store.set('settings', settings);
-        console.log('Settings saved to electron-store');
       } catch (error) {
         console.error('Error saving settings:', error);
       }
     };
 
-    if (!isLoading) {
-      saveSettings();
-    }
-  }, [settings, isLoading]);
-
-  // Save a conversation to electron-store
-  const saveConversation = (conversation: Conversation) => {
-    try {
-      const isElectron = typeof window !== 'undefined' && window.electron;
-      
-      if (!isElectron) {
-        return;
+    // Debounce settings saves
+    const timeoutId = setTimeout(() => {
+      if (!isLoading) {
+        saveSettings();
       }
-      
-      // Save to electron-store
-      window.electron.store.set(`conversation_${conversation.id}`, JSON.stringify(conversation))
-        .catch(error => console.error('Error saving to electron-store:', error));
-    } catch (error) {
-      console.error('Error saving to electron-store:', error);
-    }
-  };
+    }, 1000);
+
+    return () => clearTimeout(timeoutId);
+  }, [settings, isLoading, user]);
 
   // Create a new conversation
   const createConversation = () => {
-    const id = uuidv4();
-    
     // Create an effective system prompt to reduce hallucinations
     const systemPrompt = `You are a helpful, accurate AI assistant. 
     
@@ -376,8 +531,24 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     - Respond directly to user questions
     - For code requests, provide working, well-commented examples`;
     
+    const welcomeMessage = `
+# Welcome to Classified AI! 👋
+
+I'm here to help you with:
+- Coding assistance and debugging
+- Technical explanations
+- Project planning and architecture
+- Learning new technologies
+
+## Quick Tips:
+- Be specific in your questions
+- Provide context when sharing code
+- Ask follow-up questions for clarification
+
+How can I assist you today?`;
+    
     const newConversation: Conversation = {
-      id,
+      id: uuidv4(),
       title: 'New Conversation',
       messages: [
         {
@@ -389,7 +560,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         {
           id: uuidv4(),
           role: 'assistant',
-          content: 'Welcome to Classified AI! How can I help you today?',
+          content: welcomeMessage,
           timestamp: Date.now() + 100, // Add slight timestamp offset
         }
       ],
@@ -405,13 +576,19 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setCurrentConversationState(newConversation);
     setConversations(prev => [newConversation, ...prev]); // Add to beginning of list
     
-    // Save to electron-store
-    try {
-      // Update conversations with the new conversation included
-      window.electron.store.set('conversations', [newConversation, ...conversations])
-        .catch(error => console.error('Error saving to electron-store:', error));
-    } catch (error) {
-      console.error('Error saving to electron-store:', error);
+    // Save to database if user is authenticated
+    if (user) {
+      set(ref(rtdb, `users/${user.uid}/conversations/${newConversation.id}`), newConversation)
+        .catch(error => console.error('Error saving to database:', error));
+      
+      // Update cache
+      dbCache.set(`conversation_${user.uid}_${newConversation.id}`, newConversation, 60000);
+      
+      // Invalidate conversations list cache
+      dbCache.invalidate(`conversations_${user.uid}`);
+    } else {
+      // Save to localStorage
+      localStorage.setItem('conversations', JSON.stringify([newConversation, ...conversations]));
     }
     
     return newConversation;
@@ -452,13 +629,64 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         createConversation();
       }
     }
+    
+    // Delete from database if user is authenticated
+    if (user) {
+      remove(ref(rtdb, `users/${user.uid}/conversations/${id}`))
+        .catch(error => console.error('Error removing from database:', error));
+      
+      // Remove from cache
+      dbCache.invalidate(`conversation_${user.uid}_${id}`);
+      
+      // Invalidate conversations list cache
+      dbCache.invalidate(`conversations_${user.uid}`);
+    } else {
+      // Update localStorage
+      const storedConversationsJson = localStorage.getItem('conversations');
+      if (storedConversationsJson) {
+        try {
+          const storedConversations = JSON.parse(storedConversationsJson) as Conversation[];
+          localStorage.setItem('conversations', JSON.stringify(storedConversations.filter(conv => conv.id !== id)));
+        } catch (error) {
+          console.error('Error updating localStorage:', error);
+        }
+      }
+    }
+  };
+
+  // Save a conversation 
+  const saveConversation = (conversation: Conversation) => {
+    try {
+      if (user) {
+        // Save to database if user is authenticated
+        update(ref(rtdb, `users/${user.uid}/conversations/${conversation.id}`), conversation)
+          .catch(error => console.error('Error saving conversation to database:', error));
+        
+        // Update cache
+        dbCache.set(`conversation_${user.uid}_${conversation.id}`, conversation, 60000);
+      } else {
+        // Otherwise save to localStorage
+        const conversationsJson = localStorage.getItem('conversations');
+        if (conversationsJson) {
+          try {
+            const conversations = JSON.parse(conversationsJson) as Conversation[];
+            const updatedConversations = conversations.map(conv => 
+              conv.id === conversation.id ? conversation : conv
+            );
+            localStorage.setItem('conversations', JSON.stringify(updatedConversations));
+          } catch (error) {
+            console.error('Error updating conversation in localStorage:', error);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error saving conversation:', error);
+    }
   };
 
   // Add a message to the current conversation
   const addMessage = (content: string, role: 'user' | 'assistant' | 'system') => {
     if (!currentConversation) return;
-
-    console.log(`Adding ${role} message to conversation:`, content.substring(0, 50));
 
     const newMessage: Message = {
       id: uuidv4(),
@@ -530,22 +758,33 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       return [updatedConversation, ...withoutCurrent];
     });
 
-    // Save to electron-store
-    try {
-      const isElectron = typeof window !== 'undefined' && window.electron;
-      
-      if (isElectron) {
-        // Save the updated conversation
-        window.electron.store.set(`conversation_${updatedConversation.id}`, JSON.stringify(updatedConversation))
-          .catch(error => console.error('Error saving conversation to electron-store:', error));
-        
-        // Also update the full conversations list
-        window.electron.store.set('conversations', conversations.map(conv => 
-          conv.id === updatedConversation.id ? updatedConversation : conv
-        )).catch(error => console.error('Error saving conversations to electron-store:', error));
+    // Save to database or localStorage
+    if (user) {
+      // Update in database
+      const convPath = `users/${user.uid}/conversations/${updatedConversation.id}`;
+      update(ref(rtdb, convPath), updatedConversation)
+        .then(() => {
+          console.log('Message saved to database');
+          // Update cache
+          dbCache.set(`conversation_${user.uid}_${updatedConversation.id}`, updatedConversation, 60000);
+          // Invalidate conversations list cache to ensure it's refreshed next time
+          dbCache.invalidate(`conversations_${user.uid}`);
+        })
+        .catch(error => console.error('Error saving message to database:', error));
+    } else {
+      // Save to localStorage
+      const conversationsJson = localStorage.getItem('conversations');
+      if (conversationsJson) {
+        try {
+          const conversations = JSON.parse(conversationsJson) as Conversation[];
+          const updatedConversations = conversations.map(conv => 
+            conv.id === updatedConversation.id ? updatedConversation : conv
+          );
+          localStorage.setItem('conversations', JSON.stringify(updatedConversations));
+        } catch (error) {
+          console.error('Error updating conversation in localStorage:', error);
+        }
       }
-    } catch (error) {
-      console.error('Error preparing conversation update for electron-store:', error);
     }
   };
 
@@ -562,112 +801,125 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   // Reset all conversations and create a fresh one
   const resetConversations = async () => {
     try {
-      // Remove all conversations from electron-store
-      await window.electron.store.set('conversations', []);
+      if (user) {
+        // Remove all conversations from database
+        await set(ref(rtdb, `users/${user.uid}/conversations`), null);
+        
+        // Clear cache
+        dbCache.clear();
+      } else {
+        // Clear from localStorage
+        localStorage.removeItem('conversations');
+        localStorage.removeItem('currentConversationId');
+      }
       
-      // Clear conversations state
+      // Reset state
       setConversations([]);
       setCurrentConversationState(null);
       
-      // Create a fresh conversation
+      // Create a new conversation
       createConversation();
     } catch (error) {
       console.error('Error resetting conversations:', error);
     }
   };
 
-  // Update state
+  // Set current conversation
   const setCurrentConversation = async (conversation: Conversation) => {
-    try {
-      // Prevent switching to the same conversation
-      if (currentConversation?.id === conversation.id) {
-        return;
-      }
-
-      // Validate conversation data
-      if (!conversation.id || typeof conversation.id !== 'string') {
-        throw new Error('Invalid conversation: missing or invalid id');
-      }
-      if (!conversation.messages || !Array.isArray(conversation.messages)) {
-        throw new Error('Invalid conversation: missing or invalid messages array');
-      }
-
-      // Clean up any error or temporary messages
-      const cleanedMessages = conversation.messages.filter(msg => 
-        !(msg.role === 'system' && msg.content.includes('Response generation was cancelled'))
-      );
-
-      // Update the current conversation with proper timestamps
-      const updatedConversation = {
-        ...conversation,
-        updatedAt: Date.now(),
-        messages: cleanedMessages.map(msg => ({
-          ...msg,
-          id: msg.id || uuidv4(),
-          timestamp: msg.timestamp || Date.now()
-        }))
-      };
-
-      // First update state to ensure UI responsiveness
-      setCurrentConversationState(updatedConversation);
-
-      // Update conversations list
-      setConversations(prev => {
-        const withoutCurrent = prev.filter(conv => conv.id !== conversation.id);
-        return [updatedConversation, ...withoutCurrent].sort((a, b) => b.updatedAt - a.updatedAt);
-      });
-
-      // Save to electron-store
+    console.log('Setting current conversation:', conversation.id);
+    
+    // First update the state immediately for better UX
+    setCurrentConversationState(conversation);
+    
+    // Save current conversation ID to localStorage for persistence
+    localStorage.setItem('currentConversationId', conversation.id);
+    
+    // Load full conversation details from Firebase if user is logged in
+    if (user) {
       try {
-        const isElectron = typeof window !== 'undefined' && window.electron;
+        // Check cache first
+        const cacheKey = `conversation_${user.uid}_${conversation.id}`;
+        const cachedConv = dbCache.get(cacheKey);
         
-        if (isElectron) {
-          // Save the updated conversation
-          window.electron.store.set(`conversation_${updatedConversation.id}`, JSON.stringify(updatedConversation))
-            .catch(error => console.error('Error saving conversation to electron-store:', error));
+        if (cachedConv) {
+          // If we already have a cached version that's recent, use it
+          console.log('Using cached conversation data');
+          if (JSON.stringify(cachedConv) !== JSON.stringify(conversation)) {
+            setCurrentConversationState(cachedConv);
+          }
+        } else {
+          // Not in cache, fetch from Firebase
+          console.log('Fetching full conversation from Firebase');
+          const convRef = ref(rtdb, `users/${user.uid}/conversations/${conversation.id}`);
+          const snapshot = await get(convRef);
           
-          // Also update the full conversations list
-          window.electron.store.set('conversations', conversations.map(conv => 
-            conv.id === updatedConversation.id ? updatedConversation : conv
-          )).catch(error => console.error('Error saving conversations to electron-store:', error));
+          if (snapshot.exists()) {
+            const fullConversation = snapshot.val() as Conversation;
+            
+            // Ensure the ID is set correctly
+            if (!fullConversation.id) {
+              fullConversation.id = conversation.id;
+            }
+            
+            // Set in state
+            setCurrentConversationState(fullConversation);
+            
+            // Update in conversations list if needed
+            setConversations(prev => 
+              prev.map(conv => 
+                conv.id === fullConversation.id ? fullConversation : conv
+              )
+            );
+            
+            // Update cache
+            dbCache.set(cacheKey, fullConversation, 60000);
+          } else {
+            // If not in database, save this conversation data to ensure it exists
+            console.log('Conversation not found in database, saving current data');
+            await set(convRef, conversation);
+            dbCache.set(cacheKey, conversation, 60000);
+          }
         }
       } catch (error) {
-        console.error('Error preparing conversation update for electron-store:', error);
+        console.error('Error loading full conversation details:', error);
       }
-    } catch (error: any) {
-      console.error('Error setting current conversation:', error);
-      throw new Error(`Failed to switch conversation: ${error.message}`);
     }
   };
 
-  const contextValue: AppContextType = {
-    settings,
-    updateSettings,
+  const value = {
+    user,
+    loading: isLoading,
+    signIn,
+    signUp,
+    signOut,
+    setUser,
     conversations,
+    setConversations,
     currentConversation,
     setCurrentConversation,
-    addMessage,
     createConversation,
+    updateConversation: saveConversation,
     deleteConversation,
-    tokenUsage,
-    updateTokenUsage,
+    settings,
+    setSettings,
+    updateSettings,
+    isSidebarOpen,
+    setIsSidebarOpen,
     isProcessing,
     setIsProcessing,
+    tokenUsage,
+    updateTokenUsage,
     connectionStatus,
     setConnectionStatus,
-    user,
-    setUser,
     isLoading,
     changeModel,
     resetConversations,
-    isSidebarOpen,
-    setIsSidebarOpen,
+    addMessage
   };
 
-  return <AppContext.Provider value={contextValue}>{children}</AppContext.Provider>;
+  return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 };
 
-// Export the useAppContext hook
 export const useAppContext = () => {
   const context = useContext(AppContext);
   if (context === undefined) {

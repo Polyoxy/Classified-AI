@@ -1,0 +1,45 @@
+{
+  "rules": {
+    "users": {
+      "$uid": {
+        ".read": "$uid === auth.uid",
+        ".write": "$uid === auth.uid",
+        
+        "profile": {
+          ".read": "$uid === auth.uid",
+          ".write": "$uid === auth.uid",
+          ".validate": "newData.hasChildren(['email', 'createdAt'])"
+        },
+        
+        "settings": {
+          ".read": "$uid === auth.uid",
+          ".write": "$uid === auth.uid"
+        },
+        
+        "conversations": {
+          ".indexOn": ["updatedAt"],
+          "$conversationId": {
+            ".read": "$uid === auth.uid",
+            ".write": "$uid === auth.uid",
+            
+            // Free tier optimization: limit conversation size
+            ".validate": "newData.child('messages').children().count() <= 100",
+            
+            "messages": {
+              "$messageId": {
+                // Validate content length to prevent excessive database usage
+                ".validate": "newData.child('content').val().length <= 10000"
+              }
+            }
+          }
+        }
+      }
+    },
+    
+    // Deny access to anything not specifically allowed
+    "$other": { 
+      ".read": false, 
+      ".write": false 
+    }
+  }
+} 

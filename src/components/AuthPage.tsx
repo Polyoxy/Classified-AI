@@ -21,15 +21,22 @@ import dynamic from 'next/dynamic';
 // Define the possible authentication screens
 type AuthScreen = 'login' | 'register' | 'reset-password';
 
-// Create a client-only component for elements that need browser features
+// Update ClientOnly component to use useEffect correctly and ensure consistent structure
 const ClientOnly: React.FC<{children: ReactNode}> = ({ children }) => {
-  const [isMounted, setIsMounted] = useState(false);
+  const [hasMounted, setHasMounted] = useState(false);
   
   useEffect(() => {
-    setIsMounted(true);
+    setHasMounted(true);
   }, []);
   
-  return isMounted ? <>{children}</> : null;
+  // During server rendering or first render on client, return null
+  // This prevents adding any DOM structure that would need to be hydrated
+  if (!hasMounted) {
+    return null;
+  }
+  
+  // After client-side hydration, render the children
+  return <>{children}</>;
 };
 
 const AuthPage: React.FC = () => {
@@ -42,8 +49,15 @@ const AuthPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentScreen, setCurrentScreen] = useState<AuthScreen>('login');
-  const [currentTheme, setCurrentTheme] = useState<'dark' | 'light'>(settings?.theme as 'dark' | 'light' || 'dark');
+  const [currentTheme, setCurrentTheme] = useState<'dark' | 'light'>('dark'); // Default to dark
   
+  // Initialize theme from settings once mounted
+  useEffect(() => {
+    if (settings?.theme) {
+      setCurrentTheme(settings.theme as 'dark' | 'light');
+    }
+  }, [settings?.theme]);
+
   // Detect client-side on first render
   useEffect(() => {
     // Clear the preventAutoLogin flag when the auth page mounts
@@ -97,6 +111,9 @@ const AuthPage: React.FC = () => {
 
   // Apply theme when it changes
   useEffect(() => {
+    // Skip during SSR
+    if (typeof window === 'undefined') return;
+    
     if (currentTheme && updateSettings && settings?.theme !== currentTheme) {
       updateSettings({ theme: currentTheme });
       document.body.className = `theme-${currentTheme}`;
@@ -199,13 +216,17 @@ const AuthPage: React.FC = () => {
   
   // Login screen (default)
   return (
-    <div style={{
-      height: '100vh',
-      display: 'flex',
-      flexDirection: 'column',
-      backgroundColor: 'var(--bg-color)',
-      color: 'var(--text-color)',
-    }}>
+    <div
+      className="auth-page-container"
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100vh',
+        width: '100vw',
+        backgroundColor: 'var(--bg-color)',
+        color: 'var(--text-color)',
+      }}
+    >
       {/* Title bar with window controls */}
       <div 
         className="terminal-header draggable" 
@@ -237,124 +258,73 @@ const AuthPage: React.FC = () => {
             strokeLinejoin="round"
           >
             <polyline points="4 17 10 11 4 5"></polyline>
-            <line x1="12" y1="19" x2="20" y2="19"></line>
           </svg>
-          <span style={{
-            fontWeight: 'bold',
-            letterSpacing: '1px',
-            fontSize: '0.875rem',
-            textTransform: 'uppercase',
-          }}>
-            CLASSIFIED AI
-          </span>
+          <span style={{ fontFamily: 'var(--font-family-terminal)' }}>Classified AI - Login</span>
         </div>
         
-        <ClientOnly>
-          {typeof window !== 'undefined' && window.electron && (
-            <div 
-              className="window-controls non-draggable" 
-              style={{ 
-                display: 'flex', 
-                gap: '0.5rem',
-                // @ts-ignore
-                WebkitAppRegion: 'no-drag'
-              }}
-            >
-              <div
-                onClick={() => window.electron?.windowControls?.minimize()}
-                className="window-control minimize non-draggable"
-                title="Minimize"
+        {/* Window controls - render empty div on server, actual controls on client */}
+        <div className="window-controls-container">
+          <ClientOnly>
+            <div className="window-controls" style={{ display: 'flex', gap: '8px' }}>
+              <button
+                className="window-control minimize"
+                aria-label="Minimize"
                 style={{
                   width: '12px',
                   height: '12px',
                   borderRadius: '50%',
-                  backgroundColor: '#f59e0b', // amber-500
                   border: 'none',
+                  backgroundColor: '#ffbd44',
                   cursor: 'pointer',
                 }}
+                onClick={() => {
+                  if (typeof window !== 'undefined' && window.electron?.windowControls) {
+                    window.electron.windowControls.minimize();
+                  }
+                }}
               />
-              <div
-                onClick={() => window.electron?.windowControls?.close()}
-                className="window-control close non-draggable"
-                title="Close"
+              <button
+                className="window-control close"
+                aria-label="Close"
                 style={{
                   width: '12px',
                   height: '12px',
                   borderRadius: '50%',
-                  backgroundColor: '#ef4444', // red-500
                   border: 'none',
+                  backgroundColor: '#ff605c',
                   cursor: 'pointer',
+                }}
+                onClick={() => {
+                  if (typeof window !== 'undefined' && window.electron?.windowControls) {
+                    window.electron.windowControls.close();
+                  }
                 }}
               />
             </div>
-          )}
-        </ClientOnly>
+          </ClientOnly>
+        </div>
       </div>
 
       {/* Main content */}
       <div style={{
         flex: 1,
         display: 'flex',
-        justifyContent: 'center',
+        flexDirection: 'column',
         alignItems: 'center',
-        padding: '20px',
+        justifyContent: 'center',
+        padding: '2rem',
         position: 'relative',
+        overflow: 'auto',
       }}>
-        {/* Theme selector */}
-        <div style={{
-          position: 'absolute',
-          bottom: '1rem',
-          left: 0,
-          right: 0,
-          display: 'flex',
-          justifyContent: 'center',
-          gap: '1rem',
-          fontSize: '0.75rem',
-          opacity: 0.7,
-          color: 'var(--text-color)',
-        }}>
-          <ClientOnly>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span>Theme:</span>
-              <button
-                onClick={() => setCurrentTheme('dark')}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  padding: '0.25rem 0.5rem',
-                  borderRadius: '4px',
-                  backgroundColor: currentTheme === 'dark' ? 'var(--accent-color)' : 'transparent',
-                  color: currentTheme === 'dark' ? '#fff' : 'var(--text-color)',
-                }}
-              >
-                Dark
-              </button>
-              <button
-                onClick={() => setCurrentTheme('light')}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  padding: '0.25rem 0.5rem',
-                  borderRadius: '4px',
-                  backgroundColor: currentTheme === 'light' ? 'var(--accent-color)' : 'transparent',
-                  color: currentTheme === 'light' ? '#fff' : 'var(--text-color)',
-                }}
-              >
-                Light
-              </button>
-            </div>
-          </ClientOnly>
-        </div>
-
+        {/* Login form container */}
         <div style={{
           width: '100%',
-          maxWidth: '460px',
-          padding: '40px',
-          borderRadius: '5px',
+          maxWidth: '400px',
+          backgroundColor: 'var(--card-bg)',
+          borderRadius: '8px',
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
+          padding: '2rem',
           border: '1px solid var(--border-color)',
-          backgroundColor: 'var(--bg-color)',
         }}>
           {/* Title */}
           <div style={{ textAlign: 'center', marginBottom: '16px' }}>
@@ -646,45 +616,79 @@ const AuthPage: React.FC = () => {
             </button>
           </div>
         </div>
+
+        {/* Theme selector - placeholder for server, actual content for client */}
+        <div
+          className="theme-selector-container"
+          style={{
+            position: 'absolute',
+            bottom: '1rem',
+            left: 0,
+            right: 0,
+            display: 'flex',
+            justifyContent: 'center',
+            gap: '1rem',
+            fontSize: '0.75rem',
+            opacity: 0.7,
+            color: 'var(--text-color)',
+          }}
+        >
+          <ClientOnly>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span>Theme:</span>
+              <button
+                onClick={() => handleThemeChange('dark')}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '0.25rem 0.5rem',
+                  borderRadius: '4px',
+                  backgroundColor: currentTheme === 'dark' ? 'var(--accent-color)' : 'transparent',
+                  color: currentTheme === 'dark' ? '#fff' : 'var(--text-color)',
+                }}
+              >
+                Dark
+              </button>
+              <button
+                onClick={() => handleThemeChange('light')}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '0.25rem 0.5rem',
+                  borderRadius: '4px',
+                  backgroundColor: currentTheme === 'light' ? 'var(--accent-color)' : 'transparent',
+                  color: currentTheme === 'light' ? '#fff' : 'var(--text-color)',
+                }}
+              >
+                Light
+              </button>
+            </div>
+          </ClientOnly>
+        </div>
       </div>
 
-      {/* Status bar */}
-      <div style={{
-        height: '24px',
-        borderTop: '1px solid var(--border-color)',
-        backgroundColor: 'var(--header-bg)',
-        display: 'flex',
-        alignItems: 'center',
-        padding: '0 10px',
-        fontSize: '12px',
-        color: 'var(--text-color)',
-        fontFamily: 'var(--font-family-terminal)',
-      }}>
-        {/* Left section - Hello Agent with status */}
-        <div style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          gap: '6px' 
-        }}>
-          <div style={{
-            width: '8px',
-            height: '8px',
-            borderRadius: '50%',
-            backgroundColor: '#10b981',
-            marginRight: '6px',
-          }} />
-          Agent::X1-7R4C3
-        </div>
-
-        {/* Right section */}
-        <div style={{ 
-          marginLeft: 'auto',
+      {/* Status bar - consistent structure between server and client */}
+      <div
+        className="status-bar"
+        style={{
+          height: '30px',
+          backgroundColor: 'var(--status-bar-bg)',
+          borderTop: '1px solid var(--border-color)',
           display: 'flex',
           alignItems: 'center',
-          gap: '10px',
-        }}>
-          <span>Classified-AI by The Shine</span>
-        </div>
+          justifyContent: 'center',
+          color: 'var(--text-muted)',
+          fontSize: '0.75rem',
+          backdropFilter: 'blur(6px)',
+        }}
+      >
+        <ClientOnly>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <span>Web Client</span>
+          </div>
+        </ClientOnly>
       </div>
     </div>
   );

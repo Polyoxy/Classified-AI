@@ -180,262 +180,278 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
     }
   };
 
+  // Create custom styles within the component where settings is defined
+  const customStatusBarStyles = `
+    @media (max-width: 767px) {
+      .status-bar {
+        height: 42px !important;
+        padding: 0 0.75rem !important;
+      }
+      .token-display, .cost-display, .model-selector {
+        display: none !important;
+      }
+      .status-buttons {
+        justify-content: center !important;
+        width: 100% !important;
+      }
+    }
+  `;
+
   return (
-    <div className="status-bar" style={{
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      padding: '0.5rem 1rem',
-      backgroundColor: settings?.theme === 'dark' ? '#121212' : '#f0f0f0',
-      borderTop: `1px solid ${settings?.theme === 'dark' ? '#333' : '#ddd'}`,
-      color: 'var(--text-color)',
-      fontFamily: 'Inter, sans-serif',
-      fontSize: '12px',
-      position: 'fixed',
-      bottom: 0,
-      left: 0,
-      right: isSidebarOpen ? '320px' : 0,
-      transition: 'right 0.3s ease',
-      zIndex: 100,
-      minHeight: '32px',
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <div 
-          className="model-selector" 
-          ref={dropdownRef}
-          style={{ position: 'relative' }}
-        >
+    <>
+      <style>{customStatusBarStyles}</style>
+      <div 
+        className="status-bar"
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          position: 'fixed',
+          bottom: 0,
+          left: 0,
+          right: isSidebarOpen ? '320px' : 0,
+          height: '40px',
+          backgroundColor: settings?.theme === 'dark' ? 'rgba(18, 18, 18, 0.9)' : 'rgba(245, 245, 245, 0.9)',
+          borderTop: `1px solid ${settings?.theme === 'dark' ? 'rgba(51, 51, 51, 0.8)' : 'rgba(221, 221, 221, 0.8)'}`,
+          color: settings?.theme === 'dark' ? '#b0b0b0' : '#505050',
+          padding: '0 1.25rem',
+          fontSize: '12px',
+          fontFamily: 'var(--font-mono, "JetBrains Mono", monospace)',
+          backdropFilter: 'blur(10px)',
+          transition: 'right 0.3s ease',
+          zIndex: 70, // Higher than messages to ensure visibility
+          boxShadow: `0 -1px 4px rgba(0, 0, 0, ${settings?.theme === 'dark' ? '0.2' : '0.1'})`,
+        }}
+      >
+        <style>
+          {`
+            @media (max-width: 767px) {
+              .token-display, .cost-display {
+                display: none !important;
+              }
+              .status-bar {
+                padding: 0.5rem 0.75rem !important;
+              }
+            }
+            
+            @media (min-width: 768px) {
+              .token-display, .cost-display {
+                display: inline !important;
+              }
+            }
+          `}
+        </style>
+        
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div 
-            className="selected-model"
-            onClick={() => setIsModelDropdownOpen(!isModelDropdownOpen)}
+            className="model-selector" 
+            ref={dropdownRef}
+            style={{ position: 'relative' }}
+          >
+            <div
+              className="selected-model"
+              onClick={() => setIsModelDropdownOpen(!isModelDropdownOpen)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                padding: '0.25rem 0.5rem',
+                backgroundColor: settings?.theme === 'dark' ? 'rgba(35, 35, 35, 0.6)' : 'rgba(230, 230, 230, 0.7)',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                minWidth: '150px',
+                border: `1px solid ${settings?.theme === 'dark' ? 'rgba(60, 60, 60, 0.8)' : 'rgba(200, 200, 200, 0.8)'}`,
+                transition: 'all 0.2s ease',
+                fontFamily: 'Inter, sans-serif',
+                letterSpacing: '0.2px',
+              }}
+            >
+              <span style={{ marginRight: '0.5rem' }}>
+                {getCurrentModel()}
+              </span>
+              <svg 
+                width="10" 
+                height="10" 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="2" 
+                strokeLinecap="round" 
+                strokeLinejoin="round"
+                style={{ marginLeft: 'auto' }}
+              >
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </div>
+            
+            {isModelDropdownOpen && (
+              <div 
+                className="model-dropdown"
+                style={{
+                  position: 'absolute',
+                  bottom: '100%',
+                  left: '0',
+                  width: '100%',
+                  backgroundColor: settings?.theme === 'dark' ? 'rgba(26, 26, 26, 0.9)' : 'rgba(245, 245, 245, 0.9)',
+                  border: `1px solid ${settings?.theme === 'dark' ? 'rgba(60, 60, 60, 0.7)' : 'rgba(200, 200, 200, 0.7)'}`,
+                  borderRadius: '4px',
+                  marginBottom: '0.25rem',
+                  zIndex: 1000,
+                  maxHeight: '200px',
+                  overflowY: 'auto',
+                  boxShadow: settings?.theme === 'dark' 
+                    ? '0 -4px 8px rgba(0,0,0,0.2)' 
+                    : '0 -4px 8px rgba(0,0,0,0.05)',
+                  fontFamily: 'Inter, sans-serif',
+                  backdropFilter: 'blur(6px)',
+                }}
+              >
+                {getModelsForProvider().map((model) => (
+                  <div 
+                    key={model}
+                    className="model-option"
+                    onClick={() => handleModelChange(model)}
+                    style={{
+                      padding: '0.5rem',
+                      cursor: 'pointer',
+                      backgroundColor: model === selectedModel 
+                        ? (settings?.theme === 'dark' ? '#333' : '#e0e0e0') 
+                        : 'transparent',
+                      transition: 'all 0.1s ease',
+                      fontSize: '12px',
+                      letterSpacing: '0.2px',
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.backgroundColor = settings?.theme === 'dark' ? '#333' : '#e0e0e0';
+                    }}
+                    onMouseOut={(e) => {
+                      if (model !== selectedModel) {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                      }
+                    }}
+                  >
+                    {model}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          
+          <div className="connection-status" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{
+              width: '8px',
+              height: '8px',
+              borderRadius: '50%',
+              backgroundColor: getStatusColor(),
+              marginRight: '4px',
+              opacity: 0.8,
+            }}></div>
+            <span style={{ 
+              fontFamily: 'Inter, sans-serif',
+              fontSize: '12px',
+              letterSpacing: '0.2px',
+              opacity: 0.9,
+            }}>
+              {connectionStatus === 'connected' ? 'Connected' : 
+               connectionStatus === 'disconnected' ? 'Disconnected' : 
+               connectionStatus === 'error' ? 'Error' : 'Unknown'}
+            </span>
+            
+            {tokenUsage.totalTokens > 0 && (
+              <>
+                <span className="token-display" style={{ 
+                  marginLeft: '12px',
+                  fontFamily: 'Inter, sans-serif',
+                  fontSize: '12px',
+                  letterSpacing: '0.2px',
+                  opacity: 0.8,
+                }}>
+                  Tokens: {formatNumber(tokenUsage.totalTokens)}
+                </span>
+                <span className="cost-display" style={{ 
+                  marginLeft: '12px',
+                  fontFamily: 'Inter, sans-serif',
+                  fontSize: '12px',
+                  letterSpacing: '0.2px',
+                  opacity: 0.8,
+                }}>
+                  Cost: {formatCost(tokenUsage.estimatedCost)}
+                </span>
+              </>
+            )}
+          </div>
+        </div>
+        
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <button
+            onClick={() => {
+              const isElectron = typeof window !== 'undefined' && window.electron;
+              if (isElectron && window.electron) {
+                const windowControls = window.electron.windowControls as ElectronWindowControls;
+                windowControls.reload();
+              } else {
+                window.location.reload();
+              }
+            }}
             style={{
+              backgroundColor: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              padding: '0.25rem 0.5rem',
-              backgroundColor: settings?.theme === 'dark' ? '#1a1a1a' : '#e0e0e0',
+              justifyContent: 'center',
+              padding: '4px',
               borderRadius: '4px',
-              cursor: 'pointer',
-              minWidth: '150px',
-              border: `1px solid ${settings?.theme === 'dark' ? '#333' : '#ccc'}`,
-              transition: 'all 0.2s ease',
+              color: settings?.theme === 'dark' ? 'rgba(180, 180, 180, 0.7)' : 'rgba(100, 100, 100, 0.7)',
+              opacity: 0.6,
+              transition: 'opacity 0.2s ease',
               fontFamily: 'Inter, sans-serif',
-              letterSpacing: '0.2px',
             }}
+            title="Reload"
+            onMouseOver={(e) => e.currentTarget.style.opacity = '0.9'}
+            onMouseOut={(e) => e.currentTarget.style.opacity = '0.6'}
           >
-            <span style={{ marginRight: '0.5rem' }}>
-              {getCurrentModel()}
-            </span>
             <svg 
-              width="10" 
-              height="10" 
+              width="14" 
+              height="14" 
               viewBox="0 0 24 24" 
               fill="none" 
               stroke="currentColor" 
               strokeWidth="2" 
               strokeLinecap="round" 
               strokeLinejoin="round"
-              style={{ marginLeft: 'auto' }}
             >
-              <polyline points="6 9 12 15 18 9"></polyline>
+              <path d="M23 4v6h-6"></path>
+              <path d="M1 20v-6h6"></path>
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"></path>
+              <path d="M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
             </svg>
-          </div>
+          </button>
           
-          {isModelDropdownOpen && (
-            <div 
-              className="model-dropdown"
-              style={{
-                position: 'absolute',
-                bottom: '100%',
-                left: '0',
-                width: '100%',
-                backgroundColor: settings?.theme === 'dark' ? '#1a1a1a' : '#f5f5f5',
-                border: `1px solid ${settings?.theme === 'dark' ? '#333' : '#ddd'}`,
-                borderRadius: '4px',
-                marginBottom: '0.25rem',
-                zIndex: 1000,
-                maxHeight: '200px',
-                overflowY: 'auto',
-                boxShadow: settings?.theme === 'dark' 
-                  ? '0 -4px 8px rgba(0,0,0,0.3)' 
-                  : '0 -4px 8px rgba(0,0,0,0.1)',
-                fontFamily: 'Inter, sans-serif',
-              }}
-            >
-              {getModelsForProvider().map((model) => (
-                <div 
-                  key={model}
-                  className="model-option"
-                  onClick={() => handleModelChange(model)}
-                  style={{
-                    padding: '0.5rem',
-                    cursor: 'pointer',
-                    backgroundColor: model === selectedModel 
-                      ? (settings?.theme === 'dark' ? '#333' : '#e0e0e0') 
-                      : 'transparent',
-                    transition: 'all 0.1s ease',
-                    fontSize: '12px',
-                    letterSpacing: '0.2px',
-                  }}
-                  onMouseOver={(e) => {
-                    e.currentTarget.style.backgroundColor = settings?.theme === 'dark' ? '#333' : '#e0e0e0';
-                  }}
-                  onMouseOut={(e) => {
-                    if (model !== selectedModel) {
-                      e.currentTarget.style.backgroundColor = 'transparent';
-                    }
-                  }}
-                >
-                  {model}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-        
-        <div className="connection-status" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <div style={{
-            width: '10px',
-            height: '10px',
-            borderRadius: '50%',
-            backgroundColor: getStatusColor(),
-            marginRight: '4px',
-          }}></div>
-          <span style={{ 
-            fontFamily: 'Inter, sans-serif',
-            fontSize: '12px',
-            letterSpacing: '0.2px'
-          }}>
-            {connectionStatus === 'connected' ? 'Connected' : 
-             connectionStatus === 'disconnected' ? 'Disconnected' : 
-             connectionStatus === 'error' ? 'Error' : 'Unknown'}
-          </span>
-          
-          {tokenUsage.totalTokens > 0 && (
-            <>
-              <span style={{ 
-                marginLeft: '12px',
-                fontFamily: 'Inter, sans-serif',
-                fontSize: '12px',
-                letterSpacing: '0.2px'
-              }}>
-                Tokens: {formatNumber(tokenUsage.totalTokens)}
-              </span>
-              <span style={{ 
-                marginLeft: '12px',
-                fontFamily: 'Inter, sans-serif',
-                fontSize: '12px',
-                letterSpacing: '0.2px'
-              }}>
-                Cost: {formatCost(tokenUsage.estimatedCost)}
-              </span>
-            </>
-          )}
+          <button
+            onClick={onOpenSettings}
+            style={{
+              backgroundColor: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '4px',
+              borderRadius: '4px',
+              color: settings?.theme === 'dark' ? 'rgba(180, 180, 180, 0.7)' : 'rgba(100, 100, 100, 0.7)',
+              opacity: 0.6,
+              transition: 'opacity 0.2s ease',
+              fontFamily: 'Inter, sans-serif',
+            }}
+            title="Settings"
+            onMouseOver={(e) => e.currentTarget.style.opacity = '0.9'}
+            onMouseOut={(e) => e.currentTarget.style.opacity = '0.6'}
+          >
+            <SettingsIcon />
+          </button>
         </div>
       </div>
-      
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <button
-          onClick={() => {
-            const isElectron = typeof window !== 'undefined' && window.electron;
-            if (isElectron && window.electron) {
-              const windowControls = window.electron.windowControls as ElectronWindowControls;
-              windowControls.reload();
-            } else {
-              window.location.reload();
-            }
-          }}
-          style={{
-            backgroundColor: 'transparent',
-            border: 'none',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '4px',
-            borderRadius: '4px',
-            color: 'var(--text-color)',
-            opacity: 0.7,
-            transition: 'opacity 0.2s ease',
-            fontFamily: 'Inter, sans-serif',
-          }}
-          title="Reload"
-          onMouseOver={(e) => e.currentTarget.style.opacity = '1'}
-          onMouseOut={(e) => e.currentTarget.style.opacity = '0.7'}
-        >
-          <svg 
-            width="14" 
-            height="14" 
-            viewBox="0 0 24 24" 
-            fill="none" 
-            stroke="currentColor" 
-            strokeWidth="2" 
-            strokeLinecap="round" 
-            strokeLinejoin="round"
-          >
-            <path d="M23 4v6h-6"></path>
-            <path d="M1 20v-6h6"></path>
-            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"></path>
-            <path d="M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
-          </svg>
-        </button>
-        
-        <button
-          onClick={onOpenSettings}
-          style={{
-            backgroundColor: 'transparent',
-            border: 'none',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '4px',
-            borderRadius: '4px',
-            color: 'var(--text-color)',
-            opacity: 0.7,
-            transition: 'opacity 0.2s ease',
-            fontFamily: 'Inter, sans-serif',
-          }}
-          title="Settings"
-          onMouseOver={(e) => e.currentTarget.style.opacity = '1'}
-          onMouseOut={(e) => e.currentTarget.style.opacity = '0.7'}
-        >
-          <SettingsIcon />
-        </button>
-        
-        <button
-          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-          style={{
-            backgroundColor: 'transparent',
-            border: 'none',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '4px',
-            borderRadius: '4px',
-            color: 'var(--text-color)',
-            opacity: isSidebarOpen ? 1 : 0.7,
-            transition: 'opacity 0.2s ease',
-            fontFamily: 'Inter, sans-serif',
-          }}
-          title={isSidebarOpen ? "Close Dashboard" : "Open Dashboard"}
-        >
-          <svg 
-            width="16" 
-            height="16" 
-            viewBox="0 0 24 24" 
-            fill="none" 
-            stroke="currentColor" 
-            strokeWidth="2" 
-            strokeLinecap="round" 
-            strokeLinejoin="round"
-          >
-            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-            <line x1="9" y1="3" x2="9" y2="21"></line>
-          </svg>
-        </button>
-      </div>
-    </div>
+    </>
   );
 };
 

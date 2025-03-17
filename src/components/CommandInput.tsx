@@ -25,20 +25,13 @@ const pulsingLightningStyles = `
   }
 `;
 
-// Example questions to cycle through
+// Example questions to cycle through - simplified list
 const EXAMPLE_QUESTIONS = [
   "How can I optimize my React application's performance?",
-  "Write a Python script to analyze sentiment in tweets",
-  "Create a beautiful landing page with Next.js and Tailwind",
-  "Explain the concept of blockchain in simple terms",
-  "Help me debug this async/await function",
-  "Design a scalable microservices architecture",
-  "Generate a secure password validation regex",
+  "Write a Python script to analyze data",
+  "Create a landing page with Next.js",
+  "Help me debug this function",
   "What are the best practices for API design?",
-  "Create a machine learning model for image classification",
-  "How does quantum computing differ from classical computing?",
-  "Implement a real-time chat system with WebSockets",
-  "Build a responsive navigation menu with CSS Grid",
 ];
 
 const CommandInput: React.FC = () => {
@@ -53,7 +46,40 @@ const CommandInput: React.FC = () => {
     setIsProcessing,
     currentConversation,
     createConversation,
+    isSidebarOpen,
   } = useAppContext();
+  
+  // Add additional styles for the gradient and mobile optimization
+  const customStyles = `
+    @media (max-width: 767px) {
+      .command-input {
+        position: fixed !important;
+        bottom: 50px !important; /* Position above the status bar */
+        left: 10px !important;
+        right: 10px !important;
+        width: calc(100% - 20px) !important;
+        max-width: calc(100% - 20px) !important;
+        margin: 0 auto !important;
+        z-index: 80 !important;
+        background: ${settings?.theme === 'dark' 
+          ? 'linear-gradient(to bottom, rgba(18, 18, 18, 0.85), rgba(24, 24, 24, 0.95))' 
+          : 'linear-gradient(to bottom, rgba(245, 245, 245, 0.85), rgba(250, 250, 250, 0.95))'} !important;
+      }
+    }
+    
+    @media (min-width: 768px) {
+      .command-input {
+        position: fixed !important;
+        bottom: 50px !important; /* Position above the status bar */
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        margin: 0 !important;
+        z-index: 80 !important;
+        width: calc(100% - 3rem) !important;
+        max-width: 800px !important;
+      }
+    }
+  `;
   
   // Use our chat hook
   const { sendMessage, stopResponse } = useChat();
@@ -181,6 +207,25 @@ const CommandInput: React.FC = () => {
     }
   };
   
+  // Update button styles
+  const buttonStyle: React.CSSProperties = {
+    backgroundColor: 'transparent',
+    border: 'none',
+    borderRadius: '6px',
+    padding: '6px 10px',
+    marginLeft: '8px',
+    cursor: 'pointer',
+    color: settings?.theme === 'dark' ? 'rgba(208, 208, 208, 0.6)' : 'rgba(64, 64, 64, 0.6)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    transition: 'all 0.2s ease',
+    opacity: !input.trim() || isProcessing ? 0.3 : 0.6,
+    height: '40px',
+    width: '40px',
+    flexShrink: 0,
+  };
+
   return (
     <>
       <style>{pulsingLightningStyles}</style>
@@ -206,29 +251,51 @@ const CommandInput: React.FC = () => {
         .command-button-disabled:hover {
           opacity: 0.3 !important;
         }
+        ${customStyles}
       `}</style>
       
-      <div style={{
-        position: 'relative',
-        padding: '0.75rem 1rem',
-        borderTop: '1px solid var(--border-color)',
-        backgroundColor: settings?.theme === 'dark' ? 'rgba(26, 26, 26, 0.4)' : 'rgba(245, 245, 245, 0.6)',
-        display: 'flex',
-        alignItems: 'center',
-        boxShadow: settings?.theme === 'dark' 
-          ? 'inset 0 1px 2px rgba(0,0,0,0.1)' 
-          : 'inset 0 1px 2px rgba(0,0,0,0.05)',
-        borderRadius: '8px',
-        margin: '0.75rem 1rem 1rem 1rem',
-      }}>
+      <div 
+        className="command-input"
+        style={{
+          position: 'relative',
+          padding: '10px 16px',
+          display: 'flex',
+          alignItems: 'flex-start',
+          boxShadow: `0 1px 5px rgba(0, 0, 0, ${settings?.theme === 'dark' ? '0.2' : '0.08'})`,
+          borderRadius: '8px',
+          margin: '5px auto 0.8rem auto',
+          backdropFilter: 'blur(8px)',
+          zIndex: 10,
+          border: `1px solid ${settings?.theme === 'dark' ? 'rgba(60, 60, 60, 0.5)' : 'rgba(180, 180, 180, 0.3)'}`,
+          fontFamily: 'JetBrains Mono, monospace',
+          fontSize: '14px',
+          color: settings?.theme === 'dark' ? '#d0d0d0' : '#404040',
+          width: 'calc(100% - 3rem)',
+          maxWidth: '800px', /* Match max-width with AI responses */
+          boxSizing: 'border-box',
+          transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
+          background: settings?.theme === 'dark' 
+            ? 'linear-gradient(to bottom, rgba(26, 26, 26, 0.7), rgba(32, 32, 32, 0.9))' 
+            : 'linear-gradient(to bottom, rgba(250, 250, 250, 0.7), rgba(255, 255, 255, 0.9))',
+        }}
+      onMouseOver={(e) => {
+        e.currentTarget.style.borderColor = settings?.theme === 'dark' ? 'rgba(80, 80, 80, 0.8)' : 'rgba(160, 160, 160, 0.5)';
+        e.currentTarget.style.boxShadow = `0 2px 8px rgba(0, 0, 0, ${settings?.theme === 'dark' ? '0.25' : '0.12'})`;
+      }}
+      onMouseOut={(e) => {
+        e.currentTarget.style.borderColor = settings?.theme === 'dark' ? 'rgba(60, 60, 60, 0.5)' : 'rgba(180, 180, 180, 0.3)';
+        e.currentTarget.style.boxShadow = `0 1px 5px rgba(0, 0, 0, ${settings?.theme === 'dark' ? '0.2' : '0.08'})`;
+      }}
+      >
         <div style={{
-          color: 'var(--text-color)',
+          color: settings?.theme === 'dark' ? 'rgba(208, 208, 208, 0.6)' : 'rgba(64, 64, 64, 0.6)',
           marginRight: '0.75rem',
           userSelect: 'none',
           display: 'flex',
           alignItems: 'center',
-          height: '24px',
-          opacity: 0.8,
+          height: '18px',
+          opacity: 0.7,
+          marginTop: '2px',
         }}>
           {isProcessing ? (
             <svg 
@@ -268,7 +335,9 @@ const CommandInput: React.FC = () => {
           style={{ 
             flex: 1, 
             cursor: 'text',
-            outline: 'none'
+            outline: 'none',
+            minHeight: '20px',
+            position: 'relative',
           }}
         >
           <textarea
@@ -281,20 +350,23 @@ const CommandInput: React.FC = () => {
             style={{
               backgroundColor: 'transparent',
               border: 'none',
-              color: 'var(--text-color)',
+              color: settings?.theme === 'dark' ? '#d0d0d0' : '#505050', 
               fontFamily: 'var(--font-mono, "JetBrains Mono", monospace)',
               fontSize: '14px',
               resize: 'none',
               height: 'auto',
-              minHeight: '24px',
+              minHeight: '20px',
               width: '100%',
               outline: 'none',
               padding: '0',
-              paddingTop: '2px',
+              paddingTop: '0',
               overflow: 'hidden',
-              lineHeight: '1.6',
+              lineHeight: 1.4,
               verticalAlign: 'middle',
-              caretColor: 'var(--text-color)',
+              caretColor: settings?.theme === 'dark' ? '#d0d0d0' : '#505050',
+              position: 'relative',
+              zIndex: 2,
+              letterSpacing: '0.01em',
             }}
             rows={1}
             autoFocus={false}
@@ -310,13 +382,14 @@ const CommandInput: React.FC = () => {
               style={{
                 backgroundColor: 'transparent',
                 border: 'none',
-                color: 'var(--text-color)',
+                color: settings?.theme === 'dark' ? 'rgba(208, 208, 208, 0.6)' : 'rgba(64, 64, 64, 0.6)',
                 cursor: 'pointer',
                 padding: '0.25rem',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 opacity: 0.6,
+                transition: 'opacity 0.2s ease',
               }}
               title="Stop generating"
             >
@@ -341,13 +414,14 @@ const CommandInput: React.FC = () => {
             style={{
               backgroundColor: 'transparent',
               border: 'none',
-              color: 'var(--text-color)',
+              color: settings?.theme === 'dark' ? 'rgba(208, 208, 208, 0.6)' : 'rgba(64, 64, 64, 0.6)',
               cursor: input.trim() && !isProcessing ? 'pointer' : 'not-allowed',
               padding: '0.25rem',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               opacity: input.trim() && !isProcessing ? 0.6 : 0.3,
+              transition: 'opacity 0.2s ease',
             }}
             title="Send message"
           >

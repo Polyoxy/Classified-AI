@@ -10,6 +10,7 @@ import { vscDarkPlus, vs } from 'react-syntax-highlighter/dist/cjs/styles/prism'
 
 interface MessageItemProps {
   message: Message;
+  isThinking?: boolean;
 }
 
 // Add ContextArea component at the top, outside of MessageItem
@@ -142,11 +143,110 @@ const ContextArea: React.FC<{
   );
 };
 
-const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
+// Update the code block styles to focus on clean rendering without web-specific features
+const codeBlockStyles = `
+  .code-block-container {
+    margin-bottom: 1.25rem;
+    border-radius: 6px;
+    overflow: hidden;
+    background-color: #1e1e2e;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  
+  .code-block-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background-color: #232334;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    color: #a0a0b0;
+  }
+  
+  .code-block-language {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: #a0a0b0;
+  }
+  
+  .code-block-actions {
+    display: flex;
+    gap: 8px;
+  }
+  
+  .code-block-button {
+    background: none;
+    border: none;
+    padding: 4px 8px;
+    cursor: pointer;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: #a0a0b0;
+    font-size: 13px;
+    transition: all 0.2s ease;
+  }
+  
+  .code-block-button:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+  
+  .light .code-block-container {
+    background-color: #f8f9fa;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+  }
+  
+  .light .code-block-header {
+    background-color: #e9ecef;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    color: #6b7280;
+  }
+  
+  .light .code-block-language {
+    color: #6b7280;
+  }
+  
+  .light .code-block-button {
+    color: #6b7280;
+  }
+  
+  .light .code-block-button:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+  }
+
+  /* SyntaxHighlighter customization */
+  .react-syntax-highlighter {
+    border-radius: 0 0 6px 6px !important;
+  }
+  
+  .react-syntax-highlighter-line-number {
+    opacity: 0.5 !important;
+    padding-right: 16px !important;
+    min-width: 2.5em !important;
+  }
+  
+  .react-syntax-highlighter code {
+    font-family: var(--font-mono) !important;
+    font-size: 14px !important;
+  }
+
+  /* Ensure code blocks render properly */
+  pre {
+    margin: 0 !important;
+  }
+  
+  code {
+    font-family: var(--font-mono) !important;
+  }
+`;
+
+const MessageItem: React.FC<MessageItemProps> = ({ message, isThinking }) => {
   const { settings, addMessage } = useAppContext();
   const isDarkTheme = settings?.theme === 'dark';
   const [showThinking, setShowThinking] = useState(true);
   const [copySuccess, setCopySuccess] = useState(false);
+  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
 
   const formatTime = (timestamp: number) => {
     if (!timestamp) return '';
@@ -213,38 +313,98 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
   const commonMarkdownStyles = {
     code: ({ node, inline, className, children, ...props }: any) => {
       const match = /language-(\w+)/.exec(className || '');
-      return !inline && match ? (
-        <div style={{ 
-          marginBottom: '1rem',
-          borderRadius: '4px',
-          overflow: 'hidden',
-          boxShadow: isDarkTheme 
-            ? '0 2px 4px rgba(0, 0, 0, 0.2)' 
-            : '0 2px 4px rgba(0, 0, 0, 0.1)'
-        }}>
-          <SyntaxHighlighter
-            style={isDarkTheme ? vscDarkPlus : vs}
-            language={match[1]}
-            PreTag="div"
-            customStyle={{
-              margin: 0,
-              borderRadius: '4px',
-              fontSize: '13px',
-            }}
-            {...props}
-          >
-            {String(children).replace(/\n$/, '')}
-          </SyntaxHighlighter>
-        </div>
-      ) : (
+      const lang = match ? match[1] : '';
+      const codeString = String(children).replace(/\n$/, '');
+      const codeIndex = Math.random();
+
+      const handleCopyCode = async () => {
+        try {
+          await navigator.clipboard.writeText(codeString);
+          setCopiedIndex(codeIndex);
+          setTimeout(() => setCopiedIndex(null), 2000);
+        } catch (err) {
+          console.error('Failed to copy code:', err);
+        }
+      };
+
+      if (!inline && match) {
+        // Extract line numbers if present
+        const lineMatch = /(\d+):(\d+):(.+)/.exec(lang);
+        const displayLang = lineMatch ? lineMatch[3] : lang;
+        const startLine = lineMatch ? parseInt(lineMatch[1]) : 1;
+        
+        return (
+          <div className="code-block-container">
+            <div className="code-block-header">
+              <div className="code-block-language">
+                {displayLang.toLowerCase() || 'text'}
+              </div>
+              <div className="code-block-actions">
+                <button
+                  onClick={handleCopyCode}
+                  className="code-block-button"
+                  title="Copy code"
+                >
+                  {copiedIndex === codeIndex ? (
+                    <>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                      </svg>
+                      <span>Copy</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                      </svg>
+                      <span>Copy</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+            <SyntaxHighlighter
+              style={isDarkTheme ? vscDarkPlus : vs}
+              language={displayLang}
+              showLineNumbers={true}
+              startingLineNumber={startLine}
+              customStyle={{
+                margin: 0,
+                padding: '16px',
+                fontSize: '14px',
+                backgroundColor: isDarkTheme ? '#1e1e2e' : '#f8f9fa',
+                borderRadius: '0 0 6px 6px',
+              }}
+              codeTagProps={{
+                style: {
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: '14px',
+                  lineHeight: 1.5,
+                }
+              }}
+              lineNumberStyle={{
+                color: isDarkTheme ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)',
+                paddingRight: '16px',
+                fontSize: '14px',
+              }}
+            >
+              {codeString}
+            </SyntaxHighlighter>
+          </div>
+        );
+      }
+
+      return (
         <code 
           className={className} 
           style={{
             backgroundColor: isDarkTheme ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
             padding: '2px 6px',
-            borderRadius: '3px',
+            borderRadius: '4px',
             fontSize: '13px',
             fontFamily: 'var(--font-mono)',
+            color: isDarkTheme ? '#e0e0e0' : '#404040',
           }}
           {...props}
         >
@@ -253,7 +413,15 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
       );
     },
     table: ({ node, ...props }: any) => (
-      <div style={{ overflow: 'auto', marginBottom: '1rem' }}>
+      <div style={{ 
+        overflow: 'auto',
+        marginBottom: '1.25rem',
+        borderRadius: '6px',
+        border: `1px solid ${isDarkTheme ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+        boxShadow: isDarkTheme 
+          ? '0 2px 6px rgba(0, 0, 0, 0.2)' 
+          : '0 2px 6px rgba(0, 0, 0, 0.1)',
+      }}>
         <table style={{
           borderCollapse: 'collapse',
           width: '100%',
@@ -264,54 +432,172 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
     ),
     th: ({ node, ...props }: any) => (
       <th style={{
-        backgroundColor: isDarkTheme ? '#2a2a2a' : '#e0e0e0',
-        padding: '8px',
+        backgroundColor: isDarkTheme ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
+        padding: '12px 16px',
         textAlign: 'left',
-        border: `1px solid ${isDarkTheme ? '#3a3a3a' : '#ccc'}`,
+        borderBottom: `2px solid ${isDarkTheme ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+        fontWeight: 600,
+        color: isDarkTheme ? '#e0e0e0' : '#404040',
       }} {...props} />
     ),
     td: ({ node, ...props }: any) => (
       <td style={{
-        padding: '8px',
-        textAlign: 'left',
-        border: `1px solid ${isDarkTheme ? '#3a3a3a' : '#ccc'}`,
+        padding: '12px 16px',
+        borderBottom: `1px solid ${isDarkTheme ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'}`,
+        color: isDarkTheme ? '#d0d0d0' : '#505050',
       }} {...props} />
     ),
     blockquote: ({ node, ...props }: any) => (
       <blockquote style={{
-        borderLeft: `3px solid ${isDarkTheme ? '#3a3a3a' : '#ccc'}`,
-        padding: '0 1rem',
-        margin: '1rem 0',
-        color: isDarkTheme ? '#a0a0a0' : '#606060',
+        borderLeft: `4px solid ${isDarkTheme ? '#4a4a4a' : '#d0d0d0'}`,
+        padding: '0.75rem 1.25rem',
+        margin: '1.25rem 0',
+        backgroundColor: isDarkTheme ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.02)',
+        borderRadius: '0 6px 6px 0',
+        color: isDarkTheme ? '#b0b0b0' : '#606060',
+        fontStyle: 'italic',
       }} {...props} />
     ),
     p: ({ node, ...props }: any) => (
-      <p style={{ marginBottom: '1rem', whiteSpace: 'pre-line' }} {...props} />
+      <p style={{ 
+        marginBottom: '1.25rem',
+        lineHeight: 1.7,
+        color: isDarkTheme ? '#e0e0e0' : '#404040',
+        whiteSpace: 'pre-wrap',
+        wordBreak: 'break-word',
+        overflow: 'hidden',
+      }} {...props} />
     ),
     h1: ({ node, ...props }: any) => (
-      <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1rem', marginTop: '1rem' }} {...props} />
+      <h1 style={{ 
+        fontSize: '1.75rem',
+        fontWeight: 700,
+        marginBottom: '1.25rem',
+        marginTop: '2rem',
+        color: isDarkTheme ? '#f0f0f0' : '#202020',
+        borderBottom: `1px solid ${isDarkTheme ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+        paddingBottom: '0.5rem',
+      }} {...props} />
     ),
     h2: ({ node, ...props }: any) => (
-      <h2 style={{ fontSize: '1.3rem', fontWeight: 'bold', marginBottom: '0.8rem', marginTop: '1rem' }} {...props} />
+      <h2 style={{ 
+        fontSize: '1.5rem',
+        fontWeight: 600,
+        marginBottom: '1rem',
+        marginTop: '1.75rem',
+        color: isDarkTheme ? '#e8e8e8' : '#303030',
+      }} {...props} />
     ),
     h3: ({ node, ...props }: any) => (
-      <h3 style={{ fontSize: '1.1rem', fontWeight: 'bold', marginBottom: '0.6rem', marginTop: '1rem' }} {...props} />
+      <h3 style={{ 
+        fontSize: '1.25rem',
+        fontWeight: 600,
+        marginBottom: '0.75rem',
+        marginTop: '1.5rem',
+        color: isDarkTheme ? '#e0e0e0' : '#404040',
+      }} {...props} />
     ),
-    ul: ({ node, ...props }: any) => (
-      <ul style={{ marginBottom: '1rem', paddingLeft: '2rem' }} {...props} />
+    h4: ({ node, ...props }: any) => (
+      <h4 style={{ 
+        fontSize: '1.1rem',
+        fontWeight: 600,
+        marginBottom: '0.75rem',
+        marginTop: '1.25rem',
+        color: isDarkTheme ? '#d8d8d8' : '#505050',
+      }} {...props} />
+    ),
+    ul: ({ node, ordered, ...props }: any) => (
+      <ul style={{ 
+        marginBottom: '1.25rem',
+        paddingLeft: '1.5rem',
+        listStyleType: ordered ? 'decimal' : 'disc',
+      }} {...props} />
     ),
     ol: ({ node, ...props }: any) => (
-      <ol style={{ marginBottom: '1rem', paddingLeft: '2rem' }} {...props} />
+      <ol style={{ 
+        marginBottom: '1.25rem',
+        paddingLeft: '1.5rem',
+      }} {...props} />
     ),
-    li: ({ node, ...props }: any) => (
-      <li style={{ marginBottom: '0.25rem' }} {...props} />
-    ),
+    li: ({ node, checked, ...props }: any) => {
+      const style: React.CSSProperties = {
+        marginBottom: '0.5rem',
+        color: isDarkTheme ? '#e0e0e0' : '#404040',
+      };
+
+      if (checked !== null) {
+        return (
+          <li style={{ ...style, listStyleType: 'none', marginLeft: '-1.5rem' }}>
+            <input
+              type="checkbox"
+              checked={checked}
+              readOnly
+              style={{ marginRight: '0.5rem' }}
+            />
+            <span style={{
+              textDecoration: checked ? 'line-through' : 'none',
+              opacity: checked ? 0.7 : 1,
+            }} {...props} />
+          </li>
+        );
+      }
+
+      return <li style={style} {...props} />;
+    },
     strong: ({ node, ...props }: any) => (
-      <strong style={{ fontWeight: 'bold' }} {...props} />
+      <strong style={{ 
+        fontWeight: 600,
+        color: isDarkTheme ? '#f0f0f0' : '#202020',
+      }} {...props} />
     ),
     em: ({ node, ...props }: any) => (
-      <em style={{ fontStyle: 'italic' }} {...props} />
+      <em style={{ 
+        fontStyle: 'italic',
+        color: isDarkTheme ? '#e8e8e8' : '#303030',
+      }} {...props} />
     ),
+    a: ({ node, ...props }: any) => (
+      <a style={{ 
+        color: isDarkTheme ? '#60a5fa' : '#2563eb',
+        textDecoration: 'none',
+        borderBottom: `1px solid ${isDarkTheme ? 'rgba(96, 165, 250, 0.2)' : 'rgba(37, 99, 235, 0.2)'}`,
+        transition: 'all 0.2s ease',
+        ':hover': {
+          borderBottomColor: isDarkTheme ? 'rgba(96, 165, 250, 0.4)' : 'rgba(37, 99, 235, 0.4)',
+        }
+      }} {...props} />
+    ),
+    img: ({ node, ...props }: any) => (
+      <img style={{ 
+        maxWidth: '100%',
+        height: 'auto',
+        borderRadius: '6px',
+        marginBottom: '1.25rem',
+        border: `1px solid ${isDarkTheme ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+      }} {...props} />
+    ),
+    hr: ({ node, ...props }: any) => (
+      <hr style={{ 
+        border: 'none',
+        height: '1px',
+        backgroundColor: isDarkTheme ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+        margin: '2rem 0',
+      }} {...props} />
+    ),
+    text: ({ node, ...props }: any) => {
+      const text = String(props.children);
+      // Handle soft line breaks (lines ending with two spaces)
+      const formattedText = text.replace(/ {2,}\n/g, '<br />');
+      return (
+        <span 
+          style={{
+            whiteSpace: 'pre-wrap',
+            wordBreak: 'break-word',
+          }}
+          dangerouslySetInnerHTML={{ __html: formattedText }}
+        />
+      );
+    },
   };
 
   const isThinkingComplete = hasThinking && response.trim().length > 0;
@@ -319,13 +605,21 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
   React.useEffect(() => {
     if (hasThinking && !isThinkingComplete) {
       setShowThinking(true);
+    } else if (isThinkingComplete && showThinking) {
+      // Auto-close thinking indicator after a delay when the AI response is complete
+      const timer = setTimeout(() => {
+        setShowThinking(false);
+      }, 2000); // 2 second delay before closing
+      
+      return () => clearTimeout(timer);
     }
-  }, [hasThinking, isThinkingComplete]);
+  }, [hasThinking, isThinkingComplete, showThinking]);
 
   return (
     <>
+      <style>{codeBlockStyles}</style>
       {message.role === 'user' && <ContextArea isDarkTheme={isDarkTheme} onAddMessage={addMessage} />}
-      <div style={{
+      <div className={isDarkTheme ? 'dark' : 'light'} style={{
         marginBottom: '1.5rem',
         fontFamily: message.role === 'assistant' ? 'Inter, sans-serif' : 'JetBrains Mono, monospace',
         fontSize: '14px',
@@ -474,7 +768,7 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
               textTransform: 'uppercase',
               letterSpacing: '0.5px',
             }}>
-              {isThinkingComplete ? 'Analysis' : 'Analyzing...'}
+              {isThinkingComplete ? 'Analysis Complete' : 'Analyzing...'}
             </div>
             <ReactMarkdown
               components={commonMarkdownStyles}
@@ -493,7 +787,7 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
           lineHeight: 1.6,
           fontFamily: message.role === 'assistant' ? 'Inter, sans-serif' : 'inherit',
           marginTop: hasThinking ? '0.5rem' : '0',
-        }}>
+        }} className="markdown-wrapper">
           <ReactMarkdown
             components={commonMarkdownStyles}
             remarkPlugins={[remarkGfm]}

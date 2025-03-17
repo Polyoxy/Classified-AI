@@ -2,7 +2,6 @@ import "./globals.css";
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import { Providers } from "@/components/Providers";
-import ClientTitleBar from '@/components/ClientTitleBar';
 
 const inter = Inter({
   subsets: ["latin"],
@@ -69,9 +68,6 @@ export default function RootLayout({
       </head>
       <body className="antialiased">
         <Providers>
-          {/* Client-side Title Bar wrapper */}
-          <ClientTitleBar />
-          
           <div style={{
             display: 'flex',
             height: '100vh',

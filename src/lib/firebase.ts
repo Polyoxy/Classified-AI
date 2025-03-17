@@ -1,6 +1,7 @@
 import { initializeApp, getApps } from "firebase/app";
 import { getDatabase } from "firebase/database";
 import { getAuth, setPersistence, browserLocalPersistence } from "firebase/auth";
+import { getFirestore } from "firebase/firestore";
 // Analytics is typically not used in Electron apps, but included for completeness
 import { getAnalytics, isSupported } from "firebase/analytics";
 
@@ -26,16 +27,17 @@ export const auth = getAuth(app);
 // Check if we're in Electron environment
 const isElectron = typeof window !== 'undefined' && window.electron;
 
-// Set default persistence to local in Electron
-if (isElectron) {
-  setPersistence(auth, browserLocalPersistence)
-    .catch((error) => {
-      console.error('Error setting persistence:', error);
-    });
-}
+// Set persistence to local for better user experience
+setPersistence(auth, browserLocalPersistence)
+  .catch((error) => {
+    console.error('Error setting persistence:', error);
+  });
 
-// Initialize Realtime Database
+// Initialize Realtime Database (more cost effective for the free tier)
 export const rtdb = getDatabase(app);
+
+// Initialize Firestore (use sparingly to stay within free tier limits)
+export const db = getFirestore(app);
 
 // Initialize Analytics conditionally
 export const initAnalytics = async () => {
@@ -57,5 +59,39 @@ export const initAnalytics = async () => {
   }
   return null;
 };
+
+// Helper function to cache data in memory to reduce database reads
+export const setupCaching = () => {
+  const cache = new Map();
+  
+  return {
+    set: (key: string, data: any, expiresInMs = 60000) => {
+      cache.set(key, {
+        data,
+        expiry: Date.now() + expiresInMs
+      });
+    },
+    get: (key: string) => {
+      const item = cache.get(key);
+      if (!item) return null;
+      
+      if (item.expiry < Date.now()) {
+        cache.delete(key);
+        return null;
+      }
+      
+      return item.data;
+    },
+    invalidate: (key: string) => {
+      cache.delete(key);
+    },
+    clear: () => {
+      cache.clear();
+    }
+  };
+};
+
+// Create a cache instance
+export const dbCache = setupCaching();
 
 export default app; 

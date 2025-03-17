@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAppContext } from '@/context/AppContext';
-import TitleBar from '@/components/TitleBar';
 import ChatContainer from '@/components/ChatContainer';
 import CommandInput from '@/components/CommandInput';
 import StatusBar from '@/components/StatusBar';
@@ -249,23 +248,43 @@ const globalStyles = `
 `;
 
 export default function Home() {
-  const [isElectron, setIsElectron] = useState(false);
-
-  useEffect(() => {
-    setIsElectron(window?.process?.type === 'renderer');
-  }, []);
-
   return (
     <main className={`${inter.variable} ${jetbrainsMono.variable}`}>
       <style jsx global>{globalStyles}</style>
-      <App isElectron={isElectron} />
+      <App />
     </main>
   );
 }
 
-const App: React.FC<{ isElectron: boolean }> = ({ isElectron }) => {
+const App: React.FC = () => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const { user, isLoading, settings, updateSettings } = useAppContext();
+  const { user, isLoading, settings } = useAppContext();
+
+  // Create offline user if needed
+  useEffect(() => {
+    if (!isLoading && !user) {
+      try {
+        // Check if we already have an offline user
+        const offlineUserJson = localStorage.getItem('offlineUser');
+        if (!offlineUserJson) {
+          // Create a new offline user
+          const offlineUser = {
+            uid: `offline-${Date.now()}`,
+            displayName: 'Guest User',
+            email: 'guest@classified.ai',
+            isAnonymous: true,
+            photoURL: null,
+          };
+          
+          // Save to localStorage
+          localStorage.setItem('offlineUser', JSON.stringify(offlineUser));
+          console.log('Created offline user for guest access');
+        }
+      } catch (error) {
+        console.error('Error creating offline user:', error);
+      }
+    }
+  }, [isLoading, user]);
 
   // Check for preventAutoLogin flag on mount
   useEffect(() => {
@@ -286,15 +305,6 @@ const App: React.FC<{ isElectron: boolean }> = ({ isElectron }) => {
   useEffect(() => {
     const setupAnalytics = async () => {
       try {
-        // Skip analytics in Electron
-        if (isElectron) {
-          // Only log in development
-          if (process.env.NODE_ENV === 'development') {
-            console.log('Skipping analytics in Electron environment');
-          }
-          return;
-        }
-        
         // Initialize analytics
         const { initAnalytics } = await import('@/lib/firebase');
         initAnalytics();
@@ -308,7 +318,7 @@ const App: React.FC<{ isElectron: boolean }> = ({ isElectron }) => {
     };
     
     setupAnalytics();
-  }, [isElectron]);
+  }, []);
 
   // Check for offline user
   useEffect(() => {
@@ -352,12 +362,18 @@ const App: React.FC<{ isElectron: boolean }> = ({ isElectron }) => {
 
   // User is authenticated, show the main app
   return (
-    <div className="app-container" style={{ 
-      height: '100vh', 
-      display: 'flex', 
+    <div style={{
+      display: 'flex',
       flexDirection: 'column',
-      padding: '0',
-      overflow: 'visible',
+      height: '100vh',
+      width: '100%',
+      backgroundColor: 'var(--bg-color)',
+      color: 'var(--text-color)',
+      fontFamily: 'var(--font-sans)',
+      position: 'relative',
+      overflow: 'hidden',
+      margin: '0 auto',
+      maxWidth: '100%',
     }}>
       {/* Main content */}
       <AppContent
@@ -384,13 +400,6 @@ const AppContent: React.FC<{
   setIsSettingsOpen 
 }) => {
   const { settings, isSidebarOpen } = useAppContext();
-  const [isElectron, setIsElectron] = useState(false);
-  
-  useEffect(() => {
-    if (typeof window !== 'undefined' && window.electron) {
-      setIsElectron(true);
-    }
-  }, []);
   
   return (
     <>
@@ -400,7 +409,7 @@ const AppContent: React.FC<{
         display: 'flex', 
         flexDirection: 'column',
         border: '1px solid var(--border-color)',
-        borderTop: isElectron ? '1px solid var(--border-color)' : 'none',
+        borderTop: 'none',
         borderBottom: 'none',
         borderLeft: 'none',
         borderRight: 'none',

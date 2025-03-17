@@ -26,6 +26,8 @@ const Sidebar: React.FC = () => {
   const [hoveredConversation, setHoveredConversation] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const isElectron = typeof window !== 'undefined' && window?.electron;
+  const [editingTitle, setEditingTitle] = useState<string | null>(null);
+  const [titleValue, setTitleValue] = useState('');
 
   // Handle starring a conversation
   const toggleStar = (conversationId: string) => {
@@ -65,6 +67,94 @@ const Sidebar: React.FC = () => {
     }
   };
 
+  // Start editing a conversation title
+  const startEditingTitle = (conv: Conversation, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingTitle(conv.id);
+    setTitleValue(conv.title || 'New Chat');
+  };
+
+  // Handle title input change
+  const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setTitleValue(e.target.value);
+  };
+
+  // Save edited title
+  const saveTitle = (conv: Conversation) => {
+    // Don't save if nothing changed
+    if (titleValue === conv.title) {
+      setEditingTitle(null);
+      return;
+    }
+
+    // If title is empty, set a default
+    const newTitle = titleValue.trim() || 'New Chat';
+
+    // Create a useful title from the first user message if not specified
+    let finalTitle = newTitle;
+    if (newTitle === 'New Chat' && conv.messages && conv.messages.length > 0) {
+      // Find the first user message
+      const firstUserMsg = conv.messages.find(m => m.role === 'user');
+      if (firstUserMsg && firstUserMsg.content) {
+        // Use the first 5-6 words of the user message
+        const words = firstUserMsg.content.split(' ');
+        finalTitle = words.slice(0, words.length > 6 ? 5 : words.length).join(' ');
+        
+        // Add ellipsis if truncated and ensure not too long
+        if (words.length > 6) finalTitle += '...';
+        if (finalTitle.length > 30) finalTitle = finalTitle.substring(0, 30) + '...';
+      }
+    }
+
+    const updatedConversation = {
+      ...conv,
+      title: finalTitle,
+      updatedAt: Date.now()
+    };
+    
+    // Update in state
+    setCurrentConversation(updatedConversation);
+    
+    // Update in Firebase if authenticated and not in Electron
+    if (user && !isElectron) {
+      try {
+        // Update in Realtime Database
+        update(ref(rtdb, `users/${user.uid}/conversations/${conv.id}`), updatedConversation)
+          .catch(error => console.error('Error updating conversation in Realtime Database:', error));
+      } catch (error) {
+        console.error('Error preparing conversation update for Realtime Database:', error);
+      }
+    } else if (isElectron) {
+      // Update in electron-store
+      try {
+        window.electron.store.set('conversations', conversations.map(c => 
+          c.id === conv.id ? updatedConversation : c
+        )).catch(error => console.error('Error saving to electron-store:', error));
+      } catch (error) {
+        console.error('Error saving to electron-store:', error);
+      }
+    }
+    
+    // Exit edit mode
+    setEditingTitle(null);
+  };
+
+  // Cancel editing title
+  const cancelEditTitle = () => {
+    setEditingTitle(null);
+  };
+
+  // Handle key press in title input
+  const handleTitleKeyPress = (e: React.KeyboardEvent, conv: Conversation) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      saveTitle(conv);
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      cancelEditTitle();
+    }
+  };
+
   // Handle switching to a conversation
   const handleConversationClick = async (conversation: Conversation) => {
     try {
@@ -79,12 +169,22 @@ const Sidebar: React.FC = () => {
       }
 
       setIsProcessing(true);
+      
+      // Scroll to top of the sidebar to ensure the selected conversation is in view
+      const sidebarContent = document.querySelector('.conversations-list');
+      if (sidebarContent) {
+        // Use a smooth scroll to prevent jarring jumps
+        sidebarContent.scrollTo({ top: 0, behavior: 'smooth' });
+      }
 
-      await setCurrentConversation(conversation);
+      // Add a slight delay before changing conversations to make the transition smoother
+      setTimeout(async () => {
+        await setCurrentConversation(conversation);
+        setIsProcessing(false);
+      }, 50);
     } catch (error: any) {
       console.error('Error in handleConversationClick:', error);
       addMessage(`Error switching conversation: ${error.message}`, 'system');
-    } finally {
       setIsProcessing(false);
     }
   };
@@ -287,12 +387,15 @@ const Sidebar: React.FC = () => {
         </div>
 
         {/* Conversations List */}
-        <div style={{
-          flex: 1,
-          overflowY: 'auto',
-          padding: '20px',
-          backgroundColor: 'var(--bg-color)',
-        }}>
+        <div 
+          className="conversations-list"
+          style={{
+            flex: 1,
+            overflowY: 'auto',
+            padding: '20px',
+            backgroundColor: 'var(--bg-color)',
+          }}
+        >
           {filteredConversations.length === 0 ? (
             <div style={{
               textAlign: 'center',
@@ -317,33 +420,32 @@ const Sidebar: React.FC = () => {
                   padding: '14px',
                   marginBottom: '10px',
                   backgroundColor: currentConversation?.id === conv.id 
-                    ? 'var(--accent-color)'
+                    ? settings?.theme === 'dark' ? 'rgba(60, 60, 60, 0.7)' : 'rgba(100, 100, 100, 0.2)'
                     : hoveredConversation === conv.id 
-                      ? settings?.theme === 'dark' ? 'rgba(40, 40, 45, 0.7)' : 'rgba(240, 240, 240, 0.7)'
-                      : 'transparent',
-                  border: `1px solid ${currentConversation?.id === conv.id ? 'var(--accent-color)' : 'var(--border-color)'}`,
+                      ? settings?.theme === 'dark' ? 'rgba(45, 45, 45, 0.8)' : 'rgba(220, 220, 220, 0.6)'
+                      : settings?.theme === 'dark' ? 'rgba(30, 30, 30, 0.6)' : 'rgba(240, 240, 240, 0.5)',
+                  border: `1px solid ${currentConversation?.id === conv.id 
+                    ? settings?.theme === 'dark' ? 'rgba(80, 80, 80, 0.6)' : 'rgba(100, 100, 100, 0.3)' 
+                    : 'var(--border-color)'}`,
                   borderRadius: '8px',
                   cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  opacity: 1,
+                  transition: 'all 0.15s ease',
                   position: 'relative',
                   boxShadow: currentConversation?.id === conv.id 
-                    ? '0 2px 8px rgba(0, 0, 0, 0.15)' 
-                    : hoveredConversation === conv.id 
-                      ? '0 1px 5px rgba(0, 0, 0, 0.1)' 
-                      : 'none',
+                    ? settings?.theme === 'dark' ? '0 2px 6px rgba(0, 0, 0, 0.2)' : '0 2px 6px rgba(0, 0, 0, 0.1)' 
+                    : 'none',
                   fontFamily: 'Inter, sans-serif',
                 }}
                 onMouseOver={(e) => {
                   if (currentConversation?.id !== conv.id) {
-                    e.currentTarget.style.backgroundColor = settings?.theme === 'dark' ? 'rgba(40, 40, 45, 0.7)' : 'rgba(240, 240, 240, 0.7)';
-                    e.currentTarget.style.borderColor = 'var(--text-color)';
-                    e.currentTarget.style.boxShadow = '0 1px 5px rgba(0, 0, 0, 0.1)';
+                    e.currentTarget.style.backgroundColor = settings?.theme === 'dark' ? 'rgba(45, 45, 45, 0.8)' : 'rgba(220, 220, 220, 0.6)';
+                    e.currentTarget.style.borderColor = settings?.theme === 'dark' ? 'rgba(70, 70, 70, 0.8)' : 'rgba(180, 180, 180, 0.8)';
+                    e.currentTarget.style.boxShadow = settings?.theme === 'dark' ? '0 1px 4px rgba(0, 0, 0, 0.15)' : '0 1px 4px rgba(0, 0, 0, 0.05)';
                   }
                 }}
                 onMouseOut={(e) => {
                   if (currentConversation?.id !== conv.id) {
-                    e.currentTarget.style.backgroundColor = 'transparent';
+                    e.currentTarget.style.backgroundColor = settings?.theme === 'dark' ? 'rgba(30, 30, 30, 0.6)' : 'rgba(240, 240, 240, 0.5)';
                     e.currentTarget.style.borderColor = 'var(--border-color)';
                     e.currentTarget.style.boxShadow = 'none';
                   }
@@ -355,68 +457,124 @@ const Sidebar: React.FC = () => {
                   alignItems: 'center',
                   marginBottom: '4px',
                 }}>
-                  <div style={{
-                    fontSize: '14px',
-                    fontWeight: 600,
-                    color: currentConversation?.id === conv.id ? '#fff' : 'var(--text-color)',
-                    flex: 1,
-                    marginRight: '8px',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                    letterSpacing: '0.2px',
-                  }}>
-                    {conv.title || 'New Chat'}
-                  </div>
+                  {editingTitle === conv.id ? (
+                    <input
+                      type="text"
+                      value={titleValue}
+                      onChange={handleTitleChange}
+                      onKeyDown={(e) => handleTitleKeyPress(e, conv)}
+                      onBlur={() => saveTitle(conv)}
+                      autoFocus
+                      onClick={(e) => e.stopPropagation()}
+                      style={{
+                        flex: 1,
+                        fontSize: '14px',
+                        fontWeight: 600,
+                        color: 'var(--text-color)',
+                        backgroundColor: 'transparent',
+                        border: '1px solid var(--border-color)',
+                        borderRadius: '4px',
+                        padding: '4px 8px',
+                        outline: 'none',
+                      }}
+                    />
+                  ) : (
+                    <div 
+                      style={{
+                        fontSize: '14px',
+                        fontWeight: 600,
+                        color: currentConversation?.id === conv.id 
+                          ? settings?.theme === 'dark' ? '#ffffff' : '#333333' 
+                          : 'var(--text-color)',
+                        flex: 1,
+                        marginRight: '8px',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        letterSpacing: '0.2px',
+                      }}
+                      onDoubleClick={(e) => startEditingTitle(conv, e)}
+                    >
+                      {conv.title || 'New Chat'}
+                    </div>
+                  )}
                   <div style={{
                     display: 'flex',
                     gap: '4px',
                     alignItems: 'center',
                   }}>
-                    {hoveredConversation === conv.id && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (deleteConversation) {
-                            deleteConversation(conv.id);
-                            if (currentConversation?.id === conv.id) {
-                              // If no conversations left, create a new one
-                              if (conversations.length <= 1) {
-                                createConversation();
-                              } else {
-                                // Find the next available conversation to switch to
-                                const remainingConvs = conversations.filter(c => c.id !== conv.id);
-                                // Switch to the most recent conversation
-                                setCurrentConversation(remainingConvs[0]);
+                    {hoveredConversation === conv.id && !editingTitle && (
+                      <>
+                        <button
+                          onClick={(e) => startEditingTitle(conv, e)}
+                          style={{
+                            backgroundColor: 'transparent',
+                            border: 'none',
+                            cursor: 'pointer',
+                            padding: '4px',
+                            color: currentConversation?.id === conv.id ? '#fff' : 'var(--text-color)',
+                            opacity: 0.7,
+                            transition: 'opacity 0.2s ease',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                          onMouseOver={(e) => {
+                            e.currentTarget.style.opacity = '1';
+                          }}
+                          onMouseOut={(e) => {
+                            e.currentTarget.style.opacity = '0.7';
+                          }}
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                          </svg>
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (deleteConversation) {
+                              deleteConversation(conv.id);
+                              if (currentConversation?.id === conv.id) {
+                                // If no conversations left, create a new one
+                                if (conversations.length <= 1) {
+                                  createConversation();
+                                } else {
+                                  // Find the next available conversation to switch to
+                                  const remainingConvs = conversations.filter(c => c.id !== conv.id);
+                                  // Switch to the most recent conversation
+                                  setCurrentConversation(remainingConvs[0]);
+                                }
                               }
                             }
-                          }
-                        }}
-                        style={{
-                          backgroundColor: 'transparent',
-                          border: 'none',
-                          cursor: 'pointer',
-                          padding: '4px',
-                          color: currentConversation?.id === conv.id ? '#fff' : 'var(--text-color)',
-                          opacity: 0.7,
-                          transition: 'opacity 0.2s ease',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}
-                        onMouseOver={(e) => {
-                          e.currentTarget.style.opacity = '1';
-                        }}
-                        onMouseOut={(e) => {
-                          e.currentTarget.style.opacity = '0.7';
-                        }}
-                      >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M3 6h18"></path>
-                          <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
-                          <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
-                        </svg>
-                      </button>
+                          }}
+                          style={{
+                            backgroundColor: 'transparent',
+                            border: 'none',
+                            cursor: 'pointer',
+                            padding: '4px',
+                            color: currentConversation?.id === conv.id ? '#fff' : 'var(--text-color)',
+                            opacity: 0.7,
+                            transition: 'opacity 0.2s ease',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                          onMouseOver={(e) => {
+                            e.currentTarget.style.opacity = '1';
+                          }}
+                          onMouseOut={(e) => {
+                            e.currentTarget.style.opacity = '0.7';
+                          }}
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M3 6h18"></path>
+                            <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                            <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                          </svg>
+                        </button>
+                      </>
                     )}
                     <button
                       onClick={(e) => {
@@ -442,8 +600,9 @@ const Sidebar: React.FC = () => {
                 {conv.messages && conv.messages.length > 0 && (
                   <div style={{
                     fontSize: '12px',
-                    color: currentConversation?.id === conv.id ? 'rgba(255,255,255,0.8)' : 'var(--text-secondary)',
-                    opacity: 0.8,
+                    color: currentConversation?.id === conv.id 
+                      ? settings?.theme === 'dark' ? 'rgba(255, 255, 255, 0.8)' : 'rgba(50, 50, 50, 0.8)'
+                      : settings?.theme === 'dark' ? 'rgba(200, 200, 200, 0.7)' : 'rgba(80, 80, 80, 0.7)',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
                     whiteSpace: 'nowrap',

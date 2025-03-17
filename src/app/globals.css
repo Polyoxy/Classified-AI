@@ -721,4 +721,52 @@ option:focus {
   background-color: var(--accent-hover);
 }
 
+/**
+ * Mobile Optimization
+ * ------------------
+ */
+
+/* iPhone 13 Pro Max specific optimization */
+@media screen and (device-width: 428px) and (device-height: 926px), 
+       screen and (max-width: 430px) {
+  html, body {
+    /* Prevent auto-zoom on inputs */
+    font-size: 16px !important;
+    -webkit-text-size-adjust: 100%;
+  }
+  
+  input, textarea, select, button {
+    font-size: 16px !important;
+  }
+  
+  /* Adjust status bar for mobile */
+  .status-bar {
+    padding: 0.25rem 0.5rem !important;
+  }
+  
+  /* Ensure sidebar takes full width on mobile when open */
+  .sidebar-open {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}
+
+/* General mobile optimization */
+@media screen and (max-width: 767px) {
+  /* Adjust chat container padding for mobile */
+  .chat-container {
+    padding: 60px 10px 70px !important;
+  }
+  
+  /* Hide tokens and cost on smaller screens */
+  .token-display, .cost-display {
+    display: none !important;
+  }
+  
+  /* Ensure command input is positioned well on mobile */
+  .command-input {
+    margin-bottom: 5px !important;
+  }
+}
+
 /* Make sure these styles are at the end of the file */
