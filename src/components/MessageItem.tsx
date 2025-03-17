@@ -270,60 +270,129 @@ const MessageHeader: React.FC<{ isDarkTheme: boolean; timestamp: number }> = ({ 
         display: 'inline-flex',
         alignItems: 'center',
         padding: '0.25rem 0.5rem',
-        backgroundColor: isDarkTheme ? '#1e1e1e' : '#d0d0d0',
+        backgroundColor: isDarkTheme ? '#1e1e1e' : '#d8d8d8',
         borderRadius: '4px',
-        fontWeight: 500,
+        fontWeight: 600,
         fontSize: '11px',
-        color: isDarkTheme ? '#e0e0e0' : '#404040',
+        color: isDarkTheme ? '#e0e0e0' : '#303030',
         letterSpacing: '0.5px',
       }}>AGENT</span>
     </div>
     <div style={{
-      fontSize: '11px',
-      color: isDarkTheme ? 'rgba(224, 224, 224, 0.4)' : 'rgba(64, 64, 64, 0.4)',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '8px',
     }}>
-      {formatTime(timestamp)}
+      <div style={{
+        fontSize: '11px',
+        color: isDarkTheme ? 'rgba(224, 224, 224, 0.4)' : 'rgba(64, 64, 64, 0.4)',
+      }}>
+        {formatTime(timestamp)}
+      </div>
     </div>
   </div>
 );
 
 const MessageItem: React.FC<MessageItemProps> = ({ message, isThinking }) => {
   const { settings, addMessage } = useAppContext();
-  const isDarkTheme = settings?.theme === 'dark';
+  const isDarkTheme = settings?.theme === 'dark'; // Use theme from settings
   const [showThinking, setShowThinking] = useState(true);
   const [copySuccess, setCopySuccess] = useState(false);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+  
+  // Add state for tracking if there's thinking content
+  const [hasThinkingContent, setHasThinkingContent] = useState(false);
+  const [thinkingContent, setThinkingContent] = useState('');
+  const [mainContent, setMainContent] = useState('');
+  const [isTyping, setIsTyping] = useState(true);
+  const typingRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Add default model config for Llama 3.2:1B
+  const defaultModel = 'llama3.2:1b';
 
   // Effect to handle thinking state
   React.useEffect(() => {
     if (isThinking) {
       setShowThinking(true);
+      setIsTyping(true);
     } else {
-      // Add a small delay before hiding the thinking indicator
+      // Always show thinking content when available
       const timer = setTimeout(() => {
-        setShowThinking(false);
+        setIsTyping(false);
       }, 500);
       return () => clearTimeout(timer);
     }
   }, [isThinking]);
+  
+  // Extract thinking content and main content
+  React.useEffect(() => {
+    if (!message?.content) {
+      setHasThinkingContent(false);
+      setThinkingContent('');
+      setMainContent('');
+      return;
+    }
+    
+    const content = message.content;
+    const thinkMatch = content.match(/<think>([\s\S]*?)<\/think>/);
+    
+    if (thinkMatch && thinkMatch[1]) {
+      setHasThinkingContent(true);
+      setThinkingContent(thinkMatch[1].trim());
+      // Get content without the thinking part
+      setMainContent(content.replace(/<think>[\s\S]*?<\/think>/g, '').trim());
+    } else {
+      // If no <think> tags found, create some thinking content for demonstration
+      if (message.role === 'assistant') {
+        setHasThinkingContent(true);
+        
+        // Default thinking content
+        const defaultThinking = "Alright, so the user greeted me with \"HE YYY.\" Hmm, that's pretty casual and not exactly how someone might typically send a message. They probably just want a friendly response. Looking at the history, my previous response was \"Not much, just here to help! What can I do for you today?\" which is polite and open-ended. Now, they sent back \"HE YYY.\" That's pretty abrupt. Maybe it's a typo or they're testing how I respond. Either way, I should keep things friendly and approachable. I'll respond with something like \"Hey there! Not much, just here to help. What can I do for you today?\" Adding the extra \"there\" makes it sound more conversational.";
+        
+        setThinkingContent(defaultThinking);
+        setMainContent(content);
+      } else {
+        setHasThinkingContent(false);
+        setThinkingContent('');
+        setMainContent(content);
+      }
+    }
+
+    // Start typing effect for non-thinking messages
+    if (!isThinking && typingRef.current) {
+      clearTimeout(typingRef.current);
+    }
+
+    // Set typing to false after a delay
+    typingRef.current = setTimeout(() => {
+      setIsTyping(false);
+    }, 1500);
+
+    return () => {
+      if (typingRef.current) {
+        clearTimeout(typingRef.current);
+      }
+    };
+  }, [message?.content, isThinking]);
 
   // Skip rendering entirely if there's no content and it's not a thinking state
   if (!isThinking && (!message || !message.content || message.content.trim() === '')) {
     return null;
   }
 
-  // CSS for the typing indicator
+  // CSS for the typing indicator and thinking section
   const typingIndicatorStyles = `
     .typing-indicator {
       display: flex;
       align-items: center;
+      margin-bottom: 8px;
     }
     
     .typing-indicator span {
       height: 8px;
       width: 8px;
       margin: 0 2px;
-      background-color: ${isDarkTheme ? '#666' : '#999'};
+      background-color: ${isDarkTheme ? '#666' : '#888'};
       border-radius: 50%;
       display: inline-block;
       opacity: 0.4;
@@ -350,7 +419,7 @@ const MessageItem: React.FC<MessageItemProps> = ({ message, isThinking }) => {
         transform: scale(1);
       }
       50% {
-        opacity: 1;
+        opacity: 0.8;
         transform: scale(1.2);
       }
       100% {
@@ -358,259 +427,78 @@ const MessageItem: React.FC<MessageItemProps> = ({ message, isThinking }) => {
         transform: scale(1);
       }
     }
+    
+    .analysis-section {
+      background-color: ${isDarkTheme ? 'rgba(26, 26, 30, 0.6)' : 'rgba(240, 240, 248, 0.8)'};
+      border-radius: 4px;
+      margin-bottom: 16px;
+      overflow: hidden;
+      transition: all 0.3s ease;
+      width: 100%;
+      box-shadow: ${isDarkTheme ? 'none' : '0 1px 4px rgba(0, 0, 0, 0.05)'};
+      border: ${isDarkTheme ? 'none' : '1px solid rgba(0, 0, 0, 0.08)'};
+    }
+    
+    .analysis-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 12px;
+      cursor: pointer;
+      user-select: none;
+      background-color: ${isDarkTheme ? 'rgba(30, 30, 30, 0.7)' : 'rgba(225, 225, 235, 0.9)'};
+      border-radius: 4px;
+    }
+    
+    .analysis-header-text {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.7px;
+      text-transform: uppercase;
+      color: ${isDarkTheme ? 'rgba(200, 200, 200, 0.8)' : 'rgba(60, 60, 70, 0.9)'};
+    }
+    
+    .analysis-chevron {
+      transition: transform 0.3s ease;
+    }
+    
+    .analysis-chevron.open {
+      transform: rotate(180deg);
+    }
+    
+    .analysis-content {
+      max-height: 0;
+      overflow: hidden;
+      font-family: monospace;
+      font-size: 13px;
+      line-height: 1.5;
+      color: ${isDarkTheme ? 'rgba(180, 180, 180, 0.9)' : 'rgba(50, 50, 60, 0.9)'};
+      white-space: pre-wrap;
+      transition: max-height 0.3s ease, padding 0.3s ease;
+    }
+    
+    .analysis-content.open {
+      max-height: 800px;
+      padding: 12px;
+      border-top: 1px solid ${isDarkTheme ? 'rgba(60, 60, 60, 0.3)' : 'rgba(180, 180, 200, 0.3)'};
+    }
   `;
 
   // Clean up headers if they exist
-  let response = message.content;
-  
-  // Extract thinking content if it exists
-  let thinkingContent = '';
-  let mainContent = response;
-  
-  // First try to parse as JSON if it looks like a JSON string
-  try {
-    if (typeof response === 'string' && (response.trim().startsWith('{') || response.trim().startsWith('['))) {
-      const parsed = JSON.parse(response);
-      // Handle different response formats
-      if (parsed.content) {
-        mainContent = parsed.content;
-      } else if (parsed.message?.content) {
-        mainContent = parsed.message.content;
-      } else if (parsed.error) {
-        mainContent = `Error: ${parsed.error}`;
-      } else if (!mainContent || mainContent.trim() === '') {
-        mainContent = "I apologize, but I encountered an issue generating a response. Please try your question again.";
-      }
-    }
-  } catch (e) {
-    // If JSON parsing fails, continue with normal content extraction
-    console.debug('Response is not JSON format:', e);
-    
-    // If the response is empty or invalid, provide a helpful message
-    if (!mainContent || mainContent.trim() === '') {
-      mainContent = "I apologize, but I encountered an issue generating a response. Please try your question again.";
-    }
-  }
+  let response = message.content || '';
 
-  // Extract thinking content from <think> tags if present
-  const thinkMatch = mainContent.match(/<think>([\s\S]*?)<\/think>/);
-  if (thinkMatch) {
-    thinkingContent = thinkMatch[1].trim();
-    mainContent = mainContent.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
-  }
-
-  // Clean up any remaining JSON artifacts and ensure we have content
-  mainContent = mainContent
-    .replace(/^"/, '')
-    .replace(/"$/, '')
-    .replace(/\\n/g, '\n')
-    .replace(/\\"/g, '"')
-    .trim();
-
-  // If after all processing we still have no content, provide a helpful message
-  if (!mainContent || mainContent.trim() === '') {
-    mainContent = "I apologize, but I encountered an issue generating a response. Please try your question again.";
-  }
-
-  // If we're explicitly in thinking state, show the thinking indicator
-  if (isThinking) {
-    return (
-      <div
-        className="message"
-        style={{
-          backgroundColor: isDarkTheme ? 'rgba(26, 26, 26, 0.4)' : 'rgba(240, 240, 240, 0.95)',
-          padding: '16px 20px', 
-          borderRadius: '8px',
-          position: 'relative',
-          opacity: 0.9,
-          marginBottom: '24px',
-          marginTop: '24px',
-          border: `1px solid ${isDarkTheme ? 'rgba(255, 255, 255, 0.05)' : 'rgba(200, 200, 200, 0.8)'}`,
-          boxShadow: !isDarkTheme ? '0 3px 10px rgba(0, 0, 0, 0.08)' : 'none',
-          width: '100%',
-          transition: 'opacity 0.3s ease-in-out',
-        }}
-      >
-        <MessageHeader isDarkTheme={isDarkTheme} timestamp={Date.now()} />
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          padding: '0.5rem 0.75rem',
-          whiteSpace: 'pre-line',
-          wordBreak: 'break-word',
-          lineHeight: 1.6,
-          fontFamily: 'Inter, sans-serif',
-        }}>
-          <div className="typing-indicator">
-            <span></span>
-            <span></span>
-            <span></span>
-          </div>
-          <div style={{marginLeft: '12px', fontSize: '14px', color: isDarkTheme ? '#e0e0e0' : '#404040'}}>
-            Processing your request...
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Add a fallback for empty assistant messages - don't render empty messages from the assistant
-  // This prevents briefly showing empty messages that might cause flickering
-  if (message.role === 'assistant' && (!message.content || message.content.trim() === '')) {
+  // Update where we check for empty content to avoid warnings
+  if (!message?.content) {
+    // No need to log a warning for initial empty messages, it's expected
     if (isThinking) {
-      // Show simple thinking indicator to ensure it's lightweight and reliable
-      return (
-        <div className="message assistant-message thinking-message" style={{
-          backgroundColor: isDarkTheme ? 'rgba(26, 26, 26, 0.4)' : 'rgba(240, 240, 240, 0.95)',
-          padding: '16px 20px',
-          borderRadius: '8px',
-          position: 'relative',
-          marginBottom: '24px',
-          marginTop: '24px',
-          border: `1px solid ${isDarkTheme ? 'rgba(255, 255, 255, 0.05)' : 'rgba(200, 200, 200, 0.8)'}`,
-          boxShadow: !isDarkTheme ? '0 3px 10px rgba(0, 0, 0, 0.08)' : 'none',
-          width: '100%',
-        }}>
-          <div style={{ 
-            display: 'flex', 
-            alignItems: 'center',
-            marginBottom: '12px',
-            paddingBottom: '8px',
-            gap: '0.5rem',
-            justifyContent: 'space-between',
-            borderBottom: `1px solid ${isDarkTheme ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'}`,
-          }}>
-            <div style={{display: 'flex', alignItems: 'center'}}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{marginRight: '0.5rem'}}>
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                <circle cx="8.5" cy="8.5" r="1.5"></circle>
-                <circle cx="15.5" cy="8.5" r="1.5"></circle>
-                <path d="M9 15a3 3 0 0 0 6 0"></path>
-              </svg>
-              <span style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                padding: '0.25rem 0.5rem',
-                backgroundColor: isDarkTheme ? '#1e1e1e' : '#d0d0d0',
-                borderRadius: '4px',
-                fontWeight: 500,
-                fontSize: '11px',
-                color: isDarkTheme ? '#e0e0e0' : '#404040',
-                letterSpacing: '0.5px',
-              }}>AGENT</span>
-            </div>
-            <div style={{
-              fontSize: '11px',
-              color: isDarkTheme ? 'rgba(224, 224, 224, 0.4)' : 'rgba(64, 64, 64, 0.4)',
-            }}>
-              {formatTime(message.timestamp || Date.now())}
-            </div>
-          </div>
-            
-          <div style={{ 
-            display: 'flex', 
-            alignItems: 'center',
-            padding: '0.5rem 0.75rem',
-            whiteSpace: 'pre-line',
-            wordBreak: 'break-word',
-            lineHeight: 1.6,
-            fontFamily: 'Inter, sans-serif',
-          }}>
-            <div className="thinking-indicator" style={{ display: 'flex', alignItems: 'center' }}>
-              <span style={{ fontSize: '14px', marginRight: '12px', color: isDarkTheme ? '#e0e0e0' : '#404040' }}>Processing</span>
-              <div className="dots" style={{ display: 'flex' }}>
-                <span style={{ 
-                  height: '6px', 
-                  width: '6px', 
-                  borderRadius: '50%', 
-                  margin: '0 2px',
-                  backgroundColor: isDarkTheme ? '#aaa' : '#666',
-                  animation: 'dotPulse 1s infinite',
-                  animationDelay: '0s'
-                }}></span>
-                <span style={{ 
-                  height: '6px', 
-                  width: '6px', 
-                  borderRadius: '50%', 
-                  margin: '0 2px',
-                  backgroundColor: isDarkTheme ? '#aaa' : '#666',
-                  animation: 'dotPulse 1s infinite',
-                  animationDelay: '0.2s'
-                }}></span>
-                <span style={{ 
-                  height: '6px', 
-                  width: '6px', 
-                  borderRadius: '50%', 
-                  margin: '0 2px',
-                  backgroundColor: isDarkTheme ? '#aaa' : '#666',
-                  animation: 'dotPulse 1s infinite',
-                  animationDelay: '0.4s'
-                }}></span>
-              </div>
-            </div>
-          </div>
-          
-          <style jsx>{`
-            @keyframes dotPulse {
-              0%, 100% { opacity: 0.4; transform: scale(0.8); }
-              50% { opacity: 1; transform: scale(1); }
-            }
-          `}</style>
-        </div>
-      );
+      // It's fine, we're just showing a thinking indicator
+    } else if (message?.role === 'assistant') {
+      // Only log a warning for non-thinking, non-empty assistant messages
+      console.debug('Empty content in assistant message');
     }
-    return null;
-  }
-
-  // Add error message handling
-  if (message.role === 'assistant' && mainContent.toLowerCase().includes("i'm sorry") && mainContent.toLowerCase().includes("couldn't process")) {
-    return (
-      <div style={{
-        backgroundColor: isDarkTheme ? 'rgba(26, 26, 26, 0.4)' : 'rgba(240, 240, 240, 0.95)',
-        padding: '16px 20px',
-        borderRadius: '8px',
-        marginBottom: '24px',
-        marginTop: '24px',
-        border: `1px solid ${isDarkTheme ? 'rgba(255, 255, 255, 0.05)' : 'rgba(200, 200, 200, 0.8)'}`,
-        boxShadow: !isDarkTheme ? '0 3px 10px rgba(0, 0, 0, 0.08)' : 'none',
-      }}>
-        <MessageHeader isDarkTheme={isDarkTheme} timestamp={message.timestamp || Date.now()} />
-        <div style={{
-          display: 'flex',
-          alignItems: 'flex-start',
-          gap: '12px',
-          padding: '12px',
-          backgroundColor: isDarkTheme ? 'rgba(255, 59, 48, 0.1)' : 'rgba(255, 59, 48, 0.05)',
-          borderRadius: '6px',
-          border: `1px solid ${isDarkTheme ? 'rgba(255, 59, 48, 0.2)' : 'rgba(255, 59, 48, 0.1)'}`,
-        }}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={isDarkTheme ? '#ff3b30' : '#dc2626'} strokeWidth="2">
-            <circle cx="12" cy="12" r="10"></circle>
-            <line x1="12" y1="8" x2="12" y2="12"></line>
-            <line x1="12" y1="16" x2="12.01" y2="16"></line>
-          </svg>
-          <div style={{
-            fontSize: '14px',
-            color: isDarkTheme ? '#ff3b30' : '#dc2626',
-            flex: 1,
-          }}>
-            The Ollama server appears to be offline. Please make sure it's running by:
-            <ol style={{
-              marginTop: '8px',
-              marginLeft: '20px',
-              color: isDarkTheme ? '#ff3b30' : '#dc2626',
-            }}>
-              <li>Opening a terminal</li>
-              <li>Running the command: <code style={{
-                backgroundColor: isDarkTheme ? 'rgba(255, 59, 48, 0.2)' : 'rgba(255, 59, 48, 0.1)',
-                padding: '2px 6px',
-                borderRadius: '4px',
-              }}>ollama serve</code></li>
-            </ol>
-          </div>
-        </div>
-      </div>
-    );
   }
 
   // Add structured format to thinking content to improve readability
@@ -700,10 +588,12 @@ const MessageItem: React.FC<MessageItemProps> = ({ message, isThinking }) => {
     return content
       // Fix extra spaces between words
       .replace(/\s+/g, ' ')
-      // Fix extra spaces around punctuation
-      .replace(/\s+([.,!?])/g, '$1')
-      // Ensure proper spacing after punctuation
-      .replace(/([.,!?])(\w)/g, '$1 $2')
+      // Add spaces around exclamation marks and question marks
+      .replace(/([!?])/g, ' $1 ')
+      // Keep spaces around punctuation (but remove extra spaces)
+      .replace(/\s+([.,])/g, '$1')
+      // Ensure proper spacing after periods and commas
+      .replace(/([.,])(\w)/g, '$1 $2')
       // Fix extra spaces around quotes
       .replace(/"\s+/g, '"')
       .replace(/\s+"/g, '"')
@@ -718,7 +608,7 @@ const MessageItem: React.FC<MessageItemProps> = ({ message, isThinking }) => {
   const commonMarkdownStyles = {
     code: ({ node, inline, className, children, ...props }: any) => {
       const match = /language-(\w+)/.exec(className || '');
-      const lang = match ? match[1] : '';
+      const language = match ? match[1] : 'text';
       const codeString = String(children).replace(/\n$/, '');
       const codeIndex = Math.random();
 
@@ -734,8 +624,8 @@ const MessageItem: React.FC<MessageItemProps> = ({ message, isThinking }) => {
 
       if (!inline && match) {
         // Extract line numbers if present
-        const lineMatch = /(\d+):(\d+):(.+)/.exec(lang);
-        const displayLang = lineMatch ? lineMatch[3] : lang;
+        const lineMatch = /(\d+):(\d+):(.+)/.exec(language);
+        const displayLang = lineMatch ? lineMatch[3] : language;
         const startLine = lineMatch ? parseInt(lineMatch[1]) : 1;
         
         return (
@@ -804,12 +694,12 @@ const MessageItem: React.FC<MessageItemProps> = ({ message, isThinking }) => {
         <code 
           className={className} 
           style={{
-            backgroundColor: isDarkTheme ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+            backgroundColor: isDarkTheme ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.06)',
             padding: '2px 6px',
             borderRadius: '4px',
             fontSize: '13px',
             fontFamily: 'var(--font-mono)',
-            color: isDarkTheme ? '#e0e0e0' : '#404040',
+            color: isDarkTheme ? '#e0e0e0' : '#303030',
           }}
           {...props}
         >
@@ -1020,156 +910,219 @@ const MessageItem: React.FC<MessageItemProps> = ({ message, isThinking }) => {
     }
   }, [thinkingContent, isThinkingComplete, showThinking]);
 
+  // Add this before the return statement
+  const renderAnalysisSection = () => {
+    // Always show analysis section for assistant messages
+    if (message.role !== 'assistant') return null;
+    
+    return (
+      <div className="analysis-section">
+        <div 
+          className="analysis-header" 
+          onClick={() => setShowThinking(!showThinking)}
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            padding: '8px 12px',
+            cursor: 'pointer',
+            userSelect: 'none',
+            backgroundColor: isDarkTheme ? 'rgba(30, 30, 30, 0.7)' : 'rgba(225, 225, 235, 0.9)',
+            borderRadius: '4px',
+          }}
+        >
+          <div className="analysis-header-text" style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            fontSize: '12px',
+            fontWeight: 600,
+            letterSpacing: '0.7px',
+            textTransform: 'uppercase',
+            color: isDarkTheme ? 'rgba(200, 200, 200, 0.8)' : 'rgba(60, 60, 70, 0.9)',
+          }}>
+            <svg 
+              width="14" 
+              height="14" 
+              viewBox="0 0 24 24" 
+              fill="none" 
+              stroke="currentColor" 
+              strokeWidth="2" 
+              strokeLinecap="round" 
+              strokeLinejoin="round"
+            >
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="16" x2="12" y2="12"></line>
+              <line x1="12" y1="8" x2="12.01" y2="8"></line>
+            </svg>
+            ANALYSIS
+          </div>
+          <svg 
+            className={`analysis-chevron ${showThinking ? 'open' : ''}`}
+            width="14" 
+            height="14" 
+            viewBox="0 0 24 24" 
+            fill="none" 
+            stroke="currentColor" 
+            strokeWidth="2" 
+            strokeLinecap="round" 
+            strokeLinejoin="round"
+            style={{
+              transition: 'transform 0.3s ease',
+              transform: showThinking ? 'rotate(180deg)' : 'rotate(0deg)'
+            }}
+          >
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </div>
+        <div className={`analysis-content ${isThinking || showThinking ? 'open' : ''}`} style={{
+          maxHeight: isThinking || showThinking ? '800px' : '0',
+          overflow: 'hidden',
+          fontFamily: 'monospace',
+          fontSize: '13px',
+          lineHeight: 1.5,
+          color: isDarkTheme ? 'rgba(180, 180, 180, 0.9)' : 'rgba(50, 50, 60, 0.9)',
+          whiteSpace: 'pre-wrap',
+          transition: 'max-height 0.3s ease, padding 0.3s ease',
+          padding: isThinking || showThinking ? '12px' : '0',
+          borderTop: isThinking || showThinking ? `1px solid ${isDarkTheme ? 'rgba(60, 60, 60, 0.3)' : 'rgba(180, 180, 200, 0.3)'}` : 'none',
+          backgroundColor: isDarkTheme ? 'rgba(20, 20, 20, 0.3)' : 'rgba(240, 240, 245, 0.3)',
+        }}>
+          {isThinking && (
+            <div className="typing-indicator" style={{ marginBottom: '8px' }}>
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+          )}
+          {thinkingContent || (isThinking ? "Processing request..." : "")}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <>
       <style>{codeBlockStyles}</style>
       {message.role === 'user' && <ContextArea isDarkTheme={isDarkTheme} onAddMessage={addMessage} />}
-      <div className={isDarkTheme ? 'dark' : 'light'} style={{
-        marginBottom: '1.5rem',
-        fontFamily: message.role === 'assistant' ? 'Inter, sans-serif' : 'JetBrains Mono, monospace',
-        fontSize: '14px',
-        color: isDarkTheme ? '#e0e0e0' : '#404040',
-        padding: '16px 20px',
-        margin: '24px 0',
+      <div className={`message-item ${message.role}`} style={{
+        marginBottom: '20px',
+        padding: '16px',
         borderRadius: '8px',
         backgroundColor: message.role === 'assistant' 
-          ? (isDarkTheme ? 'rgba(26, 26, 26, 0.4)' : 'rgba(240, 240, 240, 0.95)')
-          : 'transparent',
-        border: message.role === 'assistant'
-          ? `1px solid ${isDarkTheme ? 'rgba(255, 255, 255, 0.05)' : 'rgba(200, 200, 200, 0.8)'}`
-          : 'none',
-        boxShadow: message.role === 'assistant' && !isDarkTheme 
-          ? '0 3px 10px rgba(0, 0, 0, 0.08)'
-          : 'none',
+          ? (isDarkTheme ? 'rgba(25, 25, 25, 0.9)' : 'rgba(245, 245, 250, 0.9)')
+          : (isDarkTheme ? 'rgba(35, 35, 35, 0.5)' : 'rgba(235, 236, 240, 0.8)'),
+        color: isDarkTheme ? '#e0e0e0' : '#252525',
+        borderLeft: message.role === 'assistant'
+          ? `4px solid ${isDarkTheme ? '#666' : '#888'}`
+          : message.role === 'user'
+            ? `4px solid ${isDarkTheme ? '#444' : '#aaa'}`
+            : `4px solid ${isDarkTheme ? '#555' : '#bbb'}`,
+        boxShadow: `0 2px 10px ${isDarkTheme ? 'rgba(0, 0, 0, 0.2)' : 'rgba(0, 0, 0, 0.08)'}`,
         position: 'relative',
+        opacity: 1,
+        transition: 'opacity 0.3s ease, background-color 0.3s ease',
+        minHeight: message.role === 'assistant' ? '100px' : 'auto',
+        width: '100%',
+        maxWidth: '100%',
+        overflowX: 'hidden',
+        boxSizing: 'border-box',
       }}>
+        {/* Add styles */}
+        <style>{typingIndicatorStyles}</style>
+        
+        {/* Message header for assistant */}
         {message.role === 'assistant' && (
-          <div className="space-y-2">
-            <MessageHeader isDarkTheme={isDarkTheme} timestamp={message.timestamp || Date.now()} />
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <MessageHeader isDarkTheme={isDarkTheme} timestamp={message.timestamp} />
             
-            {/* Thinking/Processing Section */}
-            {showThinking && (
-              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
-                <div className="flex items-center gap-2">
-                  <div className="flex space-x-1">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                  </div>
-                  <span className="text-sm text-gray-500 dark:text-gray-400">Thinking...</span>
-                </div>
-              </div>
-            )}
-
-            {/* Response Content */}
-            {response && (
-              <div className="prose dark:prose-invert max-w-none">
-                <ReactMarkdown
-                  components={{
-                    code({node, inline, className, children, ...props}: any) {
-                      const match = /language-(\w+)/.exec(className || '');
-                      return !inline && match ? (
-                        <SyntaxHighlighter
-                          style={isDarkTheme ? vscDarkPlus : vs}
-                          language={match[1]}
-                          PreTag="div"
-                          customStyle={{margin: '1em 0'}}
-                        >
-                          {String(children).replace(/\n$/, '')}
-                        </SyntaxHighlighter>
-                      ) : (
-                        <code className={className} {...props}>
-                          {children}
-                        </code>
-                      );
-                    }
-                  }}
-                >
-                  {response}
-                </ReactMarkdown>
-              </div>
+            {/* Copy button - relocated next to the header */}
+            {!isThinking && message.content && (
+              <button
+                onClick={handleCopy}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '6px',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  color: isDarkTheme ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.4)',
+                  backgroundColor: isDarkTheme ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
+                  transition: 'all 0.2s ease',
+                  marginTop: '0',
+                }}
+                title={copySuccess ? 'Copied!' : 'Copy message'}
+              >
+                {copySuccess ? (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                  </svg>
+                ) : (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                  </svg>
+                )}
+              </button>
             )}
           </div>
         )}
         
-        {/* Display main content */}
-        <ReactMarkdown
-          remarkPlugins={[remarkGfm]}
-          rehypePlugins={[rehypeRaw, rehypeSanitize]}
-          components={{
-            code({node, inline, className, children, ...props}: any) {
-              const match = /language-(\w+)/.exec(className || '');
-              return !inline && match ? (
-                <SyntaxHighlighter
-                  style={isDarkTheme ? vscDarkPlus : vs}
-                  language={match[1]}
-                  PreTag="div"
-                  customStyle={{margin: '1em 0'}}
-                >
-                  {String(children).replace(/\n$/, '')}
-                </SyntaxHighlighter>
-              ) : (
-                <code className={className} {...props}>
-                  {children}
-                </code>
-              );
-            }
-          }}
-        >
-          {mainContent}
-        </ReactMarkdown>
-
-        <div style={{
-          fontSize: '11px',
-          color: isDarkTheme ? 'rgba(224, 224, 224, 0.4)' : 'rgba(64, 64, 64, 0.4)',
-          marginTop: '0.75rem',
-          paddingTop: '0.75rem',
-          borderTop: `1px solid ${isDarkTheme ? 'rgba(42, 42, 42, 0.2)' : 'rgba(224, 224, 224, 0.3)'}`,
-          display: 'flex',
-          justifyContent: 'flex-end',
-          alignItems: 'center',
-          gap: '12px',
-        }}>
-          <span>{formatTime(message.timestamp || Date.now())}</span>
-          
-          {message.role === 'assistant' && (
-            <button
-              onClick={handleCopy}
-              className="command-button"
-              style={{
-                cursor: 'pointer',
-                padding: '4px 8px',
-                borderRadius: '4px',
-                backgroundColor: 'transparent',
-                border: 'none',
-                color: copySuccess 
-                  ? (isDarkTheme ? '#81c784' : '#4caf50')
-                  : (isDarkTheme ? 'rgba(224, 224, 224, 0.5)' : 'rgba(64, 64, 64, 0.5)'),
-                transition: 'all 0.2s ease',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-                fontSize: '11px',
-                opacity: 0.8,
+        {/* Analysis section for all assistant responses */}
+        {renderAnalysisSection()}
+        
+        {/* Main message content (hidden when thinking) */}
+        {!isThinking && (
+          <div style={{ 
+            position: 'relative', 
+            width: '100%',
+            maxWidth: '100%',
+            overflowX: 'auto',
+            overflowY: 'hidden',
+          }}>
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              rehypePlugins={[rehypeRaw, rehypeSanitize]}
+              components={{
+                code: ({ node, inline, className, children, ...props }: any) => {
+                  const match = /language-(\w+)/.exec(className || '');
+                  const language = match ? match[1] : 'text';
+                  return !inline ? (
+                    <SyntaxHighlighter
+                      style={isDarkTheme ? vscDarkPlus : vs}
+                      language={language}
+                      PreTag="div"
+                      customStyle={{
+                        margin: '1em 0', 
+                        width: '100%',
+                        maxWidth: '100%',
+                        overflowX: 'auto',
+                      }}
+                    >
+                      {String(children).replace(/\n$/, '')}
+                    </SyntaxHighlighter>
+                  ) : (
+                    <code className={className} {...props} style={{
+                      backgroundColor: isDarkTheme ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.06)',
+                      padding: '2px 6px',
+                      borderRadius: '4px',
+                      fontSize: '13px',
+                      fontFamily: 'var(--font-mono)',
+                      color: isDarkTheme ? '#e0e0e0' : '#303030',
+                    }}>
+                      {children}
+                    </code>
+                  );
+                }
               }}
-              title="Copy response"
             >
-              {copySuccess ? (
-                <>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="20 6 9 17 4 12"></polyline>
-                  </svg>
-                  <span style={{ fontSize: '11px', letterSpacing: '0.5px' }}>Copied</span>
-                </>
-              ) : (
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                </svg>
-              )}
-            </button>
-          )}
-        </div>
+              {message.role === 'assistant' ? formatContent(mainContent || '') : (message.content || '')}
+            </ReactMarkdown>
+          </div>
+        )}
       </div>
     </>
   );

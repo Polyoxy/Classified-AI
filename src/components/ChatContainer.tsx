@@ -424,15 +424,17 @@ const ChatContainer: React.FC = () => {
             display: 'flex',
             flexDirection: 'column',
             gap: '1rem',
-            padding: '2rem',
-            paddingTop: '1rem',
+            padding: '1rem',
+            paddingTop: '0.8rem',
             paddingBottom: '130px', /* Increased padding for command input and status bar */
             height: 'calc(100% - 60px)', /* Adjust for title bar */
             overflowY: 'auto',
+            overflowX: 'hidden',
             transition: 'all 0.3s ease',
             position: 'relative',
             zIndex: 60,
-            maxWidth: '800px', /* Cap the max width of content for better readability */
+            width: '100%', /* Use full width instead of max-width */
+            boxSizing: 'border-box',
             marginLeft: 'auto',
             marginRight: 'auto',
             transform: isSidebarOpen ? 'translateX(-160px)' : 'translateX(0)', /* Shift content when sidebar is open */

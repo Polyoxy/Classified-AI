@@ -99,7 +99,7 @@ const useChat = () => {
 
       // Prepare request body
       const requestBody = {
-        model: 'deepseek-r1:7b',
+        model: 'llama3.2:1b',
         messages: formattedMessages,
         options: {
           temperature: 0.7,
