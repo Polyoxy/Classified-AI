@@ -4,6 +4,22 @@ import { callAI, StreamResponse } from '@/lib/aiService';
 import { Message } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 
+// Add checkOllamaServer function
+const checkOllamaServer = async () => {
+  try {
+    const response = await fetch('/api/chat/ollama/check');
+    if (!response.ok) {
+      const data = await response.json();
+      console.error('[Chat] Ollama server check failed:', data.message);
+      return false;
+    }
+    return true;
+  } catch (error) {
+    console.error('[Chat] Ollama server check failed:', error);
+    return false;
+  }
+};
+
 interface AIError extends Error {
   name: string;
   message: string;
@@ -58,6 +74,14 @@ export const useChat = () => {
       // Get the appropriate provider settings
       const providerSettings = settings.providers[settings.activeProvider];
       const model = currentConversation.model || providerSettings.defaultModel;
+      
+      // Check Ollama server if needed
+      if (settings.activeProvider === 'ollama') {
+        const isOllamaRunning = await checkOllamaServer();
+        if (!isOllamaRunning) {
+          throw new Error('Failed to get a valid response from any Ollama server');
+        }
+      }
       
       // Get API key if needed (not for Ollama)
       let apiKey: string | undefined = undefined;

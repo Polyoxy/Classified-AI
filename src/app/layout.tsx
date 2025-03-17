@@ -59,6 +59,26 @@ export const viewport: Viewport = {
   ],
 };
 
+export const headers = {
+  'Content-Security-Policy': `
+    default-src 'self';
+    script-src 'self' 'unsafe-eval' 'unsafe-inline';
+    style-src 'self' 'unsafe-inline';
+    img-src 'self' data: https:;
+    connect-src 'self' 
+      https://*.google-analytics.com 
+      https://*.googleapis.com 
+      https://*.firebaseio.com 
+      https://*.firebase.com 
+      https://*.firebaseapp.com
+      http://localhost:11434
+      http://127.0.0.1:11434
+      ws://localhost:11434
+      wss://localhost:11434;
+    frame-src 'self' https://*.firebaseapp.com https://*.firebase.com;
+  `.replace(/\s+/g, ' ').trim(),
+};
+
 export default function RootLayout({
   children,
 }: {

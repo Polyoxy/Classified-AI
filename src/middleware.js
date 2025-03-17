@@ -11,8 +11,8 @@ export function middleware(request) {
     style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
     img-src 'self' data: https://*.google-analytics.com https://*.googletagmanager.com;
     font-src 'self' https://fonts.gstatic.com;
-    connect-src 'self' https://*.google-analytics.com https://*.googleapis.com https://*.firebaseio.com https://*.firebase.com https://*.firebaseapp.com;
-    frame-src 'self' https://*.firebaseapp.com https://*.firebase.com;
+    connect-src 'self' http://localhost:11434 http://127.0.0.1:11434 ws://localhost:11434 wss://localhost:11434 https://*.google-analytics.com https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.firebase.com https://*.firebaseapp.com https://identitytoolkit.googleapis.com;
+    frame-src 'self' https://*.firebaseapp.com https://*.firebase.com https://*.firebaseio.com https://identitytoolkit.googleapis.com;
   `.replace(/\s+/g, ' ').trim();
 
   // Add security headers

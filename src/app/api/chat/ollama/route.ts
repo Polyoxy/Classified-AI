@@ -76,13 +76,22 @@ export async function POST(req: NextRequest) {
     
     // Validate messages array
     if (!Array.isArray(messages) || messages.length === 0) {
-      return new NextResponse(JSON.stringify({ error: 'Invalid messages format' }), { status: 400 });
+      return new NextResponse(JSON.stringify({ error: 'Invalid messages format' }), { 
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
 
     // Try each Ollama server in sequence
     for (const server of OLLAMA_SERVERS) {
       try {
         console.log('[API] Attempting to connect to', server);
+        
+        // Set a timeout for the fetch operation
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => {
+          controller.abort();
+        }, 30000); // 30 seconds timeout
         
         const response = await fetch(`${server}/api/chat`, {
           method: 'POST',
@@ -94,8 +103,12 @@ export async function POST(req: NextRequest) {
               temperature,
               num_predict: 1000,
             }
-          })
+          }),
+          signal: controller.signal
         });
+
+        // Clear the timeout
+        clearTimeout(timeoutId);
 
         if (!response.ok) {
           console.error('[API] Error response from', server + ':', response.status, response.statusText);
@@ -104,7 +117,14 @@ export async function POST(req: NextRequest) {
 
         // Get the response text
         const responseText = await response.text();
-        console.log('[API] Raw response:', responseText);
+        console.log('[API] Received response from Ollama');
+        
+        // For debugging, log a sample of the response
+        if (responseText.length > 200) {
+          console.log('[API] Sample of response:', responseText.substring(0, 200) + '...');
+        } else {
+          console.log('[API] Response:', responseText);
+        }
 
         // Process the streaming response
         const content = processStreamingResponse(responseText);
@@ -127,12 +147,18 @@ export async function POST(req: NextRequest) {
     // If we get here, all servers failed
     return new NextResponse(JSON.stringify({ 
       error: 'Failed to get a valid response from any Ollama server' 
-    }), { status: 503 });
+    }), { 
+      status: 503,
+      headers: { 'Content-Type': 'application/json' }
+    });
 
   } catch (error) {
     console.error('[API] Unhandled error:', error);
     return new NextResponse(JSON.stringify({ 
       error: 'An unexpected error occurred while processing the request' 
-    }), { status: 500 });
+    }), { 
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
 } 

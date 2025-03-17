@@ -1,9 +1,25 @@
 import { useState, useCallback, useRef } from 'react';
-import { useAppContext } from '@/context/AppContext';
-import { Message, MessageRole } from '@/types';
-import { rtdb } from '@/lib/firebase';
+import { useAppContext } from '../context/AppContext';
+import { Message, MessageRole, StreamResponse } from '../types';
+import { rtdb } from '../lib/firebase';
 import { ref, update } from 'firebase/database';
 import { v4 as uuidv4 } from 'uuid';
+
+// Add checkOllamaServer function at the top of the file
+const checkOllamaServer = async () => {
+  try {
+    const response = await fetch('/api/chat/ollama/check');
+    if (!response.ok) {
+      const data = await response.json();
+      console.error('[Chat] Ollama server check failed:', data.message);
+      return false;
+    }
+    return true;
+  } catch (error) {
+    console.error('[Chat] Ollama server check failed:', error);
+    return false;
+  }
+};
 
 const useChat = () => {
   const { 
@@ -44,84 +60,85 @@ const useChat = () => {
 
   // Helper function to send to Ollama
   const sendToOllama = async (messages: Message[]) => {
-    setError(null);
-    setIsProcessing(true);
-
     try {
-      // Check if we have messages to send
-      if (!messages || messages.length === 0) {
-        throw new Error('No messages to send');
+      // Check if Ollama server is running
+      const isServerRunning = await checkOllamaServer();
+      if (!isServerRunning) {
+        throw new Error('Failed to get a valid response from any Ollama server');
       }
 
-      // Format messages for the API
-      const formattedMessages = messages.filter(msg => msg.content.trim() !== '');
-      
+      // Format messages to ensure they are valid
+      const formattedMessages = messages.filter(msg => 
+        msg.content && typeof msg.content === 'string' && msg.content.trim() !== ''
+      );
+
       if (formattedMessages.length === 0) {
         throw new Error('No valid messages to send');
       }
 
-      console.log(`[Chat] Sending ${formattedMessages.length} messages to Ollama API`);
-
-      // Add a system message if not present
+      // Add system message if not present
       if (!formattedMessages.some(msg => msg.role === 'system')) {
         formattedMessages.unshift({
           id: uuidv4(),
           role: 'system',
-          content: 'You are a helpful AI assistant powered by the deepseek-r1:7b model. Provide direct, specific answers. Never give empty responses.',
-          createdAt: new Date().toISOString()
+          content: 'You are a helpful AI assistant. Provide clear, concise, and accurate responses.',
+          timestamp: Date.now()
         });
       }
 
+      // Prepare request body
+      const requestBody = {
+        model: 'deepseek-r1:7b',
+        messages: formattedMessages,
+        options: {
+          temperature: 0.7,
+          top_p: 0.9,
+          num_predict: 1000
+        }
+      };
+
+      console.log('[Chat] Sending messages to Ollama:', formattedMessages.length);
+
+      // Send request to API
       const response = await fetch('/api/chat/ollama', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          messages: formattedMessages,
-          model: 'deepseek-r1:7b',
-          temperature: 0.7,
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody)
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to get response from Ollama');
       }
 
       const data = await response.json();
       
-      // Validate the response data
-      if (!data || typeof data !== 'object') {
-        throw new Error('Invalid response format from API');
+      // Handle different response formats
+      let content = '';
+      if (data.content) {
+        content = data.content;
+      } else if (data.message?.content) {
+        content = data.message.content;
+      } else if (data.answer) {
+        content = data.answer;
+      } else if (typeof data === 'string') {
+        content = data;
       }
 
-      // Handle both possible response formats
-      const content = typeof data.content === 'string' ? data.content :
-                     data.message?.content || null;
-
-      if (!content) {
-        throw new Error('Received empty response from API');
+      if (!content || typeof content !== 'string' || content.trim() === '') {
+        throw new Error('Invalid response format from Ollama');
       }
 
-      // Keep the think tags in the content
-      let cleanContent = content.trim();
+      // Clean up the response content
+      const cleanContent = content.trim();
       
       // Update conversation with the response
-      const newMessage: Message = {
-        id: uuidv4(),
-        content: cleanContent,
-        role: 'assistant',
-        createdAt: new Date().toISOString(),
-      };
+      addMessage(cleanContent, 'assistant');
 
-      return newMessage;
+      return cleanContent;
     } catch (error) {
       console.error('[Chat] Error in sendToOllama:', error);
-      setError(error instanceof Error ? error.message : 'An error occurred while sending message');
-      return null;
-    } finally {
-      setIsProcessing(false);
+      throw error;
     }
   };
 

@@ -294,6 +294,19 @@ const MessageItem: React.FC<MessageItemProps> = ({ message, isThinking }) => {
   const [copySuccess, setCopySuccess] = useState(false);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
 
+  // Effect to handle thinking state
+  React.useEffect(() => {
+    if (isThinking) {
+      setShowThinking(true);
+    } else {
+      // Add a small delay before hiding the thinking indicator
+      const timer = setTimeout(() => {
+        setShowThinking(false);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [isThinking]);
+
   // Skip rendering entirely if there's no content and it's not a thinking state
   if (!isThinking && (!message || !message.content || message.content.trim() === '')) {
     return null;
@@ -1031,73 +1044,51 @@ const MessageItem: React.FC<MessageItemProps> = ({ message, isThinking }) => {
         position: 'relative',
       }}>
         {message.role === 'assistant' && (
-          <MessageHeader isDarkTheme={isDarkTheme} timestamp={message.timestamp || Date.now()} />
-        )}
-        
-        {/* Display thinking content if it exists */}
-        {thinkingContent && (
-          <div style={{
-            marginBottom: '16px',
-            padding: '16px',
-            borderRadius: '8px',
-            backgroundColor: isDarkTheme ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.03)',
-            border: `1px solid ${isDarkTheme ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
-            fontSize: '14px',
-            color: isDarkTheme ? '#d0d0d0' : '#404040',
-            fontFamily: 'Inter, sans-serif',
-            transition: 'all 0.3s ease',
-            maxHeight: showThinking ? '2000px' : '40px',
-            overflow: 'hidden',
-            cursor: 'pointer',
-          }} onClick={() => setShowThinking(!showThinking)}>
-            <div style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              marginBottom: showThinking ? '12px' : '0',
-              color: isDarkTheme ? '#888' : '#666',
-              fontSize: '13px',
-              fontWeight: 500,
-              borderBottom: showThinking ? `1px solid ${isDarkTheme ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}` : 'none',
-              paddingBottom: showThinking ? '8px' : '0'
-            }}>
-              <svg 
-                width="16" 
-                height="16" 
-                viewBox="0 0 24 24" 
-                fill="none" 
-                stroke="currentColor" 
-                strokeWidth="2" 
-                style={{ 
-                  marginRight: '8px',
-                  transform: showThinking ? 'rotate(0deg)' : 'rotate(-90deg)',
-                  transition: 'transform 0.3s ease'
-                }}
-              >
-                <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
-              </svg>
-              Thinking Process
-              <span style={{
-                marginLeft: '8px',
-                fontSize: '11px',
-                opacity: 0.7,
-                fontWeight: 400
-              }}>
-                {showThinking ? '(click to collapse)' : '(click to expand)'}
-              </span>
-            </div>
-            <div style={{
-              opacity: showThinking ? 1 : 0,
-              transition: 'opacity 0.3s ease',
-              pointerEvents: showThinking ? 'auto' : 'none'
-            }}>
-              <ReactMarkdown
-                remarkPlugins={[remarkGfm]}
-                rehypePlugins={[rehypeRaw, rehypeSanitize]}
-                components={commonMarkdownStyles}
-              >
-                {formatThinking(thinkingContent)}
-              </ReactMarkdown>
-            </div>
+          <div className="space-y-2">
+            <MessageHeader isDarkTheme={isDarkTheme} timestamp={message.timestamp || Date.now()} />
+            
+            {/* Thinking/Processing Section */}
+            {showThinking && (
+              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
+                <div className="flex items-center gap-2">
+                  <div className="flex space-x-1">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  </div>
+                  <span className="text-sm text-gray-500 dark:text-gray-400">Thinking...</span>
+                </div>
+              </div>
+            )}
+
+            {/* Response Content */}
+            {response && (
+              <div className="prose dark:prose-invert max-w-none">
+                <ReactMarkdown
+                  components={{
+                    code({node, inline, className, children, ...props}: any) {
+                      const match = /language-(\w+)/.exec(className || '');
+                      return !inline && match ? (
+                        <SyntaxHighlighter
+                          style={isDarkTheme ? vscDarkPlus : vs}
+                          language={match[1]}
+                          PreTag="div"
+                          customStyle={{margin: '1em 0'}}
+                        >
+                          {String(children).replace(/\n$/, '')}
+                        </SyntaxHighlighter>
+                      ) : (
+                        <code className={className} {...props}>
+                          {children}
+                        </code>
+                      );
+                    }
+                  }}
+                >
+                  {response}
+                </ReactMarkdown>
+              </div>
+            )}
           </div>
         )}
         

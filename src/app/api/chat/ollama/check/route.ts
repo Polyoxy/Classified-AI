@@ -28,8 +28,13 @@ export async function GET(request: NextRequest) {
       
       const response = await fetch(`${server}/api/tags`, {
         method: 'GET',
-        headers: { 'Cache-Control': 'no-cache' },
-        signal: controller.signal
+        headers: { 
+          'Cache-Control': 'no-cache',
+          'Content-Type': 'application/json'
+        },
+        signal: controller.signal,
+        // Avoid browser caching issues
+        cache: 'no-store'
       }).catch((e: Error) => {
         console.log(`[API] Fetch error for ${server}: ${e.message}`);
         connectionAttempts.push(`${server}: Fetch error - ${e.message}`);

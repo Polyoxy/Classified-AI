@@ -1,5 +1,5 @@
 // AI Provider Types
-export type AIProvider = 'ollama' | 'openai' | 'deepseek';
+export type AIProvider = 'ollama' | 'openai' | 'deepseek' | 'anthropic';
 
 export interface AIProviderConfig {
   provider: AIProvider;
@@ -81,9 +81,5 @@ export interface StreamResponse {
   };
 }
 
-// Extend Window interface
-declare global {
-  interface Window {
-    electron: ElectronAPI;
-  }
-} 
+// Window interface is now declared in electron.d.ts
+// Remove the conflicting declaration below 
