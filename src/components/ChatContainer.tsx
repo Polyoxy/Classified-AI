@@ -166,6 +166,7 @@ const ChatContainer: React.FC = () => {
     </div>
   );
 
+  // Render content
   const renderContent = () => {
     if (error) {
       return (
@@ -207,11 +208,10 @@ const ChatContainer: React.FC = () => {
               border: `1px solid ${settings?.theme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)'}`,
             }}>
               <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
-                <circle cx="8.5" cy="8.5" r="1.5"></circle>
-                <circle cx="15.5" cy="8.5" r="1.5"></circle>
-                <path d="M12 16c1.5 0 3-1 3-3"></path>
-                <path d="M9 16c-1.5 0-3-1-3-3"></path>
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                <path d="M8 9h.01"></path>
+                <path d="M12 9h.01"></path>
+                <path d="M16 9h.01"></path>
               </svg>
             </div>
             
@@ -250,15 +250,12 @@ const ChatContainer: React.FC = () => {
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center',
                 gap: '8px',
-                margin: '0 auto',
-                transition: 'all 0.2s ease',
-                fontFamily: 'JetBrains Mono, monospace',
                 boxShadow: settings?.theme === 'dark' ? '0 2px 8px rgba(0, 0, 0, 0.2)' : '0 2px 8px rgba(0, 0, 0, 0.05)',
+                transition: 'all 0.2s ease',
               }}
               onMouseOver={(e) => {
-                e.currentTarget.style.backgroundColor = settings?.theme === 'dark' ? 'rgba(170, 170, 170, 0.2)' : 'rgba(80, 80, 80, 0.12)';
+                e.currentTarget.style.backgroundColor = settings?.theme === 'dark' ? 'rgba(170, 170, 170, 0.2)' : 'rgba(80, 80, 80, 0.1)';
                 e.currentTarget.style.boxShadow = settings?.theme === 'dark' ? '0 4px 12px rgba(0, 0, 0, 0.3)' : '0 4px 12px rgba(0, 0, 0, 0.1)';
               }}
               onMouseOut={(e) => {
@@ -277,6 +274,67 @@ const ChatContainer: React.FC = () => {
       );
     }
 
+    // Check if we have any messages yet
+    if (currentConversation && currentConversation.messages.length <= 1) {
+      // Only the system message exists, show guidance text
+      return (
+        <div style={{ 
+          flex: 1, 
+          overflow: 'hidden', 
+          display: 'flex', 
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '2rem',
+          maxWidth: '800px',
+          margin: '0 auto',
+          height: '100%',
+        }}>
+          <div style={{
+            fontSize: '42px',
+            marginBottom: '20px',
+            color: settings?.theme === 'dark' ? '#aaa' : '#666',
+            backgroundColor: settings?.theme === 'dark' ? 'rgba(170, 170, 170, 0.1)' : 'rgba(120, 120, 120, 0.1)',
+            width: '100px',
+            height: '100px',
+            borderRadius: '14px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 30px',
+            border: `1px solid ${settings?.theme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)'}`,
+          }}>
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+              <path d="M8 9h.01"></path>
+              <path d="M12 9h.01"></path>
+              <path d="M16 9h.01"></path>
+            </svg>
+          </div>
+          
+          <h2 style={{
+            fontSize: '24px',
+            fontWeight: '600',
+            marginBottom: '16px',
+            color: settings?.theme === 'dark' ? '#e0e0e0' : '#333',
+          }}>
+            Ready to assist you
+          </h2>
+          
+          <p style={{
+            fontSize: '16px',
+            maxWidth: '500px',
+            marginBottom: '24px',
+            color: settings?.theme === 'dark' ? '#b0b0b0' : '#666',
+            lineHeight: 1.6,
+            textAlign: 'center',
+          }}>
+            Type your message in the input box below to start conversing. You can ask questions about coding, request explanations, or get help with technical tasks.
+          </p>
+        </div>
+      );
+    }
+
     return (
       <>
         <style>{customStyles}</style>
@@ -289,13 +347,16 @@ const ChatContainer: React.FC = () => {
             gap: '1rem',
             padding: '2rem',
             paddingTop: '1rem',
-            paddingBottom: '110px', /* Increased padding to make room for command input and status bar */
+            paddingBottom: '130px', /* Increased padding for command input and status bar */
             height: 'calc(100% - 60px)', /* Adjust for title bar */
             overflowY: 'auto',
-            marginRight: isSidebarOpen ? '320px' : '0',
-            transition: 'margin-right 0.3s ease',
+            transition: 'all 0.3s ease',
             position: 'relative',
             zIndex: 60,
+            maxWidth: '800px', /* Cap the max width of content for better readability */
+            marginLeft: 'auto',
+            marginRight: 'auto',
+            transform: isSidebarOpen ? 'translateX(-160px)' : 'translateX(0)', /* Shift content when sidebar is open */
           }}
           ref={containerRef}
         >

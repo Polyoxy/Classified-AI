@@ -4,17 +4,26 @@
     ".write": false,
     "users": {
       "$uid": {
-        ".read": "$uid === auth.uid",
-        ".write": "$uid === auth.uid || !data.exists()",
+        ".read": "$uid === auth.uid || $uid.matches(/^guest-/) || $uid.matches(/^offline-/) || $uid.matches(/^electron-/)",
+        ".write": "$uid === auth.uid || $uid.matches(/^guest-/) || $uid.matches(/^offline-/) || $uid.matches(/^electron-/)",
         "conversations": {
-          ".read": "$uid === auth.uid",
-          ".write": "$uid === auth.uid"
+          ".indexOn": ["updatedAt"],
+          "$conversationId": {
+            ".read": "auth != null && (auth.uid === $uid || $uid.matches(/^guest-/) || $uid.matches(/^offline-/) || $uid.matches(/^electron-/))",
+            ".write": "auth != null && (auth.uid === $uid || $uid.matches(/^guest-/) || $uid.matches(/^offline-/) || $uid.matches(/^electron-/))",
+            "messages": {
+              "$messageId": {
+                ".validate": "newData.child('content').val().length <= 10000"
+              }
+            }
+          }
         },
         "settings": {
-          ".read": "$uid === auth.uid",
-          ".write": "$uid === auth.uid"
+          ".read": "auth != null && (auth.uid === $uid || $uid.matches(/^guest-/) || $uid.matches(/^offline-/) || $uid.matches(/^electron-/))",
+          ".write": "auth != null && (auth.uid === $uid || $uid.matches(/^guest-/) || $uid.matches(/^offline-/) || $uid.matches(/^electron-/))"
         }
       }
-    }
+    },
+    "$other": { ".read": false, ".write": false }
   }
 } 

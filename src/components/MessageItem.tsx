@@ -266,6 +266,59 @@ const MessageItem: React.FC<MessageItemProps> = ({ message, isThinking }) => {
     }
   }
 
+  // Add structured format to thinking content to improve readability
+  const formatThinking = (content: string) => {
+    if (!content) return '';
+    
+    // Add section headers if they don't exist
+    let formatted = content;
+    
+    // Check if content already has headers
+    const hasHeaders = /##\s+[A-Za-z]+|Step\s+\d+:/i.test(content);
+    
+    if (!hasHeaders) {
+      // Parse the thinking content into steps/sections
+      const paragraphs = content.split(/\n\n+/);
+      
+      if (paragraphs.length > 1) {
+        // Multiple paragraphs - structure as steps
+        formatted = paragraphs.map((para, index) => {
+          // Check if this paragraph looks like reasoning or a conclusion
+          if (index === paragraphs.length - 1 && 
+              (para.toLowerCase().includes('therefore') || 
+               para.toLowerCase().includes('conclusion') || 
+               para.toLowerCase().includes('final') || 
+               para.toLowerCase().includes('answer'))) {
+            return `## Conclusion\n\n${para}`;
+          }
+          
+          // Check if this paragraph seems to be analyzing data
+          if (para.toLowerCase().includes('analyze') || 
+              para.toLowerCase().includes('data') || 
+              para.toLowerCase().includes('information')) {
+            return `## Analysis\n\n${para}`;
+          }
+          
+          // Default step format
+          return `## Step ${index + 1}\n\n${para}`;
+        }).join('\n\n');
+      } else {
+        // Single paragraph - add analysis header
+        formatted = `## Reasoning\n\n${content}`;
+      }
+    }
+    
+    // Add a line break after each header for better spacing
+    formatted = formatted.replace(/(##\s+.*)\n/g, '$1\n\n');
+    
+    // Format code blocks properly if they exist
+    formatted = formatted.replace(/```([a-z]*)\n([\s\S]*?)```/g, (match, lang, code) => {
+      return `\n\`\`\`${lang}\n${code.trim()}\n\`\`\`\n`;
+    });
+    
+    return formatted;
+  };
+
   const handleCopy = async () => {
     try {
       const contentToCopy = hasThinking ? `${thinking}\n\n${response}` : response;
@@ -292,6 +345,12 @@ const MessageItem: React.FC<MessageItemProps> = ({ message, isThinking }) => {
   };
 
   const formatContent = (content: string) => {
+    // Ensure content is a string before applying string methods
+    if (typeof content !== 'string') {
+      console.warn('MessageItem received non-string content:', content);
+      return String(content || '');
+    }
+    
     return content
       // Fix extra spaces between words
       .replace(/\s+/g, ' ')
@@ -775,7 +834,7 @@ const MessageItem: React.FC<MessageItemProps> = ({ message, isThinking }) => {
               remarkPlugins={[remarkGfm]}
               rehypePlugins={[rehypeRaw, rehypeSanitize]}
             >
-              {thinking}
+              {formatThinking(thinking)}
             </ReactMarkdown>
           </div>
         )}

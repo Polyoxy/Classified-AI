@@ -1,7 +1,6 @@
-import { initializeApp, getApps } from "firebase/app";
-import { getDatabase } from "firebase/database";
-import { getAuth, setPersistence, browserLocalPersistence } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { initializeApp, getApps } from 'firebase/app';
+import { getAuth, setPersistence as firebasePersistence, browserLocalPersistence } from 'firebase/auth';
+import { getDatabase } from 'firebase/database';
 // Analytics is typically not used in Electron apps, but included for completeness
 import { getAnalytics, isSupported } from "firebase/analytics";
 
@@ -28,18 +27,20 @@ export const auth = getAuth(app);
 const isElectron = typeof window !== 'undefined' && window.electron;
 
 // Set persistence to local for better user experience
-setPersistence(auth, browserLocalPersistence)
-  .catch((error) => {
-    console.error('Error setting persistence:', error);
-  });
+try {
+  firebasePersistence(auth, browserLocalPersistence)
+    .catch((error) => {
+      console.error('Error setting persistence:', error);
+    });
+} catch (error) {
+  console.error('Error with persistence:', error);
+}
 
 // Initialize Realtime Database (more cost effective for the free tier)
 export const rtdb = getDatabase(app);
 
-// Initialize Firestore (use sparingly to stay within free tier limits)
-export const db = getFirestore(app);
-
 // Initialize Analytics conditionally
+export let analytics = null;
 export const initAnalytics = async () => {
   // Skip analytics in Electron
   if (isElectron) {

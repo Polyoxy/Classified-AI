@@ -59,6 +59,13 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
     };
   }, []);
 
+  useEffect(() => {
+    // Initialize with the current model when the component mounts
+    if (settings?.providers?.[settings.activeProvider]?.defaultModel) {
+      setSelectedModel(settings.providers[settings.activeProvider].defaultModel);
+    }
+  }, [settings]);
+
   const handleModelChange = (model: string) => {
     if (model === selectedModel) return;
     
@@ -124,15 +131,43 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
   const getModelsForProvider = () => {
     if (!currentConversation) return [];
     
-    const provider = currentConversation.provider;
-    return settings.providers[provider]?.models || [];
+    const provider = currentConversation.provider || settings.activeProvider;
+    
+    // If no models are available from the conversation, get them from settings
+    const models = settings.providers[provider]?.models || [];
+    
+    // Make sure llama3.2:1b is included if not already in the list
+    if (provider === 'ollama' && !models.includes('llama3.2:1b')) {
+      return ['llama3.2:1b', ...models];
+    }
+    
+    return models;
   };
 
   const getCurrentModel = () => {
+    // Check if there are any models available
+    const models = getModelsForProvider();
+    if (models.length === 0) {
+      return 'No models available';
+    }
+    
+    // For Ollama provider, prioritize llama3.2:1b
+    if (settings?.activeProvider && settings.activeProvider === 'ollama') {
+      return 'llama3.2:1b';
+    }
+    
+    // If a model is explicitly selected, use that
     if (selectedModel) return selectedModel;
+    
+    // If a conversation exists with a model, use that
     if (currentConversation?.model) return currentConversation.model;
     
-    const models = getModelsForProvider();
+    // Default to the provider's default model
+    if (settings?.activeProvider === 'ollama') {
+      return settings.providers.ollama.defaultModel || 'llama3.2:1b';
+    }
+    
+    // Fallback to first available model
     if (models.length > 0) {
       return models[0];
     }
@@ -180,16 +215,56 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
     }
   };
 
-  // Create custom styles within the component where settings is defined
+  // Update customStatusBarStyles to ensure model selector displays properly
   const customStatusBarStyles = `
+    .model-selector {
+      display: flex !important;
+      position: relative;
+    }
+    
+    .selected-model {
+      display: flex;
+      align-items: center;
+    }
+
+    .selected-model-text {
+      font-size: 14px;
+    }
+    
+    .model-dropdown {
+      position: absolute;
+      bottom: 100% !important;
+      left: 0;
+      width: 100%;
+      margin-bottom: 8px !important;
+      max-height: 200px;
+      z-index: 10000 !important;
+      box-shadow: 0 -4px 12px rgba(0, 0, 0, ${settings?.theme === 'dark' ? '0.4' : '0.2'}) !important;
+    }
+    
     @media (max-width: 767px) {
       .status-bar {
-        height: 42px !important;
-        padding: 0 0.75rem !important;
+        height: auto !important;
+        padding: 0.75rem !important;
+        flex-wrap: wrap;
+        justify-content: center !important;
       }
-      .token-display, .cost-display, .model-selector {
+      
+      .model-selector {
+        margin-top: 0.5rem !important;
+        width: 100% !important;
+        max-width: 200px !important;
+      }
+      
+      .selected-model {
+        width: 100% !important;
+        justify-content: center !important;
+      }
+      
+      .token-display, .cost-display {
         display: none !important;
       }
+      
       .status-buttons {
         justify-content: center !important;
         width: 100% !important;
@@ -214,7 +289,7 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
           backgroundColor: settings?.theme === 'dark' ? 'rgba(18, 18, 18, 0.9)' : 'rgba(245, 245, 245, 0.9)',
           borderTop: `1px solid ${settings?.theme === 'dark' ? 'rgba(51, 51, 51, 0.8)' : 'rgba(221, 221, 221, 0.8)'}`,
           color: settings?.theme === 'dark' ? '#b0b0b0' : '#505050',
-          padding: '0 1.25rem',
+          padding: '0 10px',
           fontSize: '12px',
           fontFamily: 'var(--font-mono, "JetBrains Mono", monospace)',
           backdropFilter: 'blur(10px)',
@@ -230,7 +305,7 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
                 display: none !important;
               }
               .status-bar {
-                padding: 0.5rem 0.75rem !important;
+                padding: 0 !important;
               }
             }
             
@@ -242,11 +317,13 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
           `}
         </style>
         
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', padding: '0' }}>
           <div 
             className="model-selector" 
             ref={dropdownRef}
-            style={{ position: 'relative' }}
+            style={{ 
+              position: 'relative'
+            }}
           >
             <div
               className="selected-model"
@@ -254,23 +331,26 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                padding: '0.25rem 0.5rem',
-                backgroundColor: settings?.theme === 'dark' ? 'rgba(35, 35, 35, 0.6)' : 'rgba(230, 230, 230, 0.7)',
-                borderRadius: '4px',
+                padding: '0.4rem 0.5rem',
                 cursor: 'pointer',
-                minWidth: '150px',
-                border: `1px solid ${settings?.theme === 'dark' ? 'rgba(60, 60, 60, 0.8)' : 'rgba(200, 200, 200, 0.8)'}`,
-                transition: 'all 0.2s ease',
                 fontFamily: 'Inter, sans-serif',
-                letterSpacing: '0.2px',
+                fontSize: '14px',
               }}
             >
-              <span style={{ marginRight: '0.5rem' }}>
+              <span 
+                className="selected-model-text"
+                style={{ 
+                  marginRight: '6px',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
                 {getCurrentModel()}
               </span>
               <svg 
-                width="10" 
-                height="10" 
+                width="12" 
+                height="12" 
                 viewBox="0 0 24 24" 
                 fill="none" 
                 stroke="currentColor" 
@@ -291,16 +371,16 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
                   bottom: '100%',
                   left: '0',
                   width: '100%',
-                  backgroundColor: settings?.theme === 'dark' ? 'rgba(26, 26, 26, 0.9)' : 'rgba(245, 245, 245, 0.9)',
+                  backgroundColor: settings?.theme === 'dark' ? 'rgba(26, 26, 26, 0.95)' : 'rgba(245, 245, 245, 0.95)',
                   border: `1px solid ${settings?.theme === 'dark' ? 'rgba(60, 60, 60, 0.7)' : 'rgba(200, 200, 200, 0.7)'}`,
                   borderRadius: '4px',
-                  marginBottom: '0.25rem',
-                  zIndex: 1000,
+                  marginBottom: '8px',
+                  zIndex: 10000,
                   maxHeight: '200px',
                   overflowY: 'auto',
                   boxShadow: settings?.theme === 'dark' 
-                    ? '0 -4px 8px rgba(0,0,0,0.2)' 
-                    : '0 -4px 8px rgba(0,0,0,0.05)',
+                    ? '0 -4px 8px rgba(0,0,0,0.3)' 
+                    : '0 -4px 8px rgba(0,0,0,0.1)',
                   fontFamily: 'Inter, sans-serif',
                   backdropFilter: 'blur(6px)',
                 }}
@@ -317,8 +397,9 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
                         ? (settings?.theme === 'dark' ? '#333' : '#e0e0e0') 
                         : 'transparent',
                       transition: 'all 0.1s ease',
-                      fontSize: '12px',
+                      fontSize: '13px',
                       letterSpacing: '0.2px',
+                      fontWeight: model === selectedModel ? 'bold' : 'normal',
                     }}
                     onMouseOver={(e) => {
                       e.currentTarget.style.backgroundColor = settings?.theme === 'dark' ? '#333' : '#e0e0e0';
@@ -336,7 +417,7 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
             )}
           </div>
           
-          <div className="connection-status" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div className="connection-status" style={{ display: 'flex', alignItems: 'center', marginLeft: '8px' }}>
             <div style={{
               width: '8px',
               height: '8px',
@@ -359,7 +440,7 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
             {tokenUsage.totalTokens > 0 && (
               <>
                 <span className="token-display" style={{ 
-                  marginLeft: '12px',
+                  marginLeft: '8px',
                   fontFamily: 'Inter, sans-serif',
                   fontSize: '12px',
                   letterSpacing: '0.2px',
@@ -368,7 +449,7 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
                   Tokens: {formatNumber(tokenUsage.totalTokens)}
                 </span>
                 <span className="cost-display" style={{ 
-                  marginLeft: '12px',
+                  marginLeft: '8px',
                   fontFamily: 'Inter, sans-serif',
                   fontSize: '12px',
                   letterSpacing: '0.2px',
@@ -381,7 +462,7 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
           </div>
         </div>
         
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '0' }}>
           <button
             onClick={() => {
               const isElectron = typeof window !== 'undefined' && window.electron;

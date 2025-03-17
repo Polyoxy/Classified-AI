@@ -54,7 +54,7 @@ const CommandInput: React.FC = () => {
     @media (max-width: 767px) {
       .command-input {
         position: fixed !important;
-        bottom: 50px !important; /* Position above the status bar */
+        bottom: 60px !important; /* Position higher above the status bar */
         left: 10px !important;
         right: 10px !important;
         width: calc(100% - 20px) !important;
@@ -64,19 +64,27 @@ const CommandInput: React.FC = () => {
         background: ${settings?.theme === 'dark' 
           ? 'linear-gradient(to bottom, rgba(18, 18, 18, 0.85), rgba(24, 24, 24, 0.95))' 
           : 'linear-gradient(to bottom, rgba(245, 245, 245, 0.85), rgba(250, 250, 250, 0.95))'} !important;
+        padding: 12px 16px !important; /* Larger padding for bigger input area */
+        min-height: 60px !important; /* Increase minimum height */
+      }
+      
+      .command-input textarea {
+        font-size: 16px !important; /* Larger font size on mobile */
+        min-height: 24px !important; /* Taller input area */
       }
     }
     
     @media (min-width: 768px) {
       .command-input {
         position: fixed !important;
-        bottom: 50px !important; /* Position above the status bar */
+        bottom: 80px !important; /* Move higher up from the status bar */
         left: 50% !important;
         transform: translateX(-50%) !important;
         margin: 0 !important;
         z-index: 80 !important;
         width: calc(100% - 3rem) !important;
         max-width: 800px !important;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, ${settings?.theme === 'dark' ? '0.25' : '0.1'}) !important;
       }
     }
   `;
@@ -263,7 +271,7 @@ const CommandInput: React.FC = () => {
           alignItems: 'flex-start',
           boxShadow: `0 1px 5px rgba(0, 0, 0, ${settings?.theme === 'dark' ? '0.2' : '0.08'})`,
           borderRadius: '8px',
-          margin: '5px auto 0.8rem auto',
+          margin: '20px auto 1rem auto',
           backdropFilter: 'blur(8px)',
           zIndex: 10,
           border: `1px solid ${settings?.theme === 'dark' ? 'rgba(60, 60, 60, 0.5)' : 'rgba(180, 180, 180, 0.3)'}`,

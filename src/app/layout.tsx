@@ -1,5 +1,5 @@
 import "./globals.css";
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import { Providers } from "@/components/Providers";
 
@@ -46,14 +46,17 @@ export const metadata: Metadata = {
   description: "AI Assistant for classified operations",
   authors: [{ name: "Classified AI" }],
   keywords: ["AI", "Chat", "Terminal", "OpenAI", "Ollama", "Llama"],
-  themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#f8f9fa' },
-    { media: '(prefers-color-scheme: dark)', color: '#121212' },
-  ],
   // Use the same CSP for all environments
   other: {
     "Content-Security-Policy": baseCSP.replace(/\n/g, '')
   }
+};
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#f8f9fa' },
+    { media: '(prefers-color-scheme: dark)', color: '#121212' },
+  ],
 };
 
 export default function RootLayout({

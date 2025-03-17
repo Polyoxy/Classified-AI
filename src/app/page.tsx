@@ -256,9 +256,113 @@ export default function Home() {
   );
 }
 
+// Welcome page component to show initially
+const WelcomePage: React.FC<{
+  onStartChat: () => void;
+}> = ({ onStartChat }) => {
+  const { settings } = useAppContext();
+  
+  return (
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      minHeight: '100vh',
+      padding: '2rem',
+      textAlign: 'center',
+      backgroundColor: 'var(--bg-color)',
+    }}>
+      {/* Logo/Icon */}
+      <div style={{
+        fontSize: '64px',
+        marginBottom: '30px',
+        color: settings?.theme === 'dark' ? '#aaa' : '#666',
+        backgroundColor: settings?.theme === 'dark' ? 'rgba(170, 170, 170, 0.1)' : 'rgba(120, 120, 120, 0.1)',
+        width: '120px',
+        height: '120px',
+        borderRadius: '16px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        margin: '0 auto 40px',
+        border: `1px solid ${settings?.theme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)'}`,
+      }}>
+        {/* AI Chat Response Icon */}
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+          <path d="M8 9h.01"></path>
+          <path d="M12 9h.01"></path>
+          <path d="M16 9h.01"></path>
+        </svg>
+      </div>
+      
+      {/* Title */}
+      <h1 style={{ 
+        fontSize: '42px',
+        color: settings?.theme === 'dark' ? '#e0e0e0' : '#333',
+        fontWeight: 600,
+        marginBottom: '24px',
+        letterSpacing: '0.5px',
+      }}>
+        Welcome to Classified AI
+      </h1>
+      
+      {/* Description */}
+      <p style={{ 
+        fontSize: '18px',
+        maxWidth: '600px',
+        marginBottom: '40px',
+        color: settings?.theme === 'dark' ? '#aaaaaa' : '#666666',
+        lineHeight: 1.6,
+      }}>
+        Your intelligent assistant for coding, learning, and creative tasks. 
+        Start a conversation to explore what Classified AI can do for you.
+      </p>
+      
+      {/* Activate Intelligence Button */}
+      <button 
+        onClick={onStartChat}
+        style={{
+          padding: '14px 32px',
+          fontSize: '18px',
+          backgroundColor: settings?.theme === 'dark' ? 'rgba(170, 170, 170, 0.15)' : 'rgba(80, 80, 80, 0.07)',
+          color: settings?.theme === 'dark' ? '#d0d0d0' : '#333',
+          border: `1px solid ${settings?.theme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+          borderRadius: '8px',
+          cursor: 'pointer',
+          fontWeight: 600,
+          boxShadow: settings?.theme === 'dark' ? '0 4px 12px rgba(0, 0, 0, 0.15)' : '0 4px 12px rgba(0, 0, 0, 0.05)',
+          transition: 'all 0.2s ease',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+        }}
+        onMouseOver={(e) => {
+          e.currentTarget.style.transform = 'translateY(-2px)';
+          e.currentTarget.style.boxShadow = settings?.theme === 'dark' ? '0 6px 16px rgba(0, 0, 0, 0.2)' : '0 6px 16px rgba(0, 0, 0, 0.1)';
+          e.currentTarget.style.backgroundColor = settings?.theme === 'dark' ? 'rgba(170, 170, 170, 0.2)' : 'rgba(80, 80, 80, 0.1)';
+        }}
+        onMouseOut={(e) => {
+          e.currentTarget.style.transform = 'translateY(0)';
+          e.currentTarget.style.boxShadow = settings?.theme === 'dark' ? '0 4px 12px rgba(0, 0, 0, 0.15)' : '0 4px 12px rgba(0, 0, 0, 0.05)';
+          e.currentTarget.style.backgroundColor = settings?.theme === 'dark' ? 'rgba(170, 170, 170, 0.15)' : 'rgba(80, 80, 80, 0.07)';
+        }}
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M5 12h14"></path>
+          <path d="M12 5l7 7-7 7"></path>
+        </svg>
+        Activate Intelligence
+      </button>
+    </div>
+  );
+};
+
 const App: React.FC = () => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const { user, isLoading, settings } = useAppContext();
+  const [showChat, setShowChat] = useState(false);
+  const { user, isLoading, settings, createConversation } = useAppContext();
 
   // Create offline user if needed
   useEffect(() => {
@@ -336,6 +440,14 @@ const App: React.FC = () => {
     }
   }, [user, isLoading]);
 
+  // Function to handle starting a chat from the welcome page
+  const handleStartChat = () => {
+    // Create a new conversation
+    createConversation();
+    // Show the chat
+    setShowChat(true);
+  };
+
   // While authentication is loading, show a loading state
   if (isLoading) {
     return (
@@ -360,7 +472,7 @@ const App: React.FC = () => {
     return <AuthPage />;
   }
 
-  // User is authenticated, show the main app
+  // User is authenticated, show either welcome page or chat
   return (
     <div style={{
       display: 'flex',
@@ -375,18 +487,24 @@ const App: React.FC = () => {
       margin: '0 auto',
       maxWidth: '100%',
     }}>
-      {/* Main content */}
-      <AppContent
-        isSettingsOpen={isSettingsOpen}
-        setIsSettingsOpen={() => setIsSettingsOpen(!isSettingsOpen)} 
-      />
-      
-      {/* Settings modal */}
-      {isSettingsOpen && (
-        <SettingsModal 
-          isOpen={true}
-          onClose={() => setIsSettingsOpen(false)} 
-        />
+      {showChat ? (
+        <>
+          {/* Main content */}
+          <AppContent
+            isSettingsOpen={isSettingsOpen}
+            setIsSettingsOpen={() => setIsSettingsOpen(!isSettingsOpen)} 
+          />
+          
+          {/* Settings modal */}
+          {isSettingsOpen && (
+            <SettingsModal 
+              isOpen={true}
+              onClose={() => setIsSettingsOpen(false)} 
+            />
+          )}
+        </>
+      ) : (
+        <WelcomePage onStartChat={handleStartChat} />
       )}
     </div>
   );
