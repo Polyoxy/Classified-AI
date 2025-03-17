@@ -91,7 +91,7 @@ const ContextArea: React.FC<{
           ? (isDragging ? 'rgba(255, 255, 255, 0.05)' : 'rgba(26, 26, 26, 0.4)') 
           : (isDragging ? 'rgba(0, 0, 0, 0.05)' : 'rgba(245, 245, 245, 0.6)'),
         border: `1px solid ${isDarkTheme 
-          ? (isDragging ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.05)') 
+          ? (isDragging ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.05)')
           : (isDragging ? 'rgba(0, 0, 0, 0.1)' : 'rgba(0, 0, 0, 0.05)')}`,
         cursor: 'pointer',
         transition: 'all 0.2s ease',
@@ -478,6 +478,8 @@ const MessageItem: React.FC<MessageItemProps> = ({ message, isThinking }) => {
       color: ${isDarkTheme ? 'rgba(180, 180, 180, 0.9)' : 'rgba(50, 50, 60, 0.9)'};
       white-space: pre-wrap;
       transition: max-height 0.3s ease, padding 0.3s ease;
+      word-break: break-word;
+      overflow-wrap: break-word;
     }
     
     .analysis-content.open {
@@ -588,12 +590,12 @@ const MessageItem: React.FC<MessageItemProps> = ({ message, isThinking }) => {
     return content
       // Fix extra spaces between words
       .replace(/\s+/g, ' ')
-      // Add spaces around exclamation marks and question marks
+      // Add consistent spacing around punctuation
       .replace(/([!?])/g, ' $1 ')
       // Keep spaces around punctuation (but remove extra spaces)
-      .replace(/\s+([.,])/g, '$1')
+      .replace(/\s+([.,])/g, '$1 ')
       // Ensure proper spacing after periods and commas
-      .replace(/([.,])(\w)/g, '$1 $2')
+      .replace(/([.,])\s*(\w)/g, '$1 $2')
       // Fix extra spaces around quotes
       .replace(/"\s+/g, '"')
       .replace(/\s+"/g, '"')
@@ -603,296 +605,6 @@ const MessageItem: React.FC<MessageItemProps> = ({ message, isThinking }) => {
       // Ensure proper paragraph breaks
       .replace(/\n\s*\n/g, '\n\n')
       .trim();
-  };
-
-  const commonMarkdownStyles = {
-    code: ({ node, inline, className, children, ...props }: any) => {
-      const match = /language-(\w+)/.exec(className || '');
-      const language = match ? match[1] : 'text';
-      const codeString = String(children).replace(/\n$/, '');
-      const codeIndex = Math.random();
-
-      const handleCopyCode = async () => {
-        try {
-          await navigator.clipboard.writeText(codeString);
-          setCopiedIndex(codeIndex);
-          setTimeout(() => setCopiedIndex(null), 2000);
-        } catch (err) {
-          console.error('Failed to copy code:', err);
-        }
-      };
-
-      if (!inline && match) {
-        // Extract line numbers if present
-        const lineMatch = /(\d+):(\d+):(.+)/.exec(language);
-        const displayLang = lineMatch ? lineMatch[3] : language;
-        const startLine = lineMatch ? parseInt(lineMatch[1]) : 1;
-        
-        return (
-          <div className="code-block-container">
-            <div className="code-block-header">
-              <div className="code-block-language">
-                {displayLang.toLowerCase() || 'text'}
-              </div>
-              <div className="code-block-actions">
-                <button
-                  onClick={handleCopyCode}
-                  className="code-block-button"
-                  title="Copy code"
-                >
-                  {copiedIndex === codeIndex ? (
-                    <>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <polyline points="20 6 9 17 4 12"></polyline>
-                      </svg>
-                      <span>Copy</span>
-                    </>
-                  ) : (
-                    <>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                      </svg>
-                      <span>Copy</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-            <SyntaxHighlighter
-              style={isDarkTheme ? vscDarkPlus : vs}
-              language={displayLang}
-              showLineNumbers={true}
-              startingLineNumber={startLine}
-              customStyle={{
-                margin: 0,
-                padding: '16px',
-                fontSize: '14px',
-                backgroundColor: isDarkTheme ? '#1e1e2e' : '#f8f9fa',
-                borderRadius: '0 0 6px 6px',
-              }}
-              codeTagProps={{
-                style: {
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: '14px',
-                  lineHeight: 1.5,
-                }
-              }}
-              lineNumberStyle={{
-                color: isDarkTheme ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)',
-                paddingRight: '16px',
-                fontSize: '14px',
-              }}
-            >
-              {codeString}
-            </SyntaxHighlighter>
-          </div>
-        );
-      }
-
-      return (
-        <code 
-          className={className} 
-          style={{
-            backgroundColor: isDarkTheme ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.06)',
-            padding: '2px 6px',
-            borderRadius: '4px',
-            fontSize: '13px',
-            fontFamily: 'var(--font-mono)',
-            color: isDarkTheme ? '#e0e0e0' : '#303030',
-          }}
-          {...props}
-        >
-          {children}
-        </code>
-      );
-    },
-    table: ({ node, ...props }: any) => (
-      <div style={{ 
-        overflow: 'auto',
-        marginBottom: '1.25rem',
-        borderRadius: '6px',
-        border: `1px solid ${isDarkTheme ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
-        boxShadow: isDarkTheme 
-          ? '0 2px 6px rgba(0, 0, 0, 0.2)' 
-          : '0 2px 6px rgba(0, 0, 0, 0.1)',
-      }}>
-        <table style={{
-          borderCollapse: 'collapse',
-          width: '100%',
-          fontSize: '14px',
-          fontFamily: message.role === 'assistant' ? 'Inter, sans-serif' : 'JetBrains Mono, monospace',
-        }} {...props} />
-      </div>
-    ),
-    th: ({ node, ...props }: any) => (
-      <th style={{
-        backgroundColor: isDarkTheme ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
-        padding: '12px 16px',
-        textAlign: 'left',
-        borderBottom: `2px solid ${isDarkTheme ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
-        fontWeight: 600,
-        color: isDarkTheme ? '#e0e0e0' : '#404040',
-      }} {...props} />
-    ),
-    td: ({ node, ...props }: any) => (
-      <td style={{
-        padding: '12px 16px',
-        borderBottom: `1px solid ${isDarkTheme ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'}`,
-        color: isDarkTheme ? '#d0d0d0' : '#505050',
-      }} {...props} />
-    ),
-    blockquote: ({ node, ...props }: any) => (
-      <blockquote style={{
-        borderLeft: `4px solid ${isDarkTheme ? '#4a4a4a' : '#d0d0d0'}`,
-        padding: '0.75rem 1.25rem',
-        margin: '1.25rem 0',
-        backgroundColor: isDarkTheme ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.02)',
-        borderRadius: '0 6px 6px 0',
-        color: isDarkTheme ? '#b0b0b0' : '#606060',
-        fontStyle: 'italic',
-      }} {...props} />
-    ),
-    p: ({ node, ...props }: any) => (
-      <p style={{ 
-        marginBottom: '1.25rem',
-        lineHeight: 1.7,
-        color: isDarkTheme ? '#e0e0e0' : '#404040',
-        whiteSpace: 'pre-wrap',
-        wordBreak: 'break-word',
-        overflow: 'hidden',
-      }} {...props} />
-    ),
-    h1: ({ node, ...props }: any) => (
-      <h1 style={{ 
-        fontSize: '1.75rem',
-        fontWeight: 700,
-        marginBottom: '1.25rem',
-        marginTop: '2rem',
-        color: isDarkTheme ? '#f0f0f0' : '#202020',
-        borderBottom: `1px solid ${isDarkTheme ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
-        paddingBottom: '0.5rem',
-      }} {...props} />
-    ),
-    h2: ({ node, ...props }: any) => (
-      <h2 style={{ 
-        fontSize: '1.5rem',
-        fontWeight: 600,
-        marginBottom: '1rem',
-        marginTop: '1.75rem',
-        color: isDarkTheme ? '#e8e8e8' : '#303030',
-      }} {...props} />
-    ),
-    h3: ({ node, ...props }: any) => (
-      <h3 style={{ 
-        fontSize: '1.25rem',
-        fontWeight: 600,
-        marginBottom: '0.75rem',
-        marginTop: '1.5rem',
-        color: isDarkTheme ? '#e0e0e0' : '#404040',
-      }} {...props} />
-    ),
-    h4: ({ node, ...props }: any) => (
-      <h4 style={{ 
-        fontSize: '1.1rem',
-        fontWeight: 600,
-        marginBottom: '0.75rem',
-        marginTop: '1.25rem',
-        color: isDarkTheme ? '#d8d8d8' : '#505050',
-      }} {...props} />
-    ),
-    ul: ({ node, ordered, ...props }: any) => (
-      <ul style={{ 
-        marginBottom: '1.25rem',
-        paddingLeft: '1.5rem',
-        listStyleType: ordered ? 'decimal' : 'disc',
-      }} {...props} />
-    ),
-    ol: ({ node, ...props }: any) => (
-      <ol style={{ 
-        marginBottom: '1.25rem',
-        paddingLeft: '1.5rem',
-      }} {...props} />
-    ),
-    li: ({ node, checked, ...props }: any) => {
-      const style: React.CSSProperties = {
-        marginBottom: '0.5rem',
-        color: isDarkTheme ? '#e0e0e0' : '#404040',
-      };
-
-      if (checked !== null) {
-        return (
-          <li style={{ ...style, listStyleType: 'none', marginLeft: '-1.5rem' }}>
-            <input
-              type="checkbox"
-              checked={checked}
-              readOnly
-              style={{ marginRight: '0.5rem' }}
-            />
-            <span style={{
-              textDecoration: checked ? 'line-through' : 'none',
-              opacity: checked ? 0.7 : 1,
-            }} {...props} />
-          </li>
-        );
-      }
-
-      return <li style={style} {...props} />;
-    },
-    strong: ({ node, ...props }: any) => (
-      <strong style={{ 
-        fontWeight: 600,
-        color: isDarkTheme ? '#f0f0f0' : '#202020',
-      }} {...props} />
-    ),
-    em: ({ node, ...props }: any) => (
-      <em style={{ 
-        fontStyle: 'italic',
-        color: isDarkTheme ? '#e8e8e8' : '#303030',
-      }} {...props} />
-    ),
-    a: ({ node, ...props }: any) => (
-      <a style={{ 
-        color: isDarkTheme ? '#60a5fa' : '#2563eb',
-        textDecoration: 'none',
-        borderBottom: `1px solid ${isDarkTheme ? 'rgba(96, 165, 250, 0.2)' : 'rgba(37, 99, 235, 0.2)'}`,
-        transition: 'all 0.2s ease',
-        ':hover': {
-          borderBottomColor: isDarkTheme ? 'rgba(96, 165, 250, 0.4)' : 'rgba(37, 99, 235, 0.4)',
-        }
-      }} {...props} />
-    ),
-    img: ({ node, ...props }: any) => (
-      <img style={{ 
-        maxWidth: '100%',
-        height: 'auto',
-        borderRadius: '6px',
-        marginBottom: '1.25rem',
-        border: `1px solid ${isDarkTheme ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
-      }} {...props} />
-    ),
-    hr: ({ node, ...props }: any) => (
-      <hr style={{ 
-        border: 'none',
-        height: '1px',
-        backgroundColor: isDarkTheme ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
-        margin: '2rem 0',
-      }} {...props} />
-    ),
-    text: ({ node, ...props }: any) => {
-      const text = String(props.children);
-      // Handle soft line breaks (lines ending with two spaces)
-      const formattedText = text.replace(/ {2,}\n/g, '<br />');
-      return (
-        <span 
-          style={{
-            whiteSpace: 'pre-wrap',
-            wordBreak: 'break-word',
-          }}
-          dangerouslySetInnerHTML={{ __html: formattedText }}
-        />
-      );
-    },
   };
 
   const isThinkingComplete = thinkingContent.trim().length > 0;
@@ -987,6 +699,8 @@ const MessageItem: React.FC<MessageItemProps> = ({ message, isThinking }) => {
           padding: isThinking || showThinking ? '12px' : '0',
           borderTop: isThinking || showThinking ? `1px solid ${isDarkTheme ? 'rgba(60, 60, 60, 0.3)' : 'rgba(180, 180, 200, 0.3)'}` : 'none',
           backgroundColor: isDarkTheme ? 'rgba(20, 20, 20, 0.3)' : 'rgba(240, 240, 245, 0.3)',
+          wordBreak: 'break-word',
+          overflowWrap: 'break-word',
         }}>
           {isThinking && (
             <div className="typing-indicator" style={{ marginBottom: '8px' }}>
@@ -1027,6 +741,7 @@ const MessageItem: React.FC<MessageItemProps> = ({ message, isThinking }) => {
         maxWidth: '100%',
         overflowX: 'hidden',
         boxSizing: 'border-box',
+        wordWrap: 'break-word',
       }}>
         {/* Add styles */}
         <style>{typingIndicatorStyles}</style>
@@ -1080,8 +795,10 @@ const MessageItem: React.FC<MessageItemProps> = ({ message, isThinking }) => {
             position: 'relative', 
             width: '100%',
             maxWidth: '100%',
-            overflowX: 'auto',
+            overflowX: 'hidden',
             overflowY: 'hidden',
+            wordBreak: 'break-word',
+            whiteSpace: 'pre-wrap',
           }}>
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
@@ -1095,11 +812,15 @@ const MessageItem: React.FC<MessageItemProps> = ({ message, isThinking }) => {
                       style={isDarkTheme ? vscDarkPlus : vs}
                       language={language}
                       PreTag="div"
+                      wrapLongLines={true}
                       customStyle={{
                         margin: '1em 0', 
                         width: '100%',
                         maxWidth: '100%',
-                        overflowX: 'auto',
+                        overflowX: 'hidden',
+                        borderRadius: '6px',
+                        wordBreak: 'break-word',
+                        whiteSpace: 'pre-wrap',
                       }}
                     >
                       {String(children).replace(/\n$/, '')}
@@ -1112,11 +833,41 @@ const MessageItem: React.FC<MessageItemProps> = ({ message, isThinking }) => {
                       fontSize: '13px',
                       fontFamily: 'var(--font-mono)',
                       color: isDarkTheme ? '#e0e0e0' : '#303030',
+                      wordBreak: 'break-word',
+                      whiteSpace: 'pre-wrap',
                     }}>
                       {children}
                     </code>
                   );
-                }
+                },
+                p: ({ node, ...props }: any) => (
+                  <p style={{ 
+                    marginBottom: '1.25rem',
+                    lineHeight: 1.7,
+                    color: isDarkTheme ? '#e0e0e0' : '#404040',
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-word',
+                    overflow: 'hidden',
+                    width: '100%',
+                  }} {...props} />
+                ),
+                // Ensure proper table formatting
+                table: ({ node, ...props }: any) => (
+                  <div style={{ 
+                    overflow: 'auto',
+                    marginBottom: '1.25rem',
+                    borderRadius: '6px',
+                    border: `1px solid ${isDarkTheme ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+                    maxWidth: '100%',
+                    width: '100%',
+                  }}>
+                    <table style={{
+                      borderCollapse: 'collapse',
+                      width: '100%',
+                      fontSize: '14px',
+                    }} {...props} />
+                  </div>
+                ),
               }}
             >
               {message.role === 'assistant' ? formatContent(mainContent || '') : (message.content || '')}
