@@ -41,7 +41,7 @@ const ClientOnly: React.FC<{children: ReactNode}> = ({ children }) => {
 
 const AuthPage: React.FC = () => {
   const router = useRouter();
-  const { setUser, settings, updateSettings } = useAppContext();
+  const { setUser, settings, updateSettings, signIn } = useAppContext();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
@@ -49,15 +49,9 @@ const AuthPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentScreen, setCurrentScreen] = useState<AuthScreen>('login');
-  const [currentTheme, setCurrentTheme] = useState<'dark' | 'light'>('dark'); // Default to dark
+  // Always use dark theme, don't track state for it
+  const currentTheme = 'dark';
   
-  // Initialize theme from settings once mounted
-  useEffect(() => {
-    if (settings?.theme) {
-      setCurrentTheme(settings.theme as 'dark' | 'light');
-    }
-  }, [settings?.theme]);
-
   // Detect client-side on first render
   useEffect(() => {
     // Clear the preventAutoLogin flag when the auth page mounts
@@ -69,9 +63,13 @@ const AuthPage: React.FC = () => {
 
   // Check if in Electron - if so, redirect to main app automatically
   useEffect(() => {
-    const isElectron = typeof window !== 'undefined' && window.electron;
+    // More specific electron detection - check for electron object
+    const isElectron = 
+      typeof window !== 'undefined' && 
+      !!window.electron;
     
     if (isElectron) {
+      console.log('Detected Electron environment, using electron-user');
       // For Electron, create a direct user and redirect
       const electronUser = {
         uid: 'electron-user',
@@ -120,35 +118,51 @@ const AuthPage: React.FC = () => {
     }
   }, [currentTheme, updateSettings, settings?.theme]);
   
-  // Handle login with email/password (simplified for Electron)
+  // Handle login with email/password
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
     
     try {
-      // For Electron, we'll create a simple local user
-      const electronUser = {
-        uid: 'electron-user',
-        displayName: 'Electron User',
-        email: email || 'user@electron.app',
-        isAnonymous: false
-      };
+      // Check if we're in Electron
+      const isElectron = 
+        typeof window !== 'undefined' && 
+        !!window.electron;
       
-      // Set user info
-      setUser(electronUser as unknown as User);
-      
-      // Save email to localStorage if remember me is checked
-      if (rememberMe && email) {
-        localStorage.setItem('lastLoginEmail', email);
-        localStorage.setItem('rememberMe', JSON.stringify(rememberMe));
+      if (isElectron) {
+        // For Electron, we'll create a simple local user
+        const electronUser = {
+          uid: 'electron-user',
+          displayName: 'Electron User',
+          email: email || 'user@electron.app',
+          isAnonymous: false
+        };
+        
+        setUser(electronUser as unknown as User);
+        
+        // Save email to localStorage if remember me is checked
+        if (rememberMe && email) {
+          localStorage.setItem('lastLoginEmail', email);
+          localStorage.setItem('rememberMe', JSON.stringify(rememberMe));
+        }
+        
+        router.push('/');
+      } else {
+        // For web, use Firebase authentication
+        await signIn(email, password);
+        
+        // Save email to localStorage if remember me is checked
+        if (rememberMe && email) {
+          localStorage.setItem('lastLoginEmail', email);
+          localStorage.setItem('rememberMe', JSON.stringify(rememberMe));
+        }
+        
+        // Redirect will happen via the auth state listener
       }
-      
-      // Redirect to main app
-      router.push('/');
-    } catch (error: any) {
+    } catch (error) {
       console.error('Login error:', error);
-      setError('Failed to login. Please try again.');
+      setError(error instanceof Error ? error.message : String(error));
     } finally {
       setIsLoading(false);
     }
@@ -200,11 +214,6 @@ const AuthPage: React.FC = () => {
     }
   };
 
-  // Handle theme change
-  const handleThemeChange = (theme: 'dark' | 'light') => {
-    setCurrentTheme(theme);
-  };
-  
   // Show appropriate screen based on current state
   if (currentScreen === 'register') {
     return <RegisterPage onBackToLogin={() => setCurrentScreen('login')} />;
@@ -617,78 +626,27 @@ const AuthPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Theme selector - placeholder for server, actual content for client */}
+        {/* Status bar - consistent structure between server and client */}
         <div
-          className="theme-selector-container"
+          className="status-bar"
           style={{
-            position: 'absolute',
-            bottom: '1rem',
-            left: 0,
-            right: 0,
+            height: '30px',
+            backgroundColor: 'var(--status-bar-bg)',
+            borderTop: '1px solid var(--border-color)',
             display: 'flex',
+            alignItems: 'center',
             justifyContent: 'center',
-            gap: '1rem',
+            color: 'var(--text-muted)',
             fontSize: '0.75rem',
-            opacity: 0.7,
-            color: 'var(--text-color)',
+            backdropFilter: 'blur(6px)',
           }}
         >
           <ClientOnly>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span>Theme:</span>
-              <button
-                onClick={() => handleThemeChange('dark')}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  padding: '0.25rem 0.5rem',
-                  borderRadius: '4px',
-                  backgroundColor: currentTheme === 'dark' ? 'var(--accent-color)' : 'transparent',
-                  color: currentTheme === 'dark' ? '#fff' : 'var(--text-color)',
-                }}
-              >
-                Dark
-              </button>
-              <button
-                onClick={() => handleThemeChange('light')}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  padding: '0.25rem 0.5rem',
-                  borderRadius: '4px',
-                  backgroundColor: currentTheme === 'light' ? 'var(--accent-color)' : 'transparent',
-                  color: currentTheme === 'light' ? '#fff' : 'var(--text-color)',
-                }}
-              >
-                Light
-              </button>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <span>Web Client</span>
             </div>
           </ClientOnly>
         </div>
-      </div>
-
-      {/* Status bar - consistent structure between server and client */}
-      <div
-        className="status-bar"
-        style={{
-          height: '30px',
-          backgroundColor: 'var(--status-bar-bg)',
-          borderTop: '1px solid var(--border-color)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: 'var(--text-muted)',
-          fontSize: '0.75rem',
-          backdropFilter: 'blur(6px)',
-        }}
-      >
-        <ClientOnly>
-          <div style={{ display: 'flex', alignItems: 'center' }}>
-            <span>Web Client</span>
-          </div>
-        </ClientOnly>
       </div>
     </div>
   );

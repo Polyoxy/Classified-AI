@@ -407,21 +407,20 @@ const App: React.FC = () => {
 
   // Set up analytics
   useEffect(() => {
+    // Setup analytics when component mounts if not in electron
     const setupAnalytics = async () => {
       try {
-        // Initialize analytics
-        const { initAnalytics } = await import('@/lib/firebase');
-        initAnalytics();
-        // Only log in development
-        if (process.env.NODE_ENV === 'development') {
-          console.log('Analytics initialized');
-        }
+        // Import analytics, which is already initialized
+        await import('@/lib/firebase');
+        console.log('Analytics setup complete');
       } catch (error) {
         console.error('Error setting up analytics:', error);
       }
     };
     
-    setupAnalytics();
+    if (typeof window !== 'undefined' && !window.electron) {
+      setupAnalytics();
+    }
   }, []);
 
   // Check for offline user

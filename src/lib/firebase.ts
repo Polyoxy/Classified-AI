@@ -7,14 +7,14 @@ import { getAnalytics, isSupported } from "firebase/analytics";
 // Your web app's Firebase configuration
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  apiKey: "AIzaSyCNOiqkEgmEo7CIJ2LUS6wO8fAmPwhLTgQ",
-  authDomain: "classified-ai.firebaseapp.com",
-  projectId: "classified-ai",
-  databaseURL: "https://classified-ai-default-rtdb.firebaseio.com",
-  storageBucket: "classified-ai.firebasestorage.app",
-  messagingSenderId: "470759227763",
-  appId: "1:470759227763:web:f62c50762a220b49f2c506",
-  measurementId: "G-Y3E1LPM4PD"
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
+  databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL
 };
 
 // Initialize Firebase
@@ -39,27 +39,19 @@ try {
 // Initialize Realtime Database (more cost effective for the free tier)
 export const rtdb = getDatabase(app);
 
-// Initialize Analytics conditionally
-export let analytics = null;
-export const initAnalytics = async () => {
-  // Skip analytics in Electron
-  if (isElectron) {
-    console.log('Analytics disabled in Electron environment');
-    return null;
-  }
-  
-  if (typeof window !== 'undefined') {
-    try {
-      const isAnalyticsSupported = await isSupported();
-      if (isAnalyticsSupported) {
-        return getAnalytics(app);
-      }
-    } catch (error) {
-      console.error('Analytics not supported:', error);
+// Set up analytics if supported
+let analytics = null;
+if (typeof window !== 'undefined') {
+  isSupported().then(supported => {
+    if (supported) {
+      analytics = getAnalytics(app);
     }
-  }
-  return null;
-};
+  }).catch(error => {
+    console.warn('Analytics not supported:', error);
+  });
+}
+
+export { analytics };
 
 // Helper function to cache data in memory to reduce database reads
 export const setupCaching = () => {

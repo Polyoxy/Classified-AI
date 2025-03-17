@@ -241,6 +241,52 @@ const codeBlockStyles = `
   }
 `;
 
+// Move formatTime function before MessageHeader
+const formatTime = (timestamp: number) => {
+  if (!timestamp) return '';
+  const date = new Date(timestamp);
+  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+};
+
+// Add header component for assistant messages
+const MessageHeader: React.FC<{ isDarkTheme: boolean; timestamp: number }> = ({ isDarkTheme, timestamp }) => (
+  <div style={{
+    display: 'flex',
+    alignItems: 'center',
+    marginBottom: '12px',
+    paddingBottom: '8px',
+    gap: '0.5rem',
+    justifyContent: 'space-between',
+    borderBottom: `1px solid ${isDarkTheme ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'}`,
+  }}>
+    <div style={{display: 'flex', alignItems: 'center'}}>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{marginRight: '0.5rem'}}>
+        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+        <circle cx="8.5" cy="8.5" r="1.5"></circle>
+        <circle cx="15.5" cy="8.5" r="1.5"></circle>
+        <path d="M9 15a3 3 0 0 0 6 0"></path>
+      </svg>
+      <span style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        padding: '0.25rem 0.5rem',
+        backgroundColor: isDarkTheme ? '#1e1e1e' : '#d0d0d0',
+        borderRadius: '4px',
+        fontWeight: 500,
+        fontSize: '11px',
+        color: isDarkTheme ? '#e0e0e0' : '#404040',
+        letterSpacing: '0.5px',
+      }}>AGENT</span>
+    </div>
+    <div style={{
+      fontSize: '11px',
+      color: isDarkTheme ? 'rgba(224, 224, 224, 0.4)' : 'rgba(64, 64, 64, 0.4)',
+    }}>
+      {formatTime(timestamp)}
+    </div>
+  </div>
+);
+
 const MessageItem: React.FC<MessageItemProps> = ({ message, isThinking }) => {
   const { settings, addMessage } = useAppContext();
   const isDarkTheme = settings?.theme === 'dark';
@@ -248,87 +294,374 @@ const MessageItem: React.FC<MessageItemProps> = ({ message, isThinking }) => {
   const [copySuccess, setCopySuccess] = useState(false);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
 
-  const formatTime = (timestamp: number) => {
-    if (!timestamp) return '';
-    const date = new Date(timestamp);
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  };
+  // Skip rendering entirely if there's no content and it's not a thinking state
+  if (!isThinking && (!message || !message.content || message.content.trim() === '')) {
+    return null;
+  }
 
-  const hasThinking = message.role === 'assistant' && message.content.includes('<think>');
-  let thinking = '';
+  // CSS for the typing indicator
+  const typingIndicatorStyles = `
+    .typing-indicator {
+      display: flex;
+      align-items: center;
+    }
+    
+    .typing-indicator span {
+      height: 8px;
+      width: 8px;
+      margin: 0 2px;
+      background-color: ${isDarkTheme ? '#666' : '#999'};
+      border-radius: 50%;
+      display: inline-block;
+      opacity: 0.4;
+    }
+    
+    .typing-indicator span:nth-child(1) {
+      animation: typing 1.5s infinite;
+      animation-delay: 0s;
+    }
+    
+    .typing-indicator span:nth-child(2) {
+      animation: typing 1.5s infinite;
+      animation-delay: 0.3s;
+    }
+    
+    .typing-indicator span:nth-child(3) {
+      animation: typing 1.5s infinite;
+      animation-delay: 0.6s;
+    }
+    
+    @keyframes typing {
+      0% {
+        opacity: 0.4;
+        transform: scale(1);
+      }
+      50% {
+        opacity: 1;
+        transform: scale(1.2);
+      }
+      100% {
+        opacity: 0.4;
+        transform: scale(1);
+      }
+    }
+  `;
+
+  // Clean up headers if they exist
   let response = message.content;
   
-  if (hasThinking) {
-    const thinkingMatch = message.content.match(/<think>([\s\S]*?)<\/think>/);
-    if (thinkingMatch && thinkingMatch[1]) {
-      thinking = thinkingMatch[1].trim();
-      response = message.content.replace(/<think>[\s\S]*?<\/think>/, '').trim();
+  // Extract thinking content if it exists
+  let thinkingContent = '';
+  let mainContent = response;
+  
+  // First try to parse as JSON if it looks like a JSON string
+  try {
+    if (typeof response === 'string' && (response.trim().startsWith('{') || response.trim().startsWith('['))) {
+      const parsed = JSON.parse(response);
+      // Handle different response formats
+      if (parsed.content) {
+        mainContent = parsed.content;
+      } else if (parsed.message?.content) {
+        mainContent = parsed.message.content;
+      } else if (parsed.error) {
+        mainContent = `Error: ${parsed.error}`;
+      } else if (!mainContent || mainContent.trim() === '') {
+        mainContent = "I apologize, but I encountered an issue generating a response. Please try your question again.";
+      }
     }
+  } catch (e) {
+    // If JSON parsing fails, continue with normal content extraction
+    console.debug('Response is not JSON format:', e);
+    
+    // If the response is empty or invalid, provide a helpful message
+    if (!mainContent || mainContent.trim() === '') {
+      mainContent = "I apologize, but I encountered an issue generating a response. Please try your question again.";
+    }
+  }
+
+  // Extract thinking content from <think> tags if present
+  const thinkMatch = mainContent.match(/<think>([\s\S]*?)<\/think>/);
+  if (thinkMatch) {
+    thinkingContent = thinkMatch[1].trim();
+    mainContent = mainContent.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+  }
+
+  // Clean up any remaining JSON artifacts and ensure we have content
+  mainContent = mainContent
+    .replace(/^"/, '')
+    .replace(/"$/, '')
+    .replace(/\\n/g, '\n')
+    .replace(/\\"/g, '"')
+    .trim();
+
+  // If after all processing we still have no content, provide a helpful message
+  if (!mainContent || mainContent.trim() === '') {
+    mainContent = "I apologize, but I encountered an issue generating a response. Please try your question again.";
+  }
+
+  // If we're explicitly in thinking state, show the thinking indicator
+  if (isThinking) {
+    return (
+      <div
+        className="message"
+        style={{
+          backgroundColor: isDarkTheme ? 'rgba(26, 26, 26, 0.4)' : 'rgba(240, 240, 240, 0.95)',
+          padding: '16px 20px', 
+          borderRadius: '8px',
+          position: 'relative',
+          opacity: 0.9,
+          marginBottom: '24px',
+          marginTop: '24px',
+          border: `1px solid ${isDarkTheme ? 'rgba(255, 255, 255, 0.05)' : 'rgba(200, 200, 200, 0.8)'}`,
+          boxShadow: !isDarkTheme ? '0 3px 10px rgba(0, 0, 0, 0.08)' : 'none',
+          width: '100%',
+          transition: 'opacity 0.3s ease-in-out',
+        }}
+      >
+        <MessageHeader isDarkTheme={isDarkTheme} timestamp={Date.now()} />
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          padding: '0.5rem 0.75rem',
+          whiteSpace: 'pre-line',
+          wordBreak: 'break-word',
+          lineHeight: 1.6,
+          fontFamily: 'Inter, sans-serif',
+        }}>
+          <div className="typing-indicator">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+          <div style={{marginLeft: '12px', fontSize: '14px', color: isDarkTheme ? '#e0e0e0' : '#404040'}}>
+            Processing your request...
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Add a fallback for empty assistant messages - don't render empty messages from the assistant
+  // This prevents briefly showing empty messages that might cause flickering
+  if (message.role === 'assistant' && (!message.content || message.content.trim() === '')) {
+    if (isThinking) {
+      // Show simple thinking indicator to ensure it's lightweight and reliable
+      return (
+        <div className="message assistant-message thinking-message" style={{
+          backgroundColor: isDarkTheme ? 'rgba(26, 26, 26, 0.4)' : 'rgba(240, 240, 240, 0.95)',
+          padding: '16px 20px',
+          borderRadius: '8px',
+          position: 'relative',
+          marginBottom: '24px',
+          marginTop: '24px',
+          border: `1px solid ${isDarkTheme ? 'rgba(255, 255, 255, 0.05)' : 'rgba(200, 200, 200, 0.8)'}`,
+          boxShadow: !isDarkTheme ? '0 3px 10px rgba(0, 0, 0, 0.08)' : 'none',
+          width: '100%',
+        }}>
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center',
+            marginBottom: '12px',
+            paddingBottom: '8px',
+            gap: '0.5rem',
+            justifyContent: 'space-between',
+            borderBottom: `1px solid ${isDarkTheme ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'}`,
+          }}>
+            <div style={{display: 'flex', alignItems: 'center'}}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{marginRight: '0.5rem'}}>
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                <circle cx="15.5" cy="8.5" r="1.5"></circle>
+                <path d="M9 15a3 3 0 0 0 6 0"></path>
+              </svg>
+              <span style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                padding: '0.25rem 0.5rem',
+                backgroundColor: isDarkTheme ? '#1e1e1e' : '#d0d0d0',
+                borderRadius: '4px',
+                fontWeight: 500,
+                fontSize: '11px',
+                color: isDarkTheme ? '#e0e0e0' : '#404040',
+                letterSpacing: '0.5px',
+              }}>AGENT</span>
+            </div>
+            <div style={{
+              fontSize: '11px',
+              color: isDarkTheme ? 'rgba(224, 224, 224, 0.4)' : 'rgba(64, 64, 64, 0.4)',
+            }}>
+              {formatTime(message.timestamp || Date.now())}
+            </div>
+          </div>
+            
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center',
+            padding: '0.5rem 0.75rem',
+            whiteSpace: 'pre-line',
+            wordBreak: 'break-word',
+            lineHeight: 1.6,
+            fontFamily: 'Inter, sans-serif',
+          }}>
+            <div className="thinking-indicator" style={{ display: 'flex', alignItems: 'center' }}>
+              <span style={{ fontSize: '14px', marginRight: '12px', color: isDarkTheme ? '#e0e0e0' : '#404040' }}>Processing</span>
+              <div className="dots" style={{ display: 'flex' }}>
+                <span style={{ 
+                  height: '6px', 
+                  width: '6px', 
+                  borderRadius: '50%', 
+                  margin: '0 2px',
+                  backgroundColor: isDarkTheme ? '#aaa' : '#666',
+                  animation: 'dotPulse 1s infinite',
+                  animationDelay: '0s'
+                }}></span>
+                <span style={{ 
+                  height: '6px', 
+                  width: '6px', 
+                  borderRadius: '50%', 
+                  margin: '0 2px',
+                  backgroundColor: isDarkTheme ? '#aaa' : '#666',
+                  animation: 'dotPulse 1s infinite',
+                  animationDelay: '0.2s'
+                }}></span>
+                <span style={{ 
+                  height: '6px', 
+                  width: '6px', 
+                  borderRadius: '50%', 
+                  margin: '0 2px',
+                  backgroundColor: isDarkTheme ? '#aaa' : '#666',
+                  animation: 'dotPulse 1s infinite',
+                  animationDelay: '0.4s'
+                }}></span>
+              </div>
+            </div>
+          </div>
+          
+          <style jsx>{`
+            @keyframes dotPulse {
+              0%, 100% { opacity: 0.4; transform: scale(0.8); }
+              50% { opacity: 1; transform: scale(1); }
+            }
+          `}</style>
+        </div>
+      );
+    }
+    return null;
+  }
+
+  // Add error message handling
+  if (message.role === 'assistant' && mainContent.toLowerCase().includes("i'm sorry") && mainContent.toLowerCase().includes("couldn't process")) {
+    return (
+      <div style={{
+        backgroundColor: isDarkTheme ? 'rgba(26, 26, 26, 0.4)' : 'rgba(240, 240, 240, 0.95)',
+        padding: '16px 20px',
+        borderRadius: '8px',
+        marginBottom: '24px',
+        marginTop: '24px',
+        border: `1px solid ${isDarkTheme ? 'rgba(255, 255, 255, 0.05)' : 'rgba(200, 200, 200, 0.8)'}`,
+        boxShadow: !isDarkTheme ? '0 3px 10px rgba(0, 0, 0, 0.08)' : 'none',
+      }}>
+        <MessageHeader isDarkTheme={isDarkTheme} timestamp={message.timestamp || Date.now()} />
+        <div style={{
+          display: 'flex',
+          alignItems: 'flex-start',
+          gap: '12px',
+          padding: '12px',
+          backgroundColor: isDarkTheme ? 'rgba(255, 59, 48, 0.1)' : 'rgba(255, 59, 48, 0.05)',
+          borderRadius: '6px',
+          border: `1px solid ${isDarkTheme ? 'rgba(255, 59, 48, 0.2)' : 'rgba(255, 59, 48, 0.1)'}`,
+        }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={isDarkTheme ? '#ff3b30' : '#dc2626'} strokeWidth="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+          </svg>
+          <div style={{
+            fontSize: '14px',
+            color: isDarkTheme ? '#ff3b30' : '#dc2626',
+            flex: 1,
+          }}>
+            The Ollama server appears to be offline. Please make sure it's running by:
+            <ol style={{
+              marginTop: '8px',
+              marginLeft: '20px',
+              color: isDarkTheme ? '#ff3b30' : '#dc2626',
+            }}>
+              <li>Opening a terminal</li>
+              <li>Running the command: <code style={{
+                backgroundColor: isDarkTheme ? 'rgba(255, 59, 48, 0.2)' : 'rgba(255, 59, 48, 0.1)',
+                padding: '2px 6px',
+                borderRadius: '4px',
+              }}>ollama serve</code></li>
+            </ol>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   // Add structured format to thinking content to improve readability
   const formatThinking = (content: string) => {
     if (!content) return '';
     
-    // Add section headers if they don't exist
-    let formatted = content;
+    // Clean up the content first
+    let formatted = content
+      .replace(/^\n+|\n+$/g, '') // Remove leading/trailing newlines
+      .replace(/\n{3,}/g, '\n\n') // Replace multiple newlines with double newlines
+      .replace(/\\n/g, '\n') // Replace escaped newlines
+      .replace(/\\"/g, '"'); // Replace escaped quotes
     
-    // Check if content already has headers
-    const hasHeaders = /##\s+[A-Za-z]+|Step\s+\d+:/i.test(content);
+    // Split into paragraphs
+    const paragraphs = formatted.split(/\n\n+/);
     
-    if (!hasHeaders) {
-      // Parse the thinking content into steps/sections
-      const paragraphs = content.split(/\n\n+/);
+    // Format each paragraph
+    formatted = paragraphs.map((para, index) => {
+      // Skip empty paragraphs
+      if (!para.trim()) return '';
       
-      if (paragraphs.length > 1) {
-        // Multiple paragraphs - structure as steps
-        formatted = paragraphs.map((para, index) => {
-          // Check if this paragraph looks like reasoning or a conclusion
-          if (index === paragraphs.length - 1 && 
-              (para.toLowerCase().includes('therefore') || 
-               para.toLowerCase().includes('conclusion') || 
-               para.toLowerCase().includes('final') || 
-               para.toLowerCase().includes('answer'))) {
-            return `## Conclusion\n\n${para}`;
-          }
-          
-          // Check if this paragraph seems to be analyzing data
-          if (para.toLowerCase().includes('analyze') || 
-              para.toLowerCase().includes('data') || 
-              para.toLowerCase().includes('information')) {
-            return `## Analysis\n\n${para}`;
-          }
-          
-          // Default step format
-          return `## Step ${index + 1}\n\n${para}`;
-        }).join('\n\n');
-      } else {
-        // Single paragraph - add analysis header
-        formatted = `## Reasoning\n\n${content}`;
+      // If it's already a list item or code block, leave it as is
+      if (para.startsWith('- ') || para.startsWith('```')) {
+        return para;
       }
-    }
-    
-    // Add a line break after each header for better spacing
-    formatted = formatted.replace(/(##\s+.*)\n/g, '$1\n\n');
-    
-    // Format code blocks properly if they exist
-    formatted = formatted.replace(/```([a-z]*)\n([\s\S]*?)```/g, (match, lang, code) => {
-      return `\n\`\`\`${lang}\n${code.trim()}\n\`\`\`\n`;
-    });
+      
+      // If it's a calculation or step-by-step process with numbers
+      if (para.includes('=') || /\d+[×x*]\d+/.test(para) || para.match(/^\d+[\.\)]/)) {
+        // If it's a numbered list, preserve the format
+        if (para.match(/^\d+[\.\)]/) && !para.includes('=')) {
+          return para;
+        }
+        // Otherwise wrap in code block
+        return `\`\`\`\n${para}\n\`\`\``;
+      }
+      
+      // For regular paragraphs, add some structure
+      if (index === 0) {
+        return `### Initial Approach\n${para}`;
+      } else if (index === paragraphs.length - 1) {
+        return `### Conclusion\n${para}`;
+      } else if (para.toLowerCase().includes('calculate') || 
+                 para.toLowerCase().includes('computation') ||
+                 para.toLowerCase().includes('step') ||
+                 para.toLowerCase().includes('next')) {
+        return `### Step ${index + 1}\n${para}`;
+      } else {
+        return para;
+      }
+    }).filter(Boolean).join('\n\n');
     
     return formatted;
   };
 
   const handleCopy = async () => {
     try {
-      const contentToCopy = hasThinking ? `${thinking}\n\n${response}` : response;
+      const contentToCopy = thinkingContent ? `${thinkingContent}\n\n${mainContent}` : mainContent;
       await navigator.clipboard.writeText(contentToCopy);
       setCopySuccess(true);
       setTimeout(() => setCopySuccess(false), 2000);
     } catch (error) {
       console.error('Failed to copy:', error);
       const textarea = document.createElement('textarea');
-      textarea.value = hasThinking ? `${thinking}\n\n${response}` : response;
+      textarea.value = thinkingContent ? `${thinkingContent}\n\n${mainContent}` : mainContent;
       textarea.style.position = 'fixed';
       textarea.style.opacity = '0';
       document.body.appendChild(textarea);
@@ -659,10 +992,10 @@ const MessageItem: React.FC<MessageItemProps> = ({ message, isThinking }) => {
     },
   };
 
-  const isThinkingComplete = hasThinking && response.trim().length > 0;
+  const isThinkingComplete = thinkingContent.trim().length > 0;
 
   React.useEffect(() => {
-    if (hasThinking && !isThinkingComplete) {
+    if (thinkingContent && !isThinkingComplete) {
       setShowThinking(true);
     } else if (isThinkingComplete && showThinking) {
       // Auto-close thinking indicator after a delay when the AI response is complete
@@ -672,7 +1005,7 @@ const MessageItem: React.FC<MessageItemProps> = ({ message, isThinking }) => {
       
       return () => clearTimeout(timer);
     }
-  }, [hasThinking, isThinkingComplete, showThinking]);
+  }, [thinkingContent, isThinkingComplete, showThinking]);
 
   return (
     <>
@@ -683,8 +1016,8 @@ const MessageItem: React.FC<MessageItemProps> = ({ message, isThinking }) => {
         fontFamily: message.role === 'assistant' ? 'Inter, sans-serif' : 'JetBrains Mono, monospace',
         fontSize: '14px',
         color: isDarkTheme ? '#e0e0e0' : '#404040',
-        padding: '16px 20px',  // Keep improved padding
-        margin: '24px 0',      // Keep improved margin
+        padding: '16px 20px',
+        margin: '24px 0',
         borderRadius: '8px',
         backgroundColor: message.role === 'assistant' 
           ? (isDarkTheme ? 'rgba(26, 26, 26, 0.4)' : 'rgba(240, 240, 240, 0.95)')
@@ -697,215 +1030,154 @@ const MessageItem: React.FC<MessageItemProps> = ({ message, isThinking }) => {
           : 'none',
         position: 'relative',
       }}>
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          marginBottom: '12px',  // Keep improved spacing
-          paddingBottom: '8px',  // Keep improved spacing
-          gap: '0.5rem',
-          justifyContent: 'space-between',
-          borderBottom: `1px solid ${isDarkTheme ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'}`,
-        }}>
-          <div style={{display: 'flex', alignItems: 'center'}}>
-            {message.role === 'user' ? (
-              <>
-                <span style={{marginRight: '0.5rem'}}>&#62;</span>
-                <span style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  padding: '0.25rem 0.5rem',
-                  backgroundColor: isDarkTheme ? '#2a2a2a' : '#e0e0e0',
-                  borderRadius: '4px',
-                  fontWeight: 500,
-                  fontSize: '11px',
-                  color: isDarkTheme ? '#e0e0e0' : '#404040',
-                  letterSpacing: '0.5px',
-                }}>USER</span>
-              </>
-            ) : (
-              <>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{marginRight: '0.5rem'}}>
-                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                  <circle cx="8.5" cy="8.5" r="1.5"></circle>
-                  <circle cx="15.5" cy="8.5" r="1.5"></circle>
-                  <path d="M9 15a3 3 0 0 0 6 0"></path>
-                </svg>
-                <span style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  padding: '0.25rem 0.5rem',
-                  backgroundColor: isDarkTheme ? '#1e1e1e' : '#d0d0d0',
-                  borderRadius: '4px',
-                  fontWeight: 500,
-                  fontSize: '11px',
-                  color: isDarkTheme ? '#e0e0e0' : '#404040',
-                  letterSpacing: '0.5px',
-                }}>AGENT</span>
-              </>
-            )}
-          </div>
-
-          {hasThinking && (
-            <div 
-              onClick={() => setShowThinking(!showThinking)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                padding: '0.25rem 0.5rem',
-                borderRadius: '4px',
-                backgroundColor: showThinking 
-                  ? (isDarkTheme ? '#2a2a2a' : '#d0d0d0') 
-                  : (isDarkTheme ? '#1a1a1a' : '#e0e0e0'),
-                fontSize: '11px',
-                fontWeight: 500,
-                cursor: 'pointer',
-                gap: '4px',
-                transition: 'all 0.2s ease',
-                border: `1px solid ${isDarkTheme ? '#2a2a2a' : '#d0d0d0'}`,
-                opacity: 0.8,
-                userSelect: 'none',
-              }}
-            >
+        {message.role === 'assistant' && (
+          <MessageHeader isDarkTheme={isDarkTheme} timestamp={message.timestamp || Date.now()} />
+        )}
+        
+        {/* Display thinking content if it exists */}
+        {thinkingContent && (
+          <div style={{
+            marginBottom: '16px',
+            padding: '16px',
+            borderRadius: '8px',
+            backgroundColor: isDarkTheme ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.03)',
+            border: `1px solid ${isDarkTheme ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+            fontSize: '14px',
+            color: isDarkTheme ? '#d0d0d0' : '#404040',
+            fontFamily: 'Inter, sans-serif',
+            transition: 'all 0.3s ease',
+            maxHeight: showThinking ? '2000px' : '40px',
+            overflow: 'hidden',
+            cursor: 'pointer',
+          }} onClick={() => setShowThinking(!showThinking)}>
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              marginBottom: showThinking ? '12px' : '0',
+              color: isDarkTheme ? '#888' : '#666',
+              fontSize: '13px',
+              fontWeight: 500,
+              borderBottom: showThinking ? `1px solid ${isDarkTheme ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}` : 'none',
+              paddingBottom: showThinking ? '8px' : '0'
+            }}>
               <svg 
-                width="12" 
-                height="12" 
-                viewBox="0 0 24 24" 
-                fill="none" 
-                stroke={isDarkTheme ? '#909090' : '#606060'} 
-                strokeWidth="2" 
-                strokeLinecap="round" 
-                strokeLinejoin="round"
-              >
-                <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path>
-                <circle cx="12" cy="12" r="3"></circle>
-              </svg>
-              <span style={{color: isDarkTheme ? '#b0b0b0' : '#505050', letterSpacing: '0.5px'}}>ANALYSIS</span>
-              <svg 
-                width="10" 
-                height="10" 
+                width="16" 
+                height="16" 
                 viewBox="0 0 24 24" 
                 fill="none" 
                 stroke="currentColor" 
                 strokeWidth="2" 
-                strokeLinecap="round" 
-                strokeLinejoin="round" 
-                style={{
-                  transform: showThinking ? 'rotate(180deg)' : 'rotate(0deg)',
+                style={{ 
+                  marginRight: '8px',
+                  transform: showThinking ? 'rotate(0deg)' : 'rotate(-90deg)',
                   transition: 'transform 0.3s ease'
                 }}
               >
-                <polyline points="6 9 12 15 18 9"></polyline>
+                <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
               </svg>
+              Thinking Process
+              <span style={{
+                marginLeft: '8px',
+                fontSize: '11px',
+                opacity: 0.7,
+                fontWeight: 400
+              }}>
+                {showThinking ? '(click to collapse)' : '(click to expand)'}
+              </span>
             </div>
-          )}
-        </div>
-
-        {hasThinking && (
-          <div style={{
-            padding: '0.5rem 0.75rem',
-            borderLeft: `2px solid ${isDarkTheme ? '#2a2a2a' : '#d0d0d0'}`,
-            marginBottom: '0.75rem',
-            fontSize: '13px',
-            fontFamily: 'Inter, sans-serif',
-            color: isDarkTheme ? '#909090' : '#606060',
-            whiteSpace: 'pre-line',
-            wordBreak: 'break-word',
-            maxHeight: showThinking ? '500px' : '0px',
-            overflow: 'hidden',
-            transition: 'all 0.3s ease',
-            opacity: showThinking ? 0.9 : 0,
-            lineHeight: 1.5,
-          }}>
             <div style={{
-              fontWeight: 500,
-              color: isDarkTheme ? '#a0a0a0' : '#505050',
-              fontFamily: 'Inter, sans-serif',
-              display: 'flex',
-              alignItems: 'center',
-              marginBottom: '4px',
-              fontSize: '11px',
-              textTransform: 'uppercase',
-              letterSpacing: '0.5px',
+              opacity: showThinking ? 1 : 0,
+              transition: 'opacity 0.3s ease',
+              pointerEvents: showThinking ? 'auto' : 'none'
             }}>
-              {isThinkingComplete ? 'Analysis Complete' : 'Analyzing...'}
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                rehypePlugins={[rehypeRaw, rehypeSanitize]}
+                components={commonMarkdownStyles}
+              >
+                {formatThinking(thinkingContent)}
+              </ReactMarkdown>
             </div>
-            <ReactMarkdown
-              components={commonMarkdownStyles}
-              remarkPlugins={[remarkGfm]}
-              rehypePlugins={[rehypeRaw, rehypeSanitize]}
-            >
-              {formatThinking(thinking)}
-            </ReactMarkdown>
           </div>
         )}
+        
+        {/* Display main content */}
+        <ReactMarkdown
+          remarkPlugins={[remarkGfm]}
+          rehypePlugins={[rehypeRaw, rehypeSanitize]}
+          components={{
+            code({node, inline, className, children, ...props}: any) {
+              const match = /language-(\w+)/.exec(className || '');
+              return !inline && match ? (
+                <SyntaxHighlighter
+                  style={isDarkTheme ? vscDarkPlus : vs}
+                  language={match[1]}
+                  PreTag="div"
+                  customStyle={{margin: '1em 0'}}
+                >
+                  {String(children).replace(/\n$/, '')}
+                </SyntaxHighlighter>
+              ) : (
+                <code className={className} {...props}>
+                  {children}
+                </code>
+              );
+            }
+          }}
+        >
+          {mainContent}
+        </ReactMarkdown>
 
         <div style={{
-          padding: '0.5rem 0.75rem',
-          whiteSpace: 'pre-line',
-          wordBreak: 'break-word',
-          lineHeight: 1.6,
-          fontFamily: message.role === 'assistant' ? 'Inter, sans-serif' : 'inherit',
-          marginTop: hasThinking ? '0.5rem' : '0',
-        }} className="markdown-wrapper">
-          <ReactMarkdown
-            components={commonMarkdownStyles}
-            remarkPlugins={[remarkGfm]}
-            rehypePlugins={[rehypeRaw, rehypeSanitize]}
-          >
-            {formatContent(response)}
-          </ReactMarkdown>
-
-          <div style={{
-            fontSize: '11px',
-            color: isDarkTheme ? 'rgba(224, 224, 224, 0.4)' : 'rgba(64, 64, 64, 0.4)',
-            marginTop: '0.75rem',
-            paddingTop: '0.75rem',
-            borderTop: `1px solid ${isDarkTheme ? 'rgba(42, 42, 42, 0.2)' : 'rgba(224, 224, 224, 0.3)'}`,
-            display: 'flex',
-            justifyContent: 'flex-end',
-            alignItems: 'center',
-            gap: '12px',
-          }}>
-            <span>{formatTime(message.timestamp || Date.now())}</span>
-            
-            {message.role === 'assistant' && (
-              <button
-                onClick={handleCopy}
-                className="command-button"
-                style={{
-                  cursor: 'pointer',
-                  padding: '4px 8px',
-                  borderRadius: '4px',
-                  backgroundColor: 'transparent',
-                  border: 'none',
-                  color: copySuccess 
-                    ? (isDarkTheme ? '#81c784' : '#4caf50')
-                    : (isDarkTheme ? 'rgba(224, 224, 224, 0.5)' : 'rgba(64, 64, 64, 0.5)'),
-                  transition: 'all 0.2s ease',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  fontSize: '11px',
-                  opacity: 0.8,
-                }}
-                title="Copy response"
-              >
-                {copySuccess ? (
-                  <>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="20 6 9 17 4 12"></polyline>
-                    </svg>
-                    <span style={{ fontSize: '11px', letterSpacing: '0.5px' }}>Copied</span>
-                  </>
-                ) : (
+          fontSize: '11px',
+          color: isDarkTheme ? 'rgba(224, 224, 224, 0.4)' : 'rgba(64, 64, 64, 0.4)',
+          marginTop: '0.75rem',
+          paddingTop: '0.75rem',
+          borderTop: `1px solid ${isDarkTheme ? 'rgba(42, 42, 42, 0.2)' : 'rgba(224, 224, 224, 0.3)'}`,
+          display: 'flex',
+          justifyContent: 'flex-end',
+          alignItems: 'center',
+          gap: '12px',
+        }}>
+          <span>{formatTime(message.timestamp || Date.now())}</span>
+          
+          {message.role === 'assistant' && (
+            <button
+              onClick={handleCopy}
+              className="command-button"
+              style={{
+                cursor: 'pointer',
+                padding: '4px 8px',
+                borderRadius: '4px',
+                backgroundColor: 'transparent',
+                border: 'none',
+                color: copySuccess 
+                  ? (isDarkTheme ? '#81c784' : '#4caf50')
+                  : (isDarkTheme ? 'rgba(224, 224, 224, 0.5)' : 'rgba(64, 64, 64, 0.5)'),
+                transition: 'all 0.2s ease',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                fontSize: '11px',
+                opacity: 0.8,
+              }}
+              title="Copy response"
+            >
+              {copySuccess ? (
+                <>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    <polyline points="20 6 9 17 4 12"></polyline>
                   </svg>
-                )}
-              </button>
-            )}
-          </div>
+                  <span style={{ fontSize: '11px', letterSpacing: '0.5px' }}>Copied</span>
+                </>
+              ) : (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg>
+              )}
+            </button>
+          )}
         </div>
       </div>
     </>

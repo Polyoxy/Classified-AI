@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useAppContext } from '@/context/AppContext';
 import { Conversation } from '@/types';
 import { auth } from '@/lib/firebase';
 import { signOut } from 'firebase/auth';
 import { update, ref } from 'firebase/database';
 import { rtdb } from '@/lib/firebase';
+import { v4 as uuidv4 } from 'uuid';
 
 const Sidebar: React.FC = () => {
   const { 
@@ -14,12 +15,14 @@ const Sidebar: React.FC = () => {
     currentConversation, 
     setCurrentConversation,
     createConversation,
+    deleteConversation,
     setUser,
     user,
-    deleteConversation,
     addMessage,
     settings,
-    setIsSidebarOpen
+    setIsSidebarOpen,
+    resetConversations,
+    signOut,
   } = useAppContext();
 
   const [filter, setFilter] = useState<'all' | 'starred'>('all');
@@ -616,12 +619,10 @@ const Sidebar: React.FC = () => {
           )}
         </div>
 
-        {/* User Info and Logout */}
+        {/* Footer Section */}
         <div style={{
-          borderTop: '1px solid var(--border-color)',
-          padding: '16px 20px',
-          backgroundColor: 'var(--bg-color)',
-          background: settings?.theme === 'dark' ? 'linear-gradient(180deg, rgba(25, 25, 25, 0.8) 0%, rgba(25, 25, 25, 1) 100%)' : 'linear-gradient(180deg, rgba(245, 245, 245, 0.8) 0%, rgba(245, 245, 245, 1) 100%)',
+          padding: '20px',
+          backgroundColor: 'var(--bg-darker)',
           boxShadow: settings?.theme === 'dark' ? '0 -2px 8px rgba(0, 0, 0, 0.1)' : '0 -2px 8px rgba(0, 0, 0, 0.03)',
         }}>
           <div style={{
@@ -678,6 +679,56 @@ const Sidebar: React.FC = () => {
               </div>
             </div>
           </div>
+          
+          {/* Reset Conversations Button */}
+          <button
+            onClick={() => {
+              if (confirm('Are you sure you want to delete all conversations? This action cannot be undone.')) {
+                resetConversations();
+                // Create a new conversation immediately after reset
+                createConversation();
+              }
+            }}
+            style={{
+              width: '100%',
+              padding: '10px',
+              backgroundColor: settings?.theme === 'dark' ? 'rgba(180, 30, 30, 0.15)' : 'rgba(220, 53, 69, 0.1)',
+              color: settings?.theme === 'dark' ? '#ff6b6b' : '#dc3545',
+              border: `1px solid ${settings?.theme === 'dark' ? 'rgba(180, 30, 30, 0.3)' : 'rgba(220, 53, 69, 0.3)'}`,
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: 500,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              transition: 'all 0.2s ease',
+              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+              fontFamily: 'Inter, sans-serif',
+              letterSpacing: '0.2px',
+              marginBottom: '12px',
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.backgroundColor = settings?.theme === 'dark' ? 'rgba(180, 30, 30, 0.25)' : 'rgba(220, 53, 69, 0.2)';
+              e.currentTarget.style.borderColor = settings?.theme === 'dark' ? 'rgba(180, 30, 30, 0.5)' : 'rgba(220, 53, 69, 0.5)';
+              e.currentTarget.style.boxShadow = '0 2px 5px rgba(0, 0, 0, 0.15)';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.backgroundColor = settings?.theme === 'dark' ? 'rgba(180, 30, 30, 0.15)' : 'rgba(220, 53, 69, 0.1)';
+              e.currentTarget.style.borderColor = settings?.theme === 'dark' ? 'rgba(180, 30, 30, 0.3)' : 'rgba(220, 53, 69, 0.3)';
+              e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
+            }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="3 6 5 6 21 6"></polyline>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              <line x1="10" y1="11" x2="10" y2="17"></line>
+              <line x1="14" y1="11" x2="14" y2="17"></line>
+            </svg>
+            Reset All Conversations
+          </button>
+          
           <button
             onClick={handleLogout}
             style={{

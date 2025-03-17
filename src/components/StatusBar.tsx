@@ -25,6 +25,7 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const changeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const initialRenderRef = useRef(true);
+  const [windowWidth, setWindowWidth] = useState(1024); // Default to desktop
   
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -65,6 +66,26 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
       setSelectedModel(settings.providers[settings.activeProvider].defaultModel);
     }
   }, [settings]);
+
+  // Add window resize listener
+  useEffect(() => {
+    // Set initial width
+    if (typeof window !== 'undefined') {
+      setWindowWidth(window.innerWidth);
+      
+      // Add resize listener
+      const handleResize = () => {
+        setWindowWidth(window.innerWidth);
+      };
+      
+      window.addEventListener('resize', handleResize);
+      
+      // Clean up
+      return () => {
+        window.removeEventListener('resize', handleResize);
+      };
+    }
+  }, []);
 
   const handleModelChange = (model: string) => {
     if (model === selectedModel) return;
@@ -298,25 +319,6 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
           boxShadow: `0 -1px 4px rgba(0, 0, 0, ${settings?.theme === 'dark' ? '0.2' : '0.1'})`,
         }}
       >
-        <style>
-          {`
-            @media (max-width: 767px) {
-              .token-display, .cost-display {
-                display: none !important;
-              }
-              .status-bar {
-                padding: 0 !important;
-              }
-            }
-            
-            @media (min-width: 768px) {
-              .token-display, .cost-display {
-                display: inline !important;
-              }
-            }
-          `}
-        </style>
-        
         <div style={{ display: 'flex', alignItems: 'center', padding: '0' }}>
           <div 
             className="model-selector" 
@@ -428,7 +430,7 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
             }}></div>
             <span style={{ 
               fontFamily: 'Inter, sans-serif',
-              fontSize: '12px',
+              fontSize: '12px', 
               letterSpacing: '0.2px',
               opacity: 0.9,
             }}>
@@ -436,30 +438,30 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
                connectionStatus === 'disconnected' ? 'Disconnected' : 
                connectionStatus === 'error' ? 'Error' : 'Unknown'}
             </span>
-            
-            {tokenUsage.totalTokens > 0 && (
-              <>
-                <span className="token-display" style={{ 
-                  marginLeft: '8px',
-                  fontFamily: 'Inter, sans-serif',
-                  fontSize: '12px',
-                  letterSpacing: '0.2px',
-                  opacity: 0.8,
-                }}>
-                  Tokens: {formatNumber(tokenUsage.totalTokens)}
-                </span>
-                <span className="cost-display" style={{ 
-                  marginLeft: '8px',
-                  fontFamily: 'Inter, sans-serif',
-                  fontSize: '12px',
-                  letterSpacing: '0.2px',
-                  opacity: 0.8,
-                }}>
-                  Cost: {formatCost(tokenUsage.estimatedCost)}
-                </span>
-              </>
-            )}
           </div>
+          
+          {tokenUsage.totalTokens > 0 && (
+            <>
+              <span className="token-display" style={{ 
+                marginLeft: '8px',
+                fontFamily: 'Inter, sans-serif',
+                fontSize: '12px',
+                letterSpacing: '0.2px',
+                opacity: 0.8,
+              }}>
+                Tokens: {formatNumber(tokenUsage.totalTokens)}
+              </span>
+              <span className="cost-display" style={{ 
+                marginLeft: '8px',
+                fontFamily: 'Inter, sans-serif',
+                fontSize: '12px',
+                letterSpacing: '0.2px',
+                opacity: 0.8,
+              }}>
+                Cost: {formatCost(tokenUsage.estimatedCost)}
+              </span>
+            </>
+          )}
         </div>
         
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '0' }}>

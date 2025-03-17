@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useMemo } from 'react';
 import { useAppContext } from '@/context/AppContext';
 import MessageItem from './MessageItem';
 import { Message } from '@/types';
@@ -104,6 +104,75 @@ const ChatContainer: React.FC = () => {
     }
   }, [currentConversation, conversations]);
 
+  useEffect(() => {
+    if (currentConversation && (!messages.length || currentConversation.id !== previousConversationId.current)) {
+      previousConversationId.current = currentConversation.id;
+      setMessages(currentConversation.messages || []);
+    }
+  }, [currentConversation, messages.length]);
+
+  // Filter out starter messages or header text when displaying
+  const displayMessages = useMemo(() => {
+    if (!messages || !messages.length) return [];
+    
+    return messages.filter(msg => {
+      // Filter out null or empty messages
+      if (!msg || !msg.content) {
+        return false;
+      }
+      
+      // Filter out system messages if settings indicate
+      if (msg.role === 'system' && !settings?.showSystemMessages) {
+        return false;
+      }
+      
+      // Filter out assistant messages that contain ONLY header templates
+      if (msg.role === 'assistant') {
+        const content = msg.content;
+        
+        // If content is empty or just placeholder text, filter it out
+        if (content.trim() === '' || content === '...') {
+          return false;
+        }
+        
+        // Extract content after header tags if they exist
+        let cleanedContent = content;
+        if (content.includes('<|start_header_id|>') && content.includes('<|end_header_id|>')) {
+          const endHeaderIndex = content.indexOf('<|end_header_id|>') + '<|end_header_id|>'.length;
+          cleanedContent = content.substring(endHeaderIndex).trim();
+          
+          // If nothing is left after removing headers, filter it out
+          if (cleanedContent === '') {
+            return false;
+          }
+          
+          // Update the message content to remove headers
+          msg.content = cleanedContent;
+        }
+        
+        // Special case for common header templates with nothing else
+        const commonHeaders = [
+          '<|im_start|>',
+          '<|im_end|>',
+          'I am an AI assistant',
+          'I am Claude',
+          'To get the most out of our conversation'
+        ];
+        
+        // If content only consists of these common headers without substantial text, filter it out
+        const hasOnlyHeaders = commonHeaders.some(header => 
+          content.includes(header) && content.length < header.length + 20
+        );
+        
+        if (hasOnlyHeaders) {
+          return false;
+        }
+      }
+      
+      return true;
+    });
+  }, [messages, settings?.showSystemMessages]);
+
   // Scroll to bottom when messages change
   const scrollToBottom = (smooth = true) => {
     if (!containerRef.current) return;
@@ -116,13 +185,23 @@ const ChatContainer: React.FC = () => {
     containerRef.current.scrollIntoView(scrollOptions);
   };
 
+  // Add more aggressive scrolling when messages change or when processing state changes
   useEffect(() => {
     scrollToBottom(false);
     const timer = setTimeout(() => {
       scrollToBottom(true);
     }, 100);
-    return () => clearTimeout(timer);
-  }, [messages]);
+    
+    // Add another delayed scroll to handle late rendering
+    const secondTimer = setTimeout(() => {
+      scrollToBottom(true);
+    }, 500);
+    
+    return () => {
+      clearTimeout(timer);
+      clearTimeout(secondTimer);
+    };
+  }, [messages, isProcessing]);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -360,7 +439,7 @@ const ChatContainer: React.FC = () => {
           }}
           ref={containerRef}
         >
-          {messages.filter(msg => settings.showSystemMessages || msg.role !== 'system').map((message, index) => (
+          {displayMessages.map((message, index) => (
             <MessageItem 
               key={message.id || index} 
               message={message} 

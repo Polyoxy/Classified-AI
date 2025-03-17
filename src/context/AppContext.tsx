@@ -66,31 +66,10 @@ const defaultSettings: AppSettings = {
   theme: 'dark',
   activeProvider: 'ollama',
   providers: {
-    openai: {
-      apiKey: '',
-      organization: '',
-      baseUrl: 'https://api.openai.com/v1',
-      defaultModel: 'gpt-3.5-turbo',
-      models: ['gpt-3.5-turbo', 'gpt-4', 'gpt-4-turbo-preview']
-    },
-    anthropic: {
-      apiKey: '',
-      defaultModel: 'claude-instant-1',
-      models: ['claude-instant-1', 'claude-2']
-    },
     ollama: {
       baseUrl: 'http://localhost:11434',
-      defaultModel: 'llama3.2:1b',
-      models: [
-        'llama3.2:1b',
-        'deepseek-r1:7b',
-        'llama2:7b', 
-        'codellama:7b', 
-        'mistral:7b', 
-        'mixtral:8x7b',
-        'vicuna:7b',
-        'llama3:8b'
-      ]
+      defaultModel: 'deepseek-r1:7b',
+      models: ['deepseek-r1:7b']
     }
   },
   fontSize: 'medium',
@@ -148,7 +127,7 @@ interface AppContextType {
   conversations: Conversation[];
   currentConversation: Conversation | null;
   setCurrentConversation: (conversation: Conversation) => void;
-  addMessage: (content: string, role: 'user' | 'assistant' | 'system') => void;
+  addMessage: (content: string | null, role: 'user' | 'assistant' | 'system') => void;
   createConversation: () => Conversation;
   deleteConversation: (id: string) => void;
   tokenUsage: TokenUsage;
@@ -299,118 +278,109 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   }, [settings.theme]);
 
-  // Helper function to check if a user is a guest/offline user
-  const isGuestOrOfflineUser = (userId?: string): boolean => {
-    if (!userId) return true;
-    return userId.startsWith('guest-') || 
-           userId.startsWith('offline-') ||
-           userId === 'electron-user';
+  // Helper function to check if user is guest/offline
+  const isGuestOrOfflineUser = (userId: string): boolean => {
+    // A user is a guest or offline user if:
+    // 1. userId is empty or null
+    // 2. userId starts with 'offline-'
+    // 3. userId is 'guest-user' or 'electron-user'
+    // 4. user.isAnonymous is true (added in the logic below)
+    
+    return !userId || 
+      userId === '' ||
+      userId.startsWith('offline-') || 
+      userId === 'guest-user' || 
+      userId === 'electron-user';
+  };
+  
+  // Updated version of the check that includes all properties
+  const isUserAuthenticated = (user: User | null): boolean => {
+    if (!user) {
+      console.log('User is null - not authenticated');
+      return false;
+    }
+    
+    // Log detailed user info for debugging
+    console.log('Checking user authentication:', {
+      uid: user.uid,
+      isAnonymous: user.isAnonymous,
+      isGuest: user.uid === 'guest-user',
+      isElectron: user.uid === 'electron-user',
+      email: user.email,
+      emailVerified: user.emailVerified
+    });
+    
+    // A user is authenticated if:
+    // 1. They have a valid uid
+    // 2. They are not anonymous
+    // 3. They don't have a special guest/offline uid
+    
+    const isAuth = (
+      !!user.uid && 
+      !user.isAnonymous && 
+      user.uid !== 'guest-user' && 
+      user.uid !== 'electron-user' && 
+      !user.uid.startsWith('offline-')
+    );
+    
+    console.log('User authentication result:', isAuth);
+    return isAuth;
   };
 
-  // Load conversations effect - optimized for Firebase free tier
-  useEffect(() => {
-    const loadConversations = async () => {
-      // Skip if we're still loading or don't have a user
-      if (isLoading || !user) return;
-
-      try {
-        if (user) {
-          console.log('Loading conversations for user:', user.uid);
-          
-          // If this is a guest user, don't use Firebase to avoid permission errors
-          if (isGuestOrOfflineUser(user.uid)) {
-            console.log('Guest user detected, using localStorage instead of Firebase');
-            loadFromLocalStorage();
-            return;
-          }
-          
-          // If we have a regular user, try to load conversations from Firebase with pagination
-          const cacheKey = `conversations_${user.uid}`;
-          
-          // Check cache first to reduce database reads
-          const cachedConversations = dbCache.get(cacheKey);
-          if (cachedConversations && cachedConversations.length > 0) {
-            console.log('Using cached conversations:', cachedConversations.length);
-            setConversations(cachedConversations);
-            
-            // Set the most recent conversation as current if there's none currently set
-            if (!currentConversation && cachedConversations.length > 0) {
-              setCurrentConversationState(cachedConversations[0]);
-            }
-            return;
-          }
-          
-          try {
-            // Load conversations with pagination (limit to last 20 for free tier efficiency)
-            console.log('Fetching conversations from Firebase');
-            const conversationsRef = query(
-              ref(rtdb, `users/${user.uid}/conversations`),
-              orderByChild('updatedAt'),
-              limitToLast(30) // Increased limit to get more conversations
-            );
-            
-            // Set up a one-time listener to minimize bandwidth usage
-            const snapshot = await get(conversationsRef);
-            
-            if (snapshot.exists()) {
-              // Convert the object to an array and sort by updatedAt
-              const conversationsData = snapshot.val();
-              // Make sure we have valid IDs in our conversations
-              const conversationsArray = Object.entries(conversationsData).map(([id, convData]) => {
-                const conv = convData as Conversation;
-                // Ensure ID is included in the conversation object
-                if (!conv.id || conv.id !== id) {
-                  conv.id = id;
-                }
-                return conv;
-              });
-              
-              const sortedConversations = conversationsArray.sort((a, b) => b.updatedAt - a.updatedAt);
-              console.log('Loaded conversations from Firebase:', sortedConversations.length);
-              
-              // Update state
-              setConversations(sortedConversations);
-              
-              // Update cache to reduce future reads
-              dbCache.set(cacheKey, sortedConversations, 60000); // Cache for 1 minute
-              
-              // Set the most recent conversation as current if there's none currently set
-              if (!currentConversation && sortedConversations.length > 0) {
-                setCurrentConversationState(sortedConversations[0]);
-                
-                // Pre-cache this conversation to avoid loading delay
-                const fullConvKey = `conversation_${user.uid}_${sortedConversations[0].id}`;
-                dbCache.set(fullConvKey, sortedConversations[0], 300000); // Cache for 5 minutes
-              }
-            } else {
-              console.log('No conversations found, creating new one');
-              // No conversations found, create a new one
-              // Use createConversation which handles welcome messages properly and returns the new conversation
-              const newConv = createConversation();
-              
-              // Update cache
-              dbCache.set(cacheKey, [newConv], 60000);
-            }
-          } catch (error) {
-            console.error('Error loading conversations from Firebase:', error);
-            // Fall back to localStorage for any Firebase errors
-            loadFromLocalStorage();
-          }
-        } else {
-          // No user, load from localStorage
-          loadFromLocalStorage();
-        }
-      } catch (error) {
-        console.error('Error loading conversations:', error);
-        // Fall back to localStorage
-        loadFromLocalStorage();
-      }
-    };
-
-    if (!isLoading) {
-      loadConversations();
+  // Load conversations from Firebase
+  const loadFromFirebase = async () => {
+    if (!user || !isUserAuthenticated(user)) {
+      console.log('Cannot load from Firebase - user is not authenticated');
+      return;
     }
-  }, [isLoading, settings, user]); // Removed currentConversation from dependencies
+    
+    // Log user details for debugging
+    console.log('Loading conversations from Firebase for user:', user.uid, 'isAnonymous:', user.isAnonymous);
+    
+    try {
+      // Clear any old cache entries
+      dbCache.clear();
+      
+      // Get conversations reference
+      const conversationsRef = ref(rtdb, `users/${user.uid}/conversations`);
+      const conversationsSnapshot = await get(conversationsRef);
+      
+      if (conversationsSnapshot.exists()) {
+        const conversationsData = conversationsSnapshot.val();
+        const conversationsArray: Conversation[] = Object.values(conversationsData);
+        
+        // Sort by updatedAt
+        conversationsArray.sort((a, b) => b.updatedAt - a.updatedAt);
+        
+        // Update state
+        setConversations(conversationsArray);
+        
+        // Load the last active conversation if none is currently selected
+        if (!currentConversation || conversationsArray.length > 0) {
+          const savedConversationId = localStorage.getItem('currentConversationId');
+          
+          // Find saved conversation or use most recent
+          const conversationToLoad = savedConversationId 
+            ? conversationsArray.find(c => c.id === savedConversationId) 
+            : conversationsArray[0];
+            
+          if (conversationToLoad) {
+            setCurrentConversationState(conversationToLoad);
+          }
+        }
+      } else {
+        // No conversations yet - create a new one
+        console.log('No conversations found in Firebase, creating new conversation');
+        createConversation();
+      }
+    } catch (error) {
+      console.error('Error loading conversations from Firebase:', error);
+      // Fall back to localStorage
+      loadFromLocalStorage();
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const loadFromLocalStorage = () => {
     try {
@@ -461,79 +431,68 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
-  // Save conversations effect - optimized for Firebase free tier
-  useEffect(() => {
-    const saveConversations = async () => {
-      if (isLoading || conversations.length === 0) return;
+  // Save conversations to database
+  const saveConversations = async () => {
+    if (conversations.length === 0) return;
+    
+    try {
+      // Clean up conversations before saving
+      // Remove any temporary messages or error states
+      const cleanedConversations = conversations.map(conv => ({
+        ...conv,
+        messages: conv.messages.filter(msg => 
+          !(msg.role === 'system' && msg.content.includes('Response generation was cancelled'))
+        )
+      }));
       
-      try {
-        // Ensure we're not saving any temporary or error messages
-        const cleanedConversations = conversations.map(conv => ({
-          ...conv,
-          messages: conv.messages.filter(msg => 
-            !(msg.role === 'system' && msg.content.includes('Response generation was cancelled'))
-          )
-        }));
+      // Always save to localStorage first as a backup
+      localStorage.setItem('conversations', JSON.stringify(cleanedConversations));
+      if (currentConversation) {
+        localStorage.setItem('currentConversationId', currentConversation.id);
+      }
+      
+      if (user) {
+        // For guest users, we're done - we've already saved to localStorage
+        if (!isUserAuthenticated(user)) {
+          console.log('Guest user detected, saving to localStorage instead of Firebase');
+          return;
+        }
         
-        if (user) {
-          // Check if this is a guest user - use localStorage for guest users
-          if (isGuestOrOfflineUser(user.uid)) {
-            console.log('Guest user detected, saving to localStorage instead of Firebase');
-            localStorage.setItem('conversations', JSON.stringify(cleanedConversations));
-            if (currentConversation) {
-              localStorage.setItem('currentConversationId', currentConversation.id);
+        // For regular users, also save to Firebase
+        // Save to Firebase if user is authenticated - batch update
+        try {
+          // Only update conversations that have changed to reduce writes
+          const updates: Record<string, any> = {};
+          
+          for (const conv of cleanedConversations) {
+            // Check if we need to update this conversation
+            const cacheKey = `conversation_${user.uid}_${conv.id}`;
+            const cachedConv = dbCache.get(cacheKey);
+            
+            if (!cachedConv || cachedConv.updatedAt !== conv.updatedAt) {
+              // Update if not in cache or has changed
+              updates[`users/${user.uid}/conversations/${conv.id}`] = conv;
+              
+              // Update cache
+              dbCache.set(cacheKey, conv, 60000); // Cache for 1 minute
             }
-            return;
           }
           
-          // Save to Firebase if user is authenticated - batch update
-          try {
-            // Only update conversations that have changed to reduce writes
-            const updates: Record<string, any> = {};
-            
-            for (const conv of cleanedConversations) {
-              // Check if we need to update this conversation
-              const cacheKey = `conversation_${user.uid}_${conv.id}`;
-              const cachedConv = dbCache.get(cacheKey);
-              
-              if (!cachedConv || cachedConv.updatedAt !== conv.updatedAt) {
-                // Update if not in cache or has changed
-                updates[`users/${user.uid}/conversations/${conv.id}`] = conv;
-                
-                // Update cache
-                dbCache.set(cacheKey, conv, 60000); // Cache for 1 minute
-              }
-            }
-            
-            // Only send updates if there are changes to save
-            if (Object.keys(updates).length > 0) {
-              await update(ref(rtdb), updates);
-            }
-          } catch (dbError) {
-            console.error('Error saving conversations to database:', dbError);
-            // Fall back to localStorage if database save fails
-            localStorage.setItem('conversations', JSON.stringify(cleanedConversations));
+          // Only update if we have changes
+          if (Object.keys(updates).length > 0) {
+            await update(ref(rtdb), updates);
           }
-        } else {
-          // Save to localStorage if no user
-          localStorage.setItem('conversations', JSON.stringify(cleanedConversations));
-        }
-        
-        // Save current conversation ID if it exists
-        if (currentConversation) {
-          localStorage.setItem('currentConversationId', currentConversation.id);
-        }
-      } catch (error) {
-        console.error('Error saving conversations:', error);
-        // Try to save to localStorage as a last resort
-        try {
-          localStorage.setItem('conversations', JSON.stringify(conversations));
-        } catch (e) {
-          console.error('Failed to save to localStorage as fallback:', e);
+        } catch (dbError) {
+          console.error('Error saving conversations to database:', dbError);
         }
       }
-    };
-
+    } catch (error) {
+      console.error('Error preparing conversations for save:', error);
+    }
+  };
+  
+  // Save conversations effect - optimized for Firebase free tier
+  useEffect(() => {
     // Debounce saving to reduce database writes (free tier optimization)
     const timeoutId = setTimeout(() => {
       if (!isLoading) {
@@ -680,119 +639,72 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   // Add a message to the current conversation
-  const addMessage = (content: string, role: 'user' | 'assistant' | 'system') => {
-    if (!currentConversation) return;
-
-    // Ensure role is valid
-    const validRole = (role === 'user' || role === 'assistant' || role === 'system') 
-      ? role as MessageRole 
-      : 'user' as MessageRole;
-
+  const addMessage = (content: string | null, role: MessageRole) => {
+    // Ensure content is a string and handle null/undefined
+    const safeContent = typeof content === 'string' ? content : JSON.stringify(content);
+    
+    console.log(`Adding ${role} message:`, 
+      safeContent ? (safeContent.length > 50 ? safeContent.substring(0, 50) + '...' : safeContent) : '(empty message)'
+    );
+    
+    if (!currentConversation) {
+      console.log('No current conversation, creating new one');
+      // Create a new conversation if none exists
+      const newConv = createConversation();
+      
+      // Add the message to this new conversation immediately so it doesn't get lost
+      const newMessage: Message = {
+        id: uuidv4(),
+        role,
+        content: safeContent || '',
+        timestamp: Date.now(),
+      };
+      
+      newConv.messages.push(newMessage);
+      newConv.updatedAt = Date.now();
+      
+      // Update state
+      setCurrentConversationState(newConv);
+      setConversations([newConv]);
+      
+      // Save immediately
+      localStorage.setItem('conversations', JSON.stringify([newConv]));
+      localStorage.setItem('currentConversationId', newConv.id);
+      
+      return;
+    }
+    
+    // Create a new message object
     const newMessage: Message = {
       id: uuidv4(),
-      role: validRole,
-      content,
+      role,
+      content: safeContent || '',
       timestamp: Date.now(),
     };
-
-    // Update conversation title if this is the first user message
-    const isFirstUserMessage = currentConversation.messages.filter(m => m.role === 'user').length === 0 && role === 'user';
     
-    // Generate a more descriptive title from the first user message
-    let newTitle = currentConversation.title;
-    if (isFirstUserMessage) {
-      // Generate title based on content type
-      if (content.toLowerCase().startsWith('create') || content.toLowerCase().startsWith('generate') || content.toLowerCase().startsWith('make')) {
-        // For creation requests
-        const matches = content.match(/create|generate|make|build|develop|implement|write/i);
-        if (matches && matches.index !== undefined) {
-          const actionWord = matches[0];
-          const restOfSentence = content.substring(matches.index + actionWord.length).trim();
-          // Extract the main subject (up to first punctuation or 5 words max)
-          const mainSubject = restOfSentence.split(/[,.!?]/)[0].split(' ').slice(0, 5).join(' ');
-          newTitle = `${actionWord.charAt(0).toUpperCase() + actionWord.slice(1)} ${mainSubject}`;
-        }
-      } else if (content.toLowerCase().startsWith('how')) {
-        // For "how to" questions
-        const howToMatch = content.match(/how (to|do|can|would|should|could)/i);
-        if (howToMatch && howToMatch.index !== undefined) {
-          const restOfSentence = content.substring(howToMatch.index).trim();
-          const mainQuestion = restOfSentence.split(/[,.!?]/)[0].split(' ').slice(0, 6).join(' ');
-          newTitle = mainQuestion.charAt(0).toUpperCase() + mainQuestion.slice(1);
-        }
-      } else if (content.toLowerCase().startsWith('what') || content.toLowerCase().startsWith('why') || 
-                content.toLowerCase().startsWith('when') || content.toLowerCase().startsWith('where') ||
-                content.toLowerCase().startsWith('who')) {
-        // For other question types
-        const questionMatch = content.match(/what|why|when|where|who/i);
-        if (questionMatch && questionMatch[0]) {
-          const questionType = questionMatch[0];
-          const restOfSentence = content.substring(questionType.length).trim();
-          const mainQuestion = `${questionType} ${restOfSentence.split(/[,.!?]/)[0].split(' ').slice(0, 5).join(' ')}`;
-          newTitle = mainQuestion.charAt(0).toUpperCase() + mainQuestion.slice(1);
-        }
-      } else {
-        // For other messages, take first 6-8 words
-        const words = content.split(' ');
-        newTitle = words.slice(0, Math.min(6, words.length)).join(' ');
-        if (newTitle.length > 40) {
-          newTitle = newTitle.substring(0, 40) + '...';
-        }
-      }
-    }
-
-    // Create updated conversation with the new message
-    const updatedConversation: Conversation = {
+    // Create a new conversation with the message added
+    const updatedConversation = {
       ...currentConversation,
-      title: newTitle,
       messages: [...currentConversation.messages, newMessage],
       updatedAt: Date.now(),
     };
-
-    // Update state immediately with the new message
+    
+    // Update current conversation
     setCurrentConversationState(updatedConversation);
     
-    // Update conversations list and maintain order by updatedAt
-    setConversations(prev => {
-      const withoutCurrent = prev.filter(conv => conv.id !== currentConversation.id);
-      return [updatedConversation, ...withoutCurrent];
-    });
-
-    // Make sure there are no undefined roles before saving
-    const sanitizedConversation = {
-      ...updatedConversation,
-      messages: updatedConversation.messages.map(msg => ({
-        ...msg,
-        role: msg.role || 'user' as MessageRole  // Default to 'user' if role is undefined
-      }))
-    };
-
-    // Always save to localStorage for redundancy
-    saveToLocalStorage(sanitizedConversation);
-
-    // If user is a regular authenticated user, also save to Firebase
-    if (user && user.uid && !isGuestOrOfflineUser(user.uid)) {
-      
-      try {
-        // Update in database for authenticated users
-        const convPath = `users/${user.uid}/conversations/${sanitizedConversation.id}`;
-        update(ref(rtdb, convPath), sanitizedConversation)
-          .then(() => {
-            console.log('Message saved to database');
-            // Update cache
-            dbCache.set(`conversation_${user.uid}_${sanitizedConversation.id}`, sanitizedConversation, 60000);
-            // Invalidate conversations list cache to ensure it's refreshed next time
-            dbCache.invalidate(`conversations_${user.uid}`);
-          })
-          .catch(error => {
-            console.error('Error saving message to database:', error);
-          });
-      } catch (error) {
-        console.error('Error saving to Firebase:', error);
-      }
-    } else {
-      console.log('User is not a regular authenticated user, using localStorage only');
-    }
+    // Update the conversations array
+    const updatedConversations = conversations.map(c => 
+      c.id === updatedConversation.id ? updatedConversation : c
+    );
+    
+    setConversations(updatedConversations);
+    
+    // Always save to localStorage immediately to prevent message loss
+    localStorage.setItem('conversations', JSON.stringify(updatedConversations));
+    localStorage.setItem('currentConversationId', updatedConversation.id);
+    
+    // For Firebase users, we'll save in a separate batched update via the saveConversations function
+    // which is triggered by the useEffect that watches conversations
   };
   
   // Helper function to save a conversation to localStorage
@@ -886,62 +798,56 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   // Set current conversation
   const setCurrentConversation = async (conversation: Conversation) => {
-    console.log('Setting current conversation:', conversation.id);
-    
-    // First update the state immediately for better UX
+    // Always set the conversation immediately to avoid UI lag
     setCurrentConversationState(conversation);
     
-    // Save current conversation ID to localStorage for persistence
-    localStorage.setItem('currentConversationId', conversation.id);
-    
-    // Check if we can use Firebase (authenticated regular user)
-    if (user && user.uid && !isGuestOrOfflineUser(user.uid)) {
-      
+    // Check if we can use Firebase for this user
+    if (user && isUserAuthenticated(user)) {
       try {
-        // Check cache first
+        // Create a cache key for this conversation
         const cacheKey = `conversation_${user.uid}_${conversation.id}`;
-        const cachedConv = dbCache.get(cacheKey);
         
+        // Try to get from cache first to avoid unnecessary database reads
+        const cachedConv = dbCache.get(cacheKey);
         if (cachedConv) {
-          // If we already have a cached version that's recent, use it
-          console.log('Using cached conversation data');
-          if (JSON.stringify(cachedConv) !== JSON.stringify(conversation)) {
-            setCurrentConversationState(cachedConv);
-          }
-        } else {
-          // Not in cache, fetch from Firebase
-          console.log('Fetching full conversation from Firebase');
-          const convRef = ref(rtdb, `users/${user.uid}/conversations/${conversation.id}`);
-          const snapshot = await get(convRef);
+          console.log('Using cached conversation:', conversation.id);
+          setCurrentConversationState(cachedConv);
+          return;
+        }
+        
+        // If not in cache, load from Firebase
+        console.log('Loading conversation from Firebase:', conversation.id);
+        const convRef = ref(rtdb, `users/${user.uid}/conversations/${conversation.id}`);
+        const snapshot = await get(convRef);
+        
+        if (snapshot.exists()) {
+          // Found in database
+          const fullConversation = snapshot.val() as Conversation;
           
-          if (snapshot.exists()) {
-            const fullConversation = snapshot.val() as Conversation;
-            
-            // Ensure the ID is set correctly
-            if (!fullConversation.id) {
-              fullConversation.id = conversation.id;
-            }
-            
-            // Set in state
-            setCurrentConversationState(fullConversation);
-            
-            // Update in conversations list if needed
-            setConversations(prev => 
-              prev.map(conv => 
-                conv.id === fullConversation.id ? fullConversation : conv
-              )
-            );
-            
-            // Update cache
-            dbCache.set(cacheKey, fullConversation, 60000);
-          } else {
-            // If not in database, save this conversation data to ensure it exists
-            console.log('Conversation not found in database, saving current data');
-            set(convRef, conversation).catch(error => {
-              console.error('Error saving conversation to database:', error);
-            });
-            dbCache.set(cacheKey, conversation, 60000);
+          // Ensure the ID is set correctly
+          if (!fullConversation.id) {
+            fullConversation.id = conversation.id;
           }
+          
+          // Set in state
+          setCurrentConversationState(fullConversation);
+          
+          // Update in conversations list if needed
+          setConversations(prev => 
+            prev.map(conv => 
+              conv.id === fullConversation.id ? fullConversation : conv
+            )
+          );
+          
+          // Update cache
+          dbCache.set(cacheKey, fullConversation, 60000);
+        } else {
+          // If not in database, save this conversation data to ensure it exists
+          console.log('Conversation not found in database, saving current data');
+          set(convRef, conversation).catch(error => {
+            console.error('Error saving conversation to database:', error);
+          });
+          dbCache.set(cacheKey, conversation, 60000);
         }
       } catch (error) {
         console.error('Error loading full conversation details:', error);
@@ -963,6 +869,40 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       }
     }
   };
+
+  // Load conversations effect - handles both Firebase and localStorage
+  useEffect(() => {
+    const loadConversations = async () => {
+      // Skip if we're still loading or don't have a user
+      if (isLoading || !user) return;
+
+      try {
+        if (user) {
+          console.log('Loading conversations for user:', user.uid);
+          
+          // Use our new isUserAuthenticated function to determine if we should use Firebase
+          if (isUserAuthenticated(user)) {
+            console.log('Authenticated user detected, loading from Firebase');
+            await loadFromFirebase();
+          } else {
+            console.log('Guest user detected, using localStorage instead of Firebase');
+            loadFromLocalStorage();
+          }
+        } else {
+          // No user, load from localStorage
+          loadFromLocalStorage();
+        }
+      } catch (error) {
+        console.error('Error in loadConversations:', error);
+        // Fall back to localStorage in case of any errors
+        loadFromLocalStorage();
+      }
+    };
+
+    if (!isLoading) {
+      loadConversations();
+    }
+  }, [isLoading, user]); // Removed currentConversation from dependencies to prevent loops
 
   const value = {
     user,
