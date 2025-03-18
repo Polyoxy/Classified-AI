@@ -13,12 +13,10 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
     connectionStatus, 
     tokenUsage, 
     currentConversation, 
-    isProcessing,
     settings,
     changeModel,
     user,
-    setUser,
-    conversations
+    setUser
   } = useAppContext();
   
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
@@ -26,6 +24,7 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const changeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const initialRenderRef = useRef(true);
+  const [windowWidth, setWindowWidth] = useState(1024); // Default to desktop
   
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -63,8 +62,35 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
     };
   }, []);
 
+  useEffect(() => {
+    // Initialize with the current model when the component mounts
+    if (settings?.providers?.[settings.activeProvider]?.defaultModel) {
+      setSelectedModel(settings.providers[settings.activeProvider].defaultModel);
+    }
+  }, [settings]);
+
+  // Add window resize listener
+  useEffect(() => {
+    // Set initial width
+    if (typeof window !== 'undefined') {
+      setWindowWidth(window.innerWidth);
+      
+      // Add resize listener
+      const handleResize = () => {
+        setWindowWidth(window.innerWidth);
+      };
+      
+      window.addEventListener('resize', handleResize);
+      
+      // Clean up
+      return () => {
+        window.removeEventListener('resize', handleResize);
+      };
+    }
+  }, []);
+
   const handleModelChange = (model: string) => {
-    if (model === selectedModel) return; // Skip if same model selected
+    if (model === selectedModel) return;
     
     setSelectedModel(model);
     
@@ -206,18 +232,46 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
   const getModelsForProvider = () => {
     if (!currentConversation) return [];
     
-    const provider = currentConversation.provider;
-    return settings.providers[provider]?.models || [];
+    const provider = currentConversation.provider || settings.activeProvider;
+    
+    // If no models are available from the conversation, get them from settings
+    const models = settings.providers[provider]?.models || [];
+    
+    // Make sure llama3.2:1b is included if not already in the list
+    if (provider === 'ollama' && !models.includes('llama3.2:1b')) {
+      return ['llama3.2:1b', ...models];
+    }
+    
+    return models;
   };
 
   // Make sure we always have a valid model selected to display
   const getCurrentModel = () => {
+    // Check if there are any models available
+    const models = getModelsForProvider();
+    if (models.length === 0) {
+      return 'No models available';
+    }
+    
+    // For Ollama provider, prioritize llama3.2:1b
+    if (settings?.activeProvider && settings.activeProvider === 'ollama') {
+      return 'llama3.2:1b';
+    }
+    
+    // If a model is explicitly selected, use that
     if (selectedModel) return selectedModel;
+    
+    // If a conversation exists with a model, use that
     if (currentConversation?.model) return currentConversation.model;
     
-    const models = getModelsForProvider();
+    // Default to the provider's default model
+    if (settings?.activeProvider === 'ollama') {
+      return settings.providers.ollama.defaultModel || 'llama3.2:1b';
+    }
+    
+    // Fallback to first available model
     if (models.length > 0) {
-      return models[0]; // Default to first model if nothing else is available
+      return models[0];
     }
     
     return 'No models available';
@@ -287,13 +341,13 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
             windowControls.reload();
           } catch (reloadError) {
             console.warn('Failed to reload window:', reloadError);
-            window.location.reload(); // Fallback
+            window.location.href = '/auth'; // Fallback
           }
         }, 500);
       } else {
         // For non-Electron, reload the page after a delay
         setTimeout(() => {
-          window.location.reload();
+          window.location.href = '/auth';
         }, 500);
       }
     } catch (error) {
@@ -301,257 +355,309 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
       // If all else fails, try forcing a hard logout
       localStorage.removeItem('offlineUser');
       setUser(null);
-      window.location.reload();
+      window.location.href = '/auth';
     }
   };
 
+  // Update customStatusBarStyles to ensure model selector displays properly
+  const customStatusBarStyles = `
+    .model-selector {
+      display: flex !important;
+      position: relative;
+    }
+    
+    .selected-model {
+      display: flex;
+      align-items: center;
+    }
+
+    .selected-model-text {
+      font-size: 14px;
+    }
+    
+    .model-dropdown {
+      position: absolute;
+      bottom: 100% !important;
+      left: 0;
+      width: 100%;
+      margin-bottom: 8px !important;
+      max-height: 200px;
+      z-index: 10000 !important;
+      box-shadow: 0 -4px 12px rgba(0, 0, 0, ${settings?.theme === 'dark' ? '0.4' : '0.2'}) !important;
+    }
+    
+    @media (max-width: 767px) {
+      .status-bar {
+        height: auto !important;
+        padding: 0.75rem !important;
+        flex-wrap: wrap;
+        justify-content: center !important;
+      }
+      
+      .model-selector {
+        margin-top: 0.5rem !important;
+        width: 100% !important;
+        max-width: 200px !important;
+      }
+      
+      .selected-model {
+        width: 100% !important;
+        justify-content: center !important;
+      }
+      
+      .token-display, .cost-display {
+        display: none !important;
+      }
+      
+      .status-buttons {
+        justify-content: center !important;
+        width: 100% !important;
+      }
+    }
+  `;
+
   return (
-    <div className="status-bar" style={{
-      height: '40px',
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      padding: '0 12px',
-      borderTop: '1px solid var(--border-color)',
-      backgroundColor: 'var(--input-bg)',
-      color: 'var(--text-color)',
-      fontSize: '0.75rem',
-      fontFamily: 'var(--font-mono)',
-      boxSizing: 'border-box',
-    }}>
-      <div style={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        gap: '0.75rem',
-        height: '100%'
-      }}>
-        {/* Model selector */}
-        <div style={{ 
-          position: 'relative', 
-          display: 'flex', 
+    <>
+      <style>{customStatusBarStyles}</style>
+      <div 
+        className="status-bar"
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
           alignItems: 'center',
-          height: '100%',
-          marginRight: '2px',
-        }} ref={dropdownRef}>
-          <span style={{ 
-            marginRight: '0.25rem',
-            display: 'flex',
-            alignItems: 'center',
-            height: '100%' 
-          }}>Model:</span>
-          <div style={{ 
-            position: 'relative', 
-            display: 'flex', 
-            alignItems: 'center',
-            height: '100%'
-          }}>
-            <select 
-              value={getCurrentModel()}
-              onChange={(e) => handleModelChange(e.target.value)}
-              className="form-select"
+          position: 'fixed',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          height: '40px',
+          backgroundColor: settings?.theme === 'dark' ? 'rgba(18, 18, 18, 0.9)' : 'rgba(245, 245, 245, 0.9)',
+          borderTop: `1px solid ${settings?.theme === 'dark' ? 'rgba(51, 51, 51, 0.8)' : 'rgba(221, 221, 221, 0.8)'}`,
+          color: settings?.theme === 'dark' ? '#b0b0b0' : '#505050',
+          padding: '0 10px',
+          fontSize: '12px',
+          fontFamily: 'var(--font-mono, "JetBrains Mono", monospace)',
+          backdropFilter: 'blur(10px)',
+          transition: 'all 0.3s ease',
+          zIndex: 70, // Higher than messages to ensure visibility
+          boxShadow: `0 -1px 4px rgba(0, 0, 0, ${settings?.theme === 'dark' ? '0.2' : '0.1'})`,
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', padding: '0' }}>
+          <div 
+            className="model-selector" 
+            ref={dropdownRef}
+            style={{ 
+              position: 'relative'
+            }}
+          >
+            <div
+              className="selected-model"
+              onClick={() => setIsModelDropdownOpen(!isModelDropdownOpen)}
               style={{
-                backgroundColor: 'var(--input-bg)',
-                border: '1px solid var(--border-color)',
-                color: 'var(--text-color)',
-                padding: '0 0.5rem',
-                paddingRight: '1.75rem',
-                fontSize: '0.75rem',
-                borderRadius: '0.25rem',
-                cursor: 'pointer',
-                fontFamily: 'var(--font-mono)',
-                fontWeight: 'bold',
-                appearance: 'none',
-                height: '26px',
-                display: 'inline-flex',
+                display: 'flex',
                 alignItems: 'center',
-                position: 'relative',
-                boxSizing: 'border-box',
-                verticalAlign: 'middle',
-                top: '0',
-                width: 'auto',
-                minWidth: '130px',
-                lineHeight: '26px',
-                textAlign: 'center',
+                padding: '0.4rem 0.5rem',
+                cursor: 'pointer',
+                fontFamily: 'Inter, sans-serif',
+                fontSize: '14px',
               }}
             >
-              {getModelsForProvider().map((model) => (
-                <option 
-                  key={model} 
-                  value={model}
-                  style={{
-                    color: 'var(--text-color)',
-                    fontWeight: 'normal',
-                  }}
-                >
-                  {model}
-                </option>
-              ))}
-            </select>
-            <div style={{ 
-              position: 'absolute', 
-              right: '0.25rem', 
-              pointerEvents: 'none',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              height: '100%',
-              top: '0',
-              bottom: '0',
-              margin: 'auto',
-              width: '12px',
-            }}>
-              <span style={{ fontSize: '8px', lineHeight: '1', height: '8px', display: 'block', marginBottom: '1px' }}>▲</span>
-              <span style={{ fontSize: '8px', lineHeight: '1', height: '8px', display: 'block', marginTop: '1px' }}>▼</span>
+              <span 
+                className="selected-model-text"
+                style={{ 
+                  marginRight: '6px',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {getCurrentModel()}
+              </span>
+              <svg 
+                width="12" 
+                height="12" 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="2" 
+                strokeLinecap="round" 
+                strokeLinejoin="round"
+                style={{ marginLeft: 'auto' }}
+              >
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
             </div>
+            
+            {isModelDropdownOpen && (
+              <div 
+                className="model-dropdown"
+                style={{
+                  position: 'absolute',
+                  bottom: '100%',
+                  left: '0',
+                  width: '100%',
+                  backgroundColor: settings?.theme === 'dark' ? 'rgba(26, 26, 26, 0.95)' : 'rgba(245, 245, 245, 0.95)',
+                  border: `1px solid ${settings?.theme === 'dark' ? 'rgba(60, 60, 60, 0.7)' : 'rgba(200, 200, 200, 0.7)'}`,
+                  borderRadius: '4px',
+                  marginBottom: '8px',
+                  zIndex: 10000,
+                  maxHeight: '200px',
+                  overflowY: 'auto',
+                  boxShadow: settings?.theme === 'dark' 
+                    ? '0 -4px 8px rgba(0,0,0,0.3)' 
+                    : '0 -4px 8px rgba(0,0,0,0.1)',
+                  fontFamily: 'Inter, sans-serif',
+                  backdropFilter: 'blur(6px)',
+                }}
+              >
+                {getModelsForProvider().map((model) => (
+                  <div 
+                    key={model}
+                    className="model-option"
+                    onClick={() => handleModelChange(model)}
+                    style={{
+                      padding: '0.5rem',
+                      cursor: 'pointer',
+                      backgroundColor: model === selectedModel 
+                        ? (settings?.theme === 'dark' ? '#333' : '#e0e0e0') 
+                        : 'transparent',
+                      transition: 'all 0.1s ease',
+                      fontSize: '13px',
+                      letterSpacing: '0.2px',
+                      fontWeight: model === selectedModel ? 'bold' : 'normal',
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.backgroundColor = settings?.theme === 'dark' ? '#333' : '#e0e0e0';
+                    }}
+                    onMouseOut={(e) => {
+                      if (model !== selectedModel) {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                      }
+                    }}
+                  >
+                    {model}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-        </div>
-        
-        {/* Connection status display */}
-        {connectionStatus === 'connected' && (
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '12px',
-            color: 'var(--text-color)',
-            fontFamily: 'var(--font-mono)',
-            fontWeight: 'bold',
-            padding: '2px 8px',
-            borderRadius: '4px',
-            backgroundColor: 'rgba(0, 0, 0, 0.1)',
-            border: '1px solid rgba(0, 0, 0, 0.3)',
-            height: '26px',
-            marginLeft: '10px',
-            boxSizing: 'border-box',
-            position: 'relative',
-            top: '0',
-          }}>
+          
+          <div className="connection-status" style={{ display: 'flex', alignItems: 'center', marginLeft: '8px' }}>
             <div style={{
               width: '8px',
               height: '8px',
               borderRadius: '50%',
-              backgroundColor: 'var(--text-color)',
-              marginRight: '6px',
+              backgroundColor: getStatusColor(),
+              marginRight: '4px',
+              opacity: 0.8,
             }}></div>
-            Connected
-          </div>
-        )}
-        
-        {/* Token usage */}
-        {tokenUsage && tokenUsage.totalTokens > 0 && (
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <span>
-              Tokens: {formatNumber(tokenUsage.totalTokens)}
-            </span>
-            <span>
-              Cost: {formatCost(tokenUsage.estimatedCost)}
+            <span style={{ 
+              fontFamily: 'Inter, sans-serif',
+              fontSize: '12px', 
+              letterSpacing: '0.2px',
+              opacity: 0.9,
+            }}>
+              {connectionStatus === 'connected' ? 'Connected' : 
+               connectionStatus === 'disconnected' ? 'Disconnected' : 
+               connectionStatus === 'error' ? 'Error' : 'Unknown'}
             </span>
           </div>
-        )}
+          
+          {tokenUsage.totalTokens > 0 && (
+            <>
+              <span className="token-display" style={{ 
+                marginLeft: '8px',
+                fontFamily: 'Inter, sans-serif',
+                fontSize: '12px',
+                letterSpacing: '0.2px',
+                opacity: 0.8,
+              }}>
+                Tokens: {formatNumber(tokenUsage.totalTokens)}
+              </span>
+              <span className="cost-display" style={{ 
+                marginLeft: '8px',
+                fontFamily: 'Inter, sans-serif',
+                fontSize: '12px',
+                letterSpacing: '0.2px',
+                opacity: 0.8,
+              }}>
+                Cost: {formatCost(tokenUsage.estimatedCost)}
+              </span>
+            </>
+          )}
+        </div>
+        
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '0' }}>
+          <button
+            onClick={() => {
+              const isElectron = typeof window !== 'undefined' && window.electron;
+              if (isElectron && window.electron) {
+                const windowControls = window.electron.windowControls as ElectronWindowControls;
+                windowControls.reload();
+              } else {
+                window.location.reload();
+              }
+            }}
+            style={{
+              backgroundColor: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '4px',
+              borderRadius: '4px',
+              color: settings?.theme === 'dark' ? 'rgba(180, 180, 180, 0.7)' : 'rgba(100, 100, 100, 0.7)',
+              opacity: 0.6,
+              transition: 'opacity 0.2s ease',
+              fontFamily: 'Inter, sans-serif',
+            }}
+            title="Reload"
+            onMouseOver={(e) => e.currentTarget.style.opacity = '0.9'}
+            onMouseOut={(e) => e.currentTarget.style.opacity = '0.6'}
+          >
+            <svg 
+              width="14" 
+              height="14" 
+              viewBox="0 0 24 24" 
+              fill="none" 
+              stroke="currentColor" 
+              strokeWidth="2" 
+              strokeLinecap="round" 
+              strokeLinejoin="round"
+            >
+              <path d="M23 4v6h-6"></path>
+              <path d="M1 20v-6h6"></path>
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"></path>
+              <path d="M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+            </svg>
+          </button>
+          
+          <button
+            onClick={onOpenSettings}
+            style={{
+              backgroundColor: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '4px',
+              borderRadius: '4px',
+              color: settings?.theme === 'dark' ? 'rgba(180, 180, 180, 0.7)' : 'rgba(100, 100, 100, 0.7)',
+              opacity: 0.6,
+              transition: 'opacity 0.2s ease',
+              fontFamily: 'Inter, sans-serif',
+            }}
+            title="Settings"
+            onMouseOver={(e) => e.currentTarget.style.opacity = '0.9'}
+            onMouseOut={(e) => e.currentTarget.style.opacity = '0.6'}
+          >
+            <SettingsIcon />
+          </button>
+        </div>
       </div>
-      
-      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-        {/* Active model info - REMOVED as requested */}
-        
-        <button
-          onClick={() => {
-            onOpenSettings();
-          }}
-          style={{
-            backgroundColor: 'transparent',
-            border: 'none',
-            color: 'var(--text-color)',
-            cursor: 'pointer',
-            padding: '0.25rem',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-          onMouseOver={(e) => {
-            e.currentTarget.style.color = 'var(--accent-color, #E34234)';
-          }}
-          onMouseOut={(e) => {
-            e.currentTarget.style.color = 'var(--text-color)';
-          }}
-          aria-label="Open settings"
-          id="settings-button"
-          title="Settings"
-        >
-          <SettingsIcon />
-        </button>
-        
-        <button
-          title="Save"
-          style={{
-            backgroundColor: 'transparent',
-            border: 'none',
-            color: 'var(--text-color)',
-            cursor: 'pointer',
-            padding: '0.25rem',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            transition: 'all 0.2s ease',
-          }}
-          onMouseOver={(e) => {
-            e.currentTarget.style.color = 'var(--accent-color, #E34234)';
-          }}
-          onMouseOut={(e) => {
-            e.currentTarget.style.color = 'var(--text-color)';
-          }}
-        >
-          <SaveIcon />
-        </button>
-        
-        <button
-          title="Output"
-          style={{
-            backgroundColor: 'transparent',
-            border: 'none',
-            color: 'var(--text-color)',
-            cursor: 'pointer',
-            padding: '0.25rem',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            transition: 'all 0.2s ease',
-          }}
-          onMouseOver={(e) => {
-            e.currentTarget.style.color = 'var(--accent-color, #E34234)';
-          }}
-          onMouseOut={(e) => {
-            e.currentTarget.style.color = 'var(--text-color)';
-          }}
-        >
-          <MonitorIcon />
-        </button>
-        
-        <button
-          onClick={handleLogout}
-          title="Logout"
-          style={{
-            backgroundColor: 'transparent',
-            border: 'none',
-            color: 'var(--text-color)',
-            cursor: 'pointer',
-            padding: '0.25rem',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            transition: 'all 0.2s ease',
-          }}
-          onMouseOver={(e) => {
-            e.currentTarget.style.color = 'var(--accent-color, #E34234)';
-          }}
-          onMouseOut={(e) => {
-            e.currentTarget.style.color = 'var(--text-color)';
-          }}
-        >
-          <LogoutIcon />
-        </button>
-      </div>
-    </div>
+    </>
   );
 };
 
