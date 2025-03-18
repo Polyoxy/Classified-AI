@@ -236,12 +236,13 @@ const CommandInput: React.FC = () => {
   return (
     <div style={{
       position: 'fixed',
-      bottom: '32px',
+      bottom: '32px', // Leave space for status bar
       left: '0',
-      right: '0',
+      right: isProcessing ? '400px' : '0', // Adjust for code preview panel
       zIndex: 100,
       backgroundColor: settings?.theme === 'dark' ? '#121212' : '#f8f9fa',
-      padding: '0.75rem',
+      padding: '1rem',
+      transition: 'right 0.3s ease',
     }}>
       <div style={{
         maxWidth: '800px',
@@ -271,9 +272,9 @@ const CommandInput: React.FC = () => {
                 padding: 1px;
                 background: linear-gradient(
                   45deg,
-                  rgba(74, 158, 255, 0.2),
-                  rgba(138, 43, 226, 0.2),
-                  rgba(74, 158, 255, 0.2)
+                  rgba(128, 128, 128, 0.2),
+                  rgba(64, 64, 64, 0.2),
+                  rgba(128, 128, 128, 0.2)
                 );
                 -webkit-mask: linear-gradient(#fff 0 0) content-box,
                            linear-gradient(#fff 0 0);

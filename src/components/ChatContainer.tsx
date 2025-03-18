@@ -1,341 +1,71 @@
 import React, { useRef, useEffect } from 'react';
 import { useAppContext } from '@/context/AppContext';
 import MessageItem from './MessageItem';
-import ThinkingIndicator from './ThinkingIndicator';
 
 const ChatContainer: React.FC = () => {
-  const { 
-    currentConversation, 
-    settings, 
-    isProcessing,
-    setIsProcessing
-  } = useAppContext();
-  
   const containerRef = useRef<HTMLDivElement>(null);
+  const { currentConversation, isProcessing, settings } = useAppContext();
   const isDarkTheme = settings?.theme === 'dark';
-  
-  // Thinking content state
-  const [thinkingContent, setThinkingContent] = React.useState<string>('');
-  const [thinkingPhase, setThinkingPhase] = React.useState<'reasoning' | 'processing' | null>(null);
-  
-  // Generate thinking content when isProcessing changes
-  React.useEffect(() => {
-    if (isProcessing) {
-      let content = "";
-      setThinkingPhase('reasoning');
-      
-      // Initial reasoning phase
-      const timer1 = setTimeout(() => {
-        content = "Analyzing context and formulating approach...";
-        setThinkingContent(content);
-      }, 300);
-      
-      // Processing phase
-      const timer2 = setTimeout(() => {
-        setThinkingPhase('processing');
-        content = "Generating response...";
-        setThinkingContent(content);
-      }, 2000);
-      
-      return () => {
-        clearTimeout(timer1);
-        clearTimeout(timer2);
-        setThinkingPhase(null);
-      };
-    } else {
-      setThinkingContent('');
-      setThinkingPhase(null);
-    }
-  }, [isProcessing]);
 
-  // Update the scroll to bottom effect
+  // Scroll to bottom when new messages are added or when processing state changes
   useEffect(() => {
-    const smoothScrollToBottom = () => {
-      if (!containerRef.current) return;
-      
-      const container = containerRef.current;
-      const currentScroll = container.scrollTop;
-      const targetScroll = container.scrollHeight - container.clientHeight;
-      
-      // Only scroll if we're already close to the bottom (within 300px) or actively processing
-      // The isProcessing check ensures we scroll when thinking indicator appears
-      if (isProcessing || targetScroll - currentScroll < 300) {
-        // Use browser's built-in smooth scrolling
-        container.scrollTo({
-          top: targetScroll,
-          behavior: 'smooth'
-        });
-      }
-    };
-    
-    // Always scroll to bottom on initial load/refresh
-    const initialScrollToBottom = () => {
-      if (!containerRef.current) return;
-      
-      const container = containerRef.current;
-      const targetScroll = container.scrollHeight - container.clientHeight;
-      container.scrollTo({
-        top: targetScroll,
-        behavior: 'auto' // Use instant scroll on initial load
-      });
-    };
-    
-    // Run the initial scroll
-    initialScrollToBottom();
-    
-    // Also add a slight delay to handle content that might render after state updates
-    const timeoutId = setTimeout(smoothScrollToBottom, 100);
-    return () => clearTimeout(timeoutId);
-  }, [currentConversation?.messages, settings?.autoScroll, isProcessing, thinkingContent]);
+    if (containerRef.current && settings?.autoScroll !== false) {
+      containerRef.current.scrollTop = containerRef.current.scrollHeight;
+    }
+  }, [currentConversation?.messages, isProcessing, settings?.autoScroll]);
 
-  // If no conversation is selected, show an empty container
-  if (!currentConversation) {
-    return (
-      <div 
-        className="chat-container"
-        style={{
-          flex: 1,
-          padding: '1rem',
-          backgroundColor: isDarkTheme ? '#121212' : '#f8f9fa',
-          display: 'flex',
-          flexDirection: 'column',
-          maxWidth: '800px',
-          margin: '0 auto',
-          width: 'calc(100% - 3rem)',
-          paddingBottom: '100px', // Increased space for command input and status bar
-          minHeight: 'calc(100vh - 80px)',
-        }}
-      />
-    );
-  }
-
-  // Debug: log the current conversation messages
-  console.log('Current conversation messages:', {
-    messageCount: currentConversation.messages.length,
-    hasUserMessages: currentConversation.messages.some(m => m.role === 'user'),
-    hasAssistantMessages: currentConversation.messages.some(m => m.role === 'assistant'),
-    messageRoles: currentConversation.messages.map(m => m.role),
-    messageIds: currentConversation.messages.map(m => m.id?.toString().substring(0, 6)),
-    recentMessages: currentConversation.messages.slice(-3).map(m => ({
-      role: m.role,
-      content: m.content.substring(0, 30) + (m.content.length > 30 ? '...' : '')
-    }))
-  });
-
-  // Custom styles for the chat container
-  const containerStyles = `
-    .chat-container::-webkit-scrollbar {
-      width: 8px;
-      background-color: transparent;
-    }
-
-    .chat-container::-webkit-scrollbar-thumb {
-      background-color: ${isDarkTheme ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'};
-      border-radius: 4px;
-    }
-
-    .chat-container::-webkit-scrollbar-thumb:hover {
-      background-color: ${isDarkTheme ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'};
-    }
-
-    .chat-container {
-      /* Additional custom styles for better scrolling experience */
-      scrollbar-width: thin;
-      scrollbar-color: ${isDarkTheme ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'} transparent;
-    }
-
-    @media (max-width: 768px) {
-      .chat-container {
-        width: calc(100% - 2rem) !important;
-        padding: 0.75rem !important;
-      }
-    }
-    
-    /* Add styling for the agent UI container */
-    .agent-ui {
-      border-radius: 4px;
-      overflow: hidden;
-    }
-  `;
-
-  // Helper function to process AI messages and add ANALYSIS section if needed
-  const processAIMessage = (message: any) => {
-    // Default to showing analysis if the setting doesn't exist
-    const shouldShowAnalysis = settings?.showAnalysis !== false;
-    
-    if (message.role !== 'assistant' || !shouldShowAnalysis) {
-      return message;
-    }
-    
-    // Check if message already has an ANALYSIS section
-    const hasAnalysis = 
-      /<ANALYSIS>[\s\S]*?<\/ANALYSIS>/i.test(message.content) || 
-      /ANALYSIS:[\s\S]*?(?=\n\n|$)/i.test(message.content);
-    
-    if (hasAnalysis) {
-      return message;
-    }
-    
-    // If there's internal thinking/reasoning in the message
-    // try to extract it and format as ANALYSIS
-    
-    // Patterns based on the examples in the image
-    const thinkingPatterns = [
-      // Common thinking openings
-      /^(I should|Let me|I'll|I will|I need to|First,|To answer|Based on)[\s\S]*?\n\n/i,
-      /^(Alright|Okay|I see|Looking at|Analyzing|Let's)[\s\S]*?\n\n/i,
-      
-      // Specific thought patterns from the image examples
-      /^Okay, the user greeted me[\s\S]*?I'll respond by[\s\S]*?\n\n/i,
-      /^I should check if[\s\S]*?Since there's no specific[\s\S]*?\n\n/i
-    ];
-    
-    // Extract paragraphs to identify thinking sections
-    const paragraphs = message.content.split('\n\n');
-    
-    // If we have at least 2 paragraphs and the first few look like thinking
-    if (paragraphs.length >= 2) {
-      // Check if the initial paragraphs match our thinking patterns
-      let thinkingParts = [];
-      let responseParts = [...paragraphs];
-      
-      // Analyze up to the first 3 paragraphs for thinking patterns
-      const analyzeParagraphs = Math.min(3, paragraphs.length - 1);
-      
-      for (let i = 0; i < analyzeParagraphs; i++) {
-        const paragraph = paragraphs[i];
-        
-        // Check if this paragraph looks like thinking
-        const isThinking = 
-          paragraph.startsWith("I ") || 
-          paragraph.startsWith("Let's ") ||
-          paragraph.startsWith("Let me ") ||
-          paragraph.startsWith("First, I") ||
-          paragraph.startsWith("Since there's") ||
-          paragraph.startsWith("Okay,") ||
-          paragraph.startsWith("Based on") ||
-          paragraph.startsWith("Looking at");
-          
-        if (isThinking) {
-          thinkingParts.push(paragraph);
-          responseParts.shift(); // Remove from response
-        } else {
-          break; // Stop when we find a non-thinking paragraph
-        }
-      }
-      
-      // If we found thinking paragraphs, format them as ANALYSIS
-      if (thinkingParts.length > 0) {
-        const thinking = thinkingParts.join('\n\n').trim();
-        const response = responseParts.join('\n\n').trim();
-        
-        return {
-          ...message,
-          content: `<ANALYSIS>\n${thinking}\n</ANALYSIS>\n\n${response}`
-        };
-      }
-    }
-    
-    // Try the regex approach as a fallback
-    for (const pattern of thinkingPatterns) {
-      const match = message.content.match(pattern);
-      if (match && match[0].length > 40) { // Only if thinking part is substantial
-        const thinking = match[0].trim();
-        const response = message.content.slice(match[0].length).trim();
-        
-        // Only split if we have both parts
-        if (thinking && response) {
-          return {
-            ...message,
-            content: `<ANALYSIS>\n${thinking}\n</ANALYSIS>\n\n${response}`
-          };
-        }
-      }
-    }
-    
-    return message;
-  };
-
-  // Filter out thinking messages and system messages from being displayed
-  const visibleMessages = currentConversation.messages.filter(message => {
+  // Filter visible messages
+  const visibleMessages = currentConversation?.messages?.filter(msg => {
     // Skip empty messages
-    if (!message.content.trim()) return false;
-    
-    // Skip thinking messages
-    if (message.content.includes('<think>')) return false;
-    
-    // Skip initial system messages unless they contain errors
-    if (message.role === 'system' && !message.content.toLowerCase().includes('error')) {
-      return false;
-    }
-    
+    if (!msg.content?.trim()) return false;
+    // Skip system messages unless they contain errors
+    if (msg.role === 'system' && !msg.content.toLowerCase().includes('error')) return false;
     return true;
-  });
+  }) || [];
 
   return (
-    <div style={{
-      position: 'relative',
-      height: '100%',
-      display: 'flex',
-      flexDirection: 'column',
-      overflow: 'hidden',
-    }}>
-      <style>{containerStyles}</style>
-      <div 
-        ref={containerRef}
-        className="chat-container"
-        id="chatContainer"
-        style={{
-          flex: 1,
-          padding: '1rem',
-          backgroundColor: isDarkTheme ? '#121212' : '#f8f9fa',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '0.75rem',
-          maxWidth: '800px',
-          margin: '0 auto',
-          width: 'calc(100% - 3rem)',
-          overflowY: 'auto',
-          overflowX: 'hidden',
-          scrollBehavior: 'smooth',
-          position: 'relative',
-          paddingBottom: '80px', // Adjusted to account for status bar and command input
-        }}
-      >
-        {/* Welcome message if no messages yet */}
-        {currentConversation.messages.length <= 1 && (
-          <div style={{
-            padding: '2rem',
-            textAlign: 'center',
-            color: 'var(--text-color)',
-            opacity: 0.7,
-            fontStyle: 'italic'
-          }}>
-            Start a new conversation with the AI...
-          </div>
-        )}
-
-        {/* Display messages */}
+    <div 
+      ref={containerRef}
+      style={{
+        height: '100%',
+        overflowY: 'auto',
+        overflowX: 'hidden',
+        padding: '1rem',
+        paddingBottom: '120px', // Space for input
+        backgroundColor: isDarkTheme ? '#121212' : '#ffffff',
+        transition: 'background-color 0.2s ease',
+        scrollbarWidth: 'thin',
+        scrollbarColor: isDarkTheme ? '#333 #121212' : '#ccc #ffffff',
+      }}
+    >
+      <style>
+        {`
+          div::-webkit-scrollbar {
+            width: 6px;
+          }
+          div::-webkit-scrollbar-track {
+            background: ${isDarkTheme ? '#121212' : '#ffffff'};
+          }
+          div::-webkit-scrollbar-thumb {
+            background-color: ${isDarkTheme ? '#333' : '#ccc'};
+            border-radius: 6px;
+          }
+        `}
+      </style>
+      <div style={{
+        maxWidth: '800px',
+        margin: '0 auto',
+        width: '100%',
+      }}>
         {visibleMessages.map((message, index) => (
           <MessageItem
-            key={message.id || `msg-${index}`}
+            key={index}
             role={message.role}
             content={message.content}
             timestamp={message.timestamp}
+            isProcessing={index === visibleMessages.length - 1 && isProcessing}
           />
         ))}
-
-        {/* Show thinking indicator when processing */}
-        {isProcessing && (
-          <MessageItem
-            role="assistant"
-            content=""
-            isThinking={true}
-          />
-        )}
-
-        {/* Scrolling spacer */}
-        <div style={{ height: '20px' }} />
       </div>
     </div>
   );
