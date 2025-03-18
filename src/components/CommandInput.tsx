@@ -238,7 +238,7 @@ const CommandInput: React.FC = () => {
       position: 'fixed',
       bottom: '32px', // Leave space for status bar
       left: '0',
-      right: isProcessing ? '400px' : '0', // Adjust for code preview panel
+      right: '0', // Remove the conditional adjustment that was causing the shift
       zIndex: 100,
       backgroundColor: settings?.theme === 'dark' ? '#121212' : '#f8f9fa',
       padding: '1rem',

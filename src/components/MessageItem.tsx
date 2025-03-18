@@ -1,6 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useAppContext } from '@/context/AppContext';
-import ThinkingDisplay from './ThinkingDisplay';
 
 interface MessageItemProps {
   role: 'user' | 'assistant' | 'system';
@@ -18,6 +17,9 @@ const MessageItem: React.FC<MessageItemProps> = ({
   const { settings } = useAppContext();
   const isDarkTheme = settings?.theme === 'dark';
   const [showCopied, setShowCopied] = useState(false);
+  const [isThinkingCollapsed, setIsThinkingCollapsed] = useState(false);
+  const [contentHeight, setContentHeight] = useState(0);
+  const thinkingContentRef = useRef<HTMLDivElement>(null);
 
   // Process content to remove thinking tags from display
   const processContent = (content: string): string => {
@@ -25,7 +27,22 @@ const MessageItem: React.FC<MessageItemProps> = ({
     return content.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
   };
   
+  // Extract thinking content from message
+  const extractThinking = (content: string): string => {
+    const thinkRegex = /<think>([\s\S]*?)<\/think>/g;
+    const matches = [];
+    let match;
+    
+    while ((match = thinkRegex.exec(content)) !== null) {
+      matches.push(match[1].trim());
+    }
+    
+    return matches.join('\n\n');
+  };
+  
   const displayContent = processContent(content);
+  const thinkingContent = extractThinking(content);
+  const hasThinking = thinkingContent.length > 0;
 
   // Handle copy to clipboard
   const handleCopy = () => {
@@ -34,6 +51,16 @@ const MessageItem: React.FC<MessageItemProps> = ({
       setTimeout(() => setShowCopied(false), 2000);
     });
   };
+
+  // Measure content height when collapsed state changes
+  useEffect(() => {
+    if (!isThinkingCollapsed && thinkingContentRef.current) {
+      // Get the scrollHeight of the content div
+      setContentHeight(thinkingContentRef.current.scrollHeight);
+    } else {
+      setContentHeight(0);
+    }
+  }, [isThinkingCollapsed]);
 
   // Get message style based on role
   const getMessageStyle = () => {
@@ -97,9 +124,66 @@ const MessageItem: React.FC<MessageItemProps> = ({
         position: 'relative',
         ...getMessageStyle(),
       }}>
-        {/* Show thinking display for AI messages if enabled in settings */}
-        {role === 'assistant' && settings?.showAnalysis && !isProcessing && (
-          <ThinkingDisplay content={content} />
+        {/* Thinking Section */}
+        {(hasThinking || isProcessing) && role === 'assistant' && (
+          <>
+            <div 
+              onClick={() => setIsThinkingCollapsed(!isThinkingCollapsed)}
+              style={{
+                padding: '0.4rem 0.75rem',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                borderBottom: isThinkingCollapsed ? 'none' : `1px solid ${isDarkTheme ? 'rgba(80, 80, 80, 0.3)' : 'rgba(200, 200, 200, 0.5)'}`,
+                transition: 'background-color 0.2s ease',
+              }}
+            >
+              <span style={{ 
+                fontSize: '11px', 
+                fontWeight: 500,
+                color: isDarkTheme ? '#b0b0b0' : '#505050',
+              }}>
+                Thinking Process
+              </span>
+              <svg 
+                width="12" 
+                height="12" 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke={isDarkTheme ? '#b0b0b0' : '#505050'} 
+                strokeWidth="2"
+                strokeLinecap="round" 
+                strokeLinejoin="round"
+                style={{
+                  transform: isThinkingCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)',
+                  transition: 'transform 0.2s ease',
+                }}
+              >
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </div>
+            
+            <div 
+              ref={thinkingContentRef}
+              style={{
+                maxHeight: isThinkingCollapsed ? '0' : `${contentHeight}px`,
+                opacity: isThinkingCollapsed ? 0 : 1,
+                overflow: 'hidden',
+                transition: 'max-height 0.3s ease-in-out, opacity 0.2s ease-in-out',
+                fontSize: '12px',
+                lineHeight: 1.5,
+                color: isDarkTheme ? '#d0d0d0' : '#333333',
+                whiteSpace: 'pre-wrap',
+                fontFamily: 'var(--font-mono)',
+                borderBottom: !isThinkingCollapsed ? `1px solid ${isDarkTheme ? 'rgba(80, 80, 80, 0.3)' : 'rgba(200, 200, 200, 0.5)'}` : 'none',
+              }}
+            >
+              <div style={{ padding: '0.75rem' }}>
+                {thinkingContent || (isProcessing ? 'Thinking...' : '')}
+              </div>
+            </div>
+          </>
         )}
 
         <div style={{
@@ -112,24 +196,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
           wordBreak: 'break-word',
           position: 'relative',
         }}>
-          {isProcessing ? (
-            <div style={{ 
-              display: 'flex', 
-              alignItems: 'center',
-              gap: '0.5rem',
-            }}>
-              <div style={{
-                width: '4px',
-                height: '4px',
-                borderRadius: '50%',
-                backgroundColor: 'currentColor',
-                animation: 'pulse 1.5s ease-in-out infinite',
-              }} />
-              Processing...
-            </div>
-          ) : (
-            displayContent
-          )}
+          {displayContent}
           
           {/* Timestamp positioned at bottom right */}
           {timestamp && (
