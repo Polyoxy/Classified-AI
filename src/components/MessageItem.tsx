@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus, vs } from 'react-syntax-highlighter/dist/cjs/styles/prism';
 import { useAppContext } from '@/context/AppContext';
@@ -6,12 +6,13 @@ import { useAppContext } from '@/context/AppContext';
 interface MessageItemProps {
   role: 'user' | 'assistant' | 'system';
   content: string;
+  timestamp?: number;
 }
 
-const MessageItem: React.FC<MessageItemProps> = ({ role, content }) => {
-  // Get theme from context to use appropriate syntax highlighting
+const MessageItem: React.FC<MessageItemProps> = ({ role, content, timestamp }) => {
   const { settings } = useAppContext();
   const isDarkTheme = settings?.theme === 'dark';
+  const [analysisExpanded, setAnalysisExpanded] = useState(true);
   
   // Function to format the message content and handle code blocks
   const formatContent = (text: string) => {
@@ -68,6 +69,21 @@ const MessageItem: React.FC<MessageItemProps> = ({ role, content }) => {
     }
 
     return parts.length > 0 ? parts : text;
+  };
+
+  // Extract analysis section if it exists
+  const extractAnalysis = (text: string) => {
+    // Look for <ANALYSIS> or ANALYSIS: tag in the content
+    const analysisRegex = /<ANALYSIS>([\s\S]*?)(?:<\/ANALYSIS>|$)|ANALYSIS:\s*([\s\S]*?)(?=\n\n|$)/i;
+    const match = text.match(analysisRegex);
+    
+    if (match) {
+      const analysisContent = match[1] || match[2] || '';
+      const mainContent = text.replace(analysisRegex, '').trim();
+      return { analysisContent, mainContent };
+    }
+    
+    return { analysisContent: '', mainContent: text };
   };
 
   // Get appropriate colors based on role and theme
@@ -141,7 +157,11 @@ const MessageItem: React.FC<MessageItemProps> = ({ role, content }) => {
     whiteSpace: 'pre-wrap' as const,
     lineHeight: '1.6',
     color: 'var(--text-color)',
-    fontFamily: 'var(--font-mono, "JetBrains Mono", monospace)'
+    fontFamily: 'var(--font-mono, "JetBrains Mono", monospace)',
+    width: '100%',
+    overflowWrap: 'break-word' as const,
+    wordWrap: 'break-word' as const,
+    wordBreak: 'break-word' as const
   };
 
   // Add code block syntax highlighting
@@ -154,8 +174,10 @@ const MessageItem: React.FC<MessageItemProps> = ({ role, content }) => {
     border: `1px solid ${isDarkTheme ? '#2a2a2a' : '#e0e0e0'}`,
     whiteSpace: 'pre' as const,
     overflowX: 'auto' as const,
+    overflowY: 'hidden' as const,
     boxShadow: isDarkTheme ? '0 2px 6px rgba(0, 0, 0, 0.2)' : '0 2px 6px rgba(0, 0, 0, 0.05)',
-    fontFamily: 'var(--font-mono, "JetBrains Mono", monospace)'
+    fontFamily: 'var(--font-mono, "JetBrains Mono", monospace)',
+    maxWidth: '100%'
   };
 
   // Style for system messages
@@ -168,21 +190,78 @@ const MessageItem: React.FC<MessageItemProps> = ({ role, content }) => {
     padding: '0.5rem 0.75rem',
   };
 
-  return (
-    <div 
-      className={`message ${role}-message`}
-      style={role === 'system' ? systemStyle : messageStyle}
-    >
-      {role !== 'system' ? (
-        <>
-          <span className="prefix" style={prefixStyle}>
-            {role === 'user' ? '$ USER:' : '$ AI:'}
-          </span>
-          <div style={contentStyle}>
-            {formatContent(content)}
-          </div>
-        </>
-      ) : (
+  // New styles for the agent UI
+  const agentHeaderStyle = {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '0.5rem 1rem',
+    backgroundColor: '#121212',
+    borderBottom: '1px solid #2a2a2a',
+    borderTopLeftRadius: '4px',
+    borderTopRightRadius: '4px',
+  };
+
+  const agentTitleStyle = {
+    color: '#fff',
+    fontWeight: 'bold' as const,
+    fontSize: '14px',
+    fontFamily: 'var(--font-mono, "JetBrains Mono", monospace)',
+  };
+
+  const analysisToggleStyle = {
+    display: 'flex',
+    alignItems: 'center',
+    color: '#aaa',
+    cursor: 'pointer',
+    fontSize: '14px',
+    userSelect: 'none' as const,
+  };
+
+  const analysisContentStyle = {
+    padding: '1rem',
+    borderBottom: '1px solid #2a2a2a',
+    backgroundColor: '#1a1a1a',
+    color: '#aaa',
+    fontFamily: 'var(--font-mono, "JetBrains Mono", monospace)',
+    fontSize: '14px',
+    lineHeight: '1.5',
+    whiteSpace: 'pre-wrap' as const,
+    overflowWrap: 'break-word' as const,
+  };
+
+  const responseContentStyle = {
+    padding: '1rem',
+    color: '#fff',
+    fontFamily: 'var(--font-mono, "JetBrains Mono", monospace)',
+    fontSize: '14px',
+    lineHeight: '1.5',
+    whiteSpace: 'pre-wrap' as const,
+    overflowWrap: 'break-word' as const,
+  };
+
+  const timestampStyle = {
+    color: '#666',
+    fontSize: '12px',
+    marginLeft: 'auto',
+    fontFamily: 'var(--font-mono, "JetBrains Mono", monospace)',
+  };
+
+  // Format the timestamp display
+  const formatTime = (timestamp?: number) => {
+    const date = timestamp ? new Date(timestamp) : new Date();
+    return date.toLocaleTimeString([], { 
+      hour: '2-digit', 
+      minute: '2-digit', 
+      second: '2-digit', 
+      hour12: false 
+    });
+  };
+
+  // If it's a system message, render with simple style
+  if (role === 'system') {
+    return (
+      <div className="message system-message" style={systemStyle}>
         <span style={{ 
           whiteSpace: 'pre-wrap',
           lineHeight: '1.5',
@@ -190,7 +269,81 @@ const MessageItem: React.FC<MessageItemProps> = ({ role, content }) => {
         }}>
           {content}
         </span>
+      </div>
+    );
+  }
+
+  // If it's a user message, render with standard style
+  if (role === 'user') {
+    return (
+      <div className="message user-message" style={messageStyle}>
+        <span className="prefix" style={prefixStyle}>
+          $ USER:
+        </span>
+        <div style={contentStyle}>
+          {formatContent(content)}
+        </div>
+      </div>
+    );
+  }
+
+  // For AI messages, check if we need to extract analysis
+  const { analysisContent, mainContent } = extractAnalysis(content);
+  const hasAnalysis = analysisContent.length > 0;
+  
+  // If no analysis, render standard AI message
+  if (!hasAnalysis) {
+    return (
+      <div className="message assistant-message" style={messageStyle}>
+        <span className="prefix" style={prefixStyle}>
+          $ AI:
+        </span>
+        <div style={contentStyle}>
+          {formatContent(content)}
+        </div>
+      </div>
+    );
+  }
+
+  // If has analysis, render the agent UI
+  return (
+    <div className="message assistant-message agent-ui" style={{
+      marginBottom: '1rem',
+      width: '100%',
+      borderRadius: '4px',
+      overflow: 'hidden',
+      backgroundColor: '#121212',
+      boxShadow: '0 1px 3px rgba(0, 0, 0, 0.3)',
+    }}>
+      {/* Agent header with AGENT and ANALYSIS sections */}
+      <div style={agentHeaderStyle}>
+        <div style={agentTitleStyle}>AGENT</div>
+        <div 
+          style={analysisToggleStyle}
+          onClick={() => setAnalysisExpanded(!analysisExpanded)}
+        >
+          <span>ANALYSIS</span>
+          <span style={{ marginLeft: '4px' }}>{analysisExpanded ? '▼' : '►'}</span>
+        </div>
+      </div>
+      
+      {/* Analysis section */}
+      {analysisExpanded && (
+        <div style={analysisContentStyle}>
+          <div style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>ANALYSIS</div>
+          {formatContent(analysisContent)}
+        </div>
       )}
+      
+      {/* Main response */}
+      <div style={responseContentStyle}>
+        {formatContent(mainContent)}
+        <div style={{ display: 'flex', marginTop: '1rem' }}>
+          <span style={timestampStyle}>
+            {formatTime(timestamp)}
+          </span>
+        </div>
+      </div>
     </div>
   );
 };

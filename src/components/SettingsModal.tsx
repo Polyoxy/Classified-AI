@@ -17,6 +17,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   const [userRole, setUserRole] = useState<UserRole>(settings.userRole);
   const [customPrompts, setCustomPrompts] = useState<Record<UserRole, string>>(settings.customSystemPrompts);
   const [theme, setTheme] = useState<'dark' | 'light'>(settings.theme === 'dark' ? 'dark' : 'light');
+  const [showAnalysis, setShowAnalysis] = useState<boolean>(settings.showAnalysis !== false);
   const [activeTab, setActiveTab] = useState<'appearance' | 'api' | 'prompts' | 'about'>('appearance');
 
   // Update state when settings change
@@ -28,33 +29,33 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
     setFontSize(settings.fontSize);
     setUserRole(settings.userRole);
     setCustomPrompts(settings.customSystemPrompts);
-    setTheme(settings.theme === 'dark' ? 'dark' : 'light');
+    setShowAnalysis(settings.showAnalysis !== false);
   }, [settings]);
 
   // Save settings and close modal
   const handleSave = () => {
-    // Update provider config
-    const updatedProviders = { ...settings.providers };
-    updatedProviders[activeProvider] = {
-      ...updatedProviders[activeProvider],
-      apiKey: apiKey,
-      baseUrl: baseUrl,
-    };
-
-    // Update settings
-    updateSettings({
-      activeProvider,
-      temperature,
+    // Create a new settings object
+    const newSettings = {
+      ...settings,
+      theme,
       fontSize,
       userRole,
+      temperature,
       customSystemPrompts: customPrompts,
-      providers: updatedProviders,
-      theme: theme === 'dark' ? 'dark' : 'light',
-    });
+      activeProvider,
+      showAnalysis,
+      providers: {
+        ...settings.providers,
+        [activeProvider]: {
+          ...settings.providers[activeProvider],
+          apiKey,
+          baseUrl,
+        }
+      }
+    };
 
-    // Apply theme class to body
-    document.body.className = `theme-${theme}`;
-
+    // Update the settings
+    updateSettings(newSettings);
     onClose();
   };
 
@@ -170,6 +171,24 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                   <option value="casual">Casual User</option>
                   <option value="code-helper">Code Helper</option>
                 </select>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Show Analysis</label>
+                <div className="switch-container">
+                  <label className="switch">
+                    <input
+                      type="checkbox"
+                      checked={showAnalysis}
+                      onChange={(e) => setShowAnalysis(e.target.checked)}
+                    />
+                    <span className="slider round"></span>
+                  </label>
+                  <span className="switch-label">{showAnalysis ? 'On' : 'Off'}</span>
+                </div>
+                <p className="form-help-text">
+                  Show AI's internal analysis/thinking process in a collapsible section with each response.
+                </p>
               </div>
             </div>
           )}

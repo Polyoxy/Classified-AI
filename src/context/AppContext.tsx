@@ -63,6 +63,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   autoScroll: true,
   codeHighlighting: true,
   showSystemMessages: false,
+  showAnalysis: true,
 };
 
 // Create a new empty conversation

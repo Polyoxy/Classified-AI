@@ -46,6 +46,7 @@ export interface AppSettings {
   autoScroll?: boolean;
   codeHighlighting?: boolean;
   showSystemMessages?: boolean;
+  showAnalysis?: boolean; // Controls whether to show AI's analysis/thinking
 }
 
 // Token Usage
@@ -78,11 +79,4 @@ export interface StreamResponse {
     completionTokens: number;
     totalTokens: number;
   };
-}
-
-// Extend Window interface
-declare global {
-  interface Window {
-    electron: ElectronAPI;
-  }
 } 
