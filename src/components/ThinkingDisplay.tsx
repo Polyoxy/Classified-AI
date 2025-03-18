@@ -44,13 +44,8 @@ const ThinkingDisplay: React.FC<ThinkingDisplayProps> = ({ content }) => {
   return (
     <div 
       style={{
-        marginTop: '0',
-        marginBottom: '0.5rem',
-        borderRadius: '6px 6px 0 0',
-        overflow: 'hidden',
-        border: `1px solid ${isDarkTheme ? 'rgba(80, 80, 80, 0.3)' : 'rgba(200, 200, 200, 0.5)'}`,
-        borderBottom: 'none',
-        backgroundColor: isDarkTheme ? 'rgba(30, 30, 30, 0.3)' : 'rgba(245, 245, 250, 0.4)',
+        borderBottom: `1px solid ${isDarkTheme ? 'rgba(80, 80, 80, 0.3)' : 'rgba(200, 200, 200, 0.5)'}`,
+        marginBottom: '0.75rem',
       }}
     >
       <div 
@@ -61,7 +56,6 @@ const ThinkingDisplay: React.FC<ThinkingDisplayProps> = ({ content }) => {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          backgroundColor: isDarkTheme ? 'rgba(40, 40, 40, 0.6)' : 'rgba(240, 240, 240, 0.8)',
           borderBottom: isCollapsed ? 'none' : `1px solid ${isDarkTheme ? 'rgba(80, 80, 80, 0.3)' : 'rgba(200, 200, 200, 0.5)'}`,
           transition: 'background-color 0.2s ease',
         }}
