@@ -2,12 +2,35 @@ import React, { useState } from 'react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus, vs } from 'react-syntax-highlighter/dist/cjs/styles/prism';
 import { useAppContext } from '@/context/AppContext';
+import CodePreview from './CodePreview';
+import HtmlPreview from './HtmlPreview';
 
 interface MessageItemProps {
   role: 'user' | 'assistant' | 'system';
   content: string;
   timestamp?: number;
 }
+
+// Utility functions to detect HTML and extract code blocks
+const containsHtml = (content: string): boolean => {
+  const htmlRegex = /<\/?[a-z][\s\S]*>/i;
+  return htmlRegex.test(content);
+};
+
+const extractCodeBlocks = (content: string): Array<{code: string, language: string}> => {
+  const codeBlockRegex = /```(\w+)?\n([\s\S]*?)```/g;
+  const blocks: Array<{code: string, language: string}> = [];
+  
+  let match;
+  while ((match = codeBlockRegex.exec(content)) !== null) {
+    blocks.push({
+      language: match[1] || 'text',
+      code: match[2]
+    });
+  }
+  
+  return blocks;
+};
 
 const MessageItem: React.FC<MessageItemProps> = ({ role, content, timestamp }) => {
   const { settings } = useAppContext();
@@ -16,59 +39,20 @@ const MessageItem: React.FC<MessageItemProps> = ({ role, content, timestamp }) =
   
   // Function to format the message content and handle code blocks
   const formatContent = (text: string) => {
-    const codeBlockRegex = /```([a-zA-Z]*)\n([\s\S]*?)```/g;
-    const parts: JSX.Element[] = [];
-    let lastIndex = 0;
-    let match;
-
-    while ((match = codeBlockRegex.exec(text)) !== null) {
-      // Add text before code block
-      if (match.index > lastIndex) {
-        parts.push(
-          <span key={`text-${parts.length}`} style={{ whiteSpace: 'pre-wrap' }}>
-            {text.substring(lastIndex, match.index)}
-          </span>
-        );
-      }
-
-      // Add code block with syntax highlighting
-      const language = match[1] || 'text';
-      const code = match[2];
-      parts.push(
-        <div 
-          key={`code-${parts.length}`} 
-          style={codeBlockStyle}
-        >
-          <SyntaxHighlighter
-            language={language}
-            style={isDarkTheme ? vscDarkPlus : vs}
-            customStyle={{
-              backgroundColor: 'transparent',
-              padding: 0,
-              margin: 0,
-              border: 'none',
-              fontSize: `${settings?.fontSize || 14}px`,
-              fontFamily: 'var(--font-mono)'
-            }}
-          >
-            {code}
-          </SyntaxHighlighter>
-        </div>
-      );
-
-      lastIndex = match.index + match[0].length;
-    }
-
-    // Add remaining text
-    if (lastIndex < text.length) {
-      parts.push(
-        <span key={`text-${parts.length}`} style={{ whiteSpace: 'pre-wrap' }}>
-          {text.substring(lastIndex)}
-        </span>
-      );
-    }
-
-    return parts.length > 0 ? parts : text;
+    // Replace code blocks with placeholders since CodePreview will render them
+    const sanitizedText = text.replace(/```([a-zA-Z]*)\n([\s\S]*?)```/g, '');
+    
+    // If this is going to be shown in an HTML preview too, we should clean it up
+    const finalText = containsHtml(text) ? 
+      sanitizedText.replace(/<(?:.*?)>/g, '') : // Remove HTML tags for regular display
+      sanitizedText;
+    
+    // Return the content without code blocks
+    return (
+      <span style={{ whiteSpace: 'pre-wrap' }}>
+        {finalText}
+      </span>
+    );
   };
 
   // Extract analysis section if it exists
@@ -298,7 +282,25 @@ const MessageItem: React.FC<MessageItemProps> = ({ role, content, timestamp }) =
         <span className="prefix" style={prefixStyle}>
           $ AI:
         </span>
-        <div style={contentStyle}>
+        <div style={{
+          ...contentStyle,
+          overflowY: 'hidden', // Remove scrollbar
+        }}>
+          {/* Extract and display code blocks as separate previews */}
+          {extractCodeBlocks(content).map((block, index) => (
+            <CodePreview 
+              key={index} 
+              code={block.code} 
+              language={block.language} 
+              isDarkTheme={isDarkTheme} 
+            />
+          ))}
+          
+          {/* If content contains HTML patterns, offer HTML preview */}
+          {containsHtml(content) && (
+            <HtmlPreview html={content} isDarkTheme={isDarkTheme} />
+          )}
+          
           {formatContent(content)}
         </div>
       </div>
@@ -335,8 +337,26 @@ const MessageItem: React.FC<MessageItemProps> = ({ role, content, timestamp }) =
         </div>
       )}
       
-      {/* Main response */}
-      <div style={responseContentStyle}>
+      {/* Main response with code and HTML previews */}
+      <div style={{
+        ...responseContentStyle,
+        overflowY: 'hidden', // Remove scrollbar
+      }}>
+        {/* Extract and display code blocks as separate previews */}
+        {extractCodeBlocks(mainContent).map((block, index) => (
+          <CodePreview 
+            key={index} 
+            code={block.code} 
+            language={block.language} 
+            isDarkTheme={true} 
+          />
+        ))}
+        
+        {/* If content contains HTML patterns, offer HTML preview */}
+        {containsHtml(mainContent) && (
+          <HtmlPreview html={mainContent} isDarkTheme={true} />
+        )}
+        
         {formatContent(mainContent)}
         <div style={{ display: 'flex', marginTop: '1rem' }}>
           <span style={timestampStyle}>
