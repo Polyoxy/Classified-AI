@@ -1,37 +1,72 @@
 import React, { useRef, useEffect } from 'react';
 import { useAppContext } from '@/context/AppContext';
 import MessageItem from './MessageItem';
+import ThinkingIndicator from './ThinkingIndicator';
 
 const ChatContainer: React.FC = () => {
-  const { currentConversation, settings } = useAppContext();
+  const { 
+    currentConversation, 
+    settings, 
+    isProcessing,
+    setIsProcessing
+  } = useAppContext();
+  
   const containerRef = useRef<HTMLDivElement>(null);
   const isDarkTheme = settings?.theme === 'dark';
-
-  // Add a more sophisticated scroll handler
-  useEffect(() => {
-    if (!containerRef.current || settings?.autoScroll === false) return;
-    
-    // Smooth scroll with animation
-    const smoothScrollToBottom = () => {
-      const container = containerRef.current;
-      if (!container) return;
+  
+  // Example thinking content for demonstration
+  const [thinkingContent, setThinkingContent] = React.useState<string>('');
+  
+  // Generate some simulated thinking content when isProcessing changes
+  React.useEffect(() => {
+    if (isProcessing) {
+      // Simulate thinking process with content updates
+      let content = "Analyzing query...\n";
+      setThinkingContent(content);
       
-      // Get current scroll position
+      const timer1 = setTimeout(() => {
+        content += "Considering relevant context and information...\n";
+        setThinkingContent(content);
+      }, 800);
+      
+      const timer2 = setTimeout(() => {
+        content += "Formulating response based on best practices...\n";
+        setThinkingContent(content);
+      }, 1500);
+      
+      const timer3 = setTimeout(() => {
+        content += "Refining response for clarity and accuracy...\n";
+        setThinkingContent(content);
+      }, 2200);
+      
+      return () => {
+        clearTimeout(timer1);
+        clearTimeout(timer2);
+        clearTimeout(timer3);
+      };
+    } else {
+      setThinkingContent('');
+    }
+  }, [isProcessing]);
+
+  // Update the scroll to bottom effect
+  useEffect(() => {
+    const smoothScrollToBottom = () => {
+      if (!containerRef.current) return;
+      
+      const container = containerRef.current;
       const currentScroll = container.scrollTop;
       const targetScroll = container.scrollHeight - container.clientHeight;
       
-      // Only scroll if we're already close to the bottom (within 300px)
-      // This prevents unwanted scrolling when viewing history
-      if (targetScroll - currentScroll > 300) {
-        // If user has scrolled up significantly, don't force scroll down
-        return;
+      // Only scroll if we're already close to the bottom (within 300px) or actively processing
+      // The isProcessing check ensures we scroll when thinking indicator appears
+      if (isProcessing || targetScroll - currentScroll < 300) {
+        // Use browser's built-in smooth scrolling
+        container.scrollTo({
+          top: targetScroll,
+          behavior: 'smooth'
+        });
       }
-      
-      // Use browser's built-in smooth scrolling
-      container.scrollTo({
-        top: targetScroll,
-        behavior: 'smooth'
-      });
     };
     
     smoothScrollToBottom();
@@ -39,7 +74,7 @@ const ChatContainer: React.FC = () => {
     // Also add a slight delay to handle content that might render after state updates
     const timeoutId = setTimeout(smoothScrollToBottom, 100);
     return () => clearTimeout(timeoutId);
-  }, [currentConversation?.messages, settings?.autoScroll]);
+  }, [currentConversation?.messages, settings?.autoScroll, isProcessing, thinkingContent]);
 
   // If no conversation is selected, show an empty container
   if (!currentConversation) {
@@ -276,6 +311,16 @@ const ChatContainer: React.FC = () => {
             />
           );
         })}
+
+        {/* Show thinking indicator when processing */}
+        {isProcessing && (
+          <MessageItem
+            role="assistant"
+            content=""
+            isThinking={true}
+            thinkingContent={thinkingContent}
+          />
+        )}
 
         {/* Scrolling spacer */}
         <div style={{ height: '20px' }} />

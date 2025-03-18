@@ -4,17 +4,24 @@ import { vscDarkPlus, vs } from 'react-syntax-highlighter/dist/cjs/styles/prism'
 import { useAppContext } from '@/context/AppContext';
 import CodePreview from './CodePreview';
 import HtmlPreview from './HtmlPreview';
+import ThinkingIndicator from './ThinkingIndicator';
 
 interface MessageItemProps {
   role: 'user' | 'assistant' | 'system';
   content: string;
   timestamp?: number;
+  isThinking?: boolean;
+  thinkingContent?: string;
 }
 
 // Utility functions to detect HTML and extract code blocks
 const containsHtml = (content: string): boolean => {
-  const htmlRegex = /<\/?[a-z][\s\S]*>/i;
-  return htmlRegex.test(content);
+  // More precise HTML detection - check for complete HTML elements, not just any tag
+  const htmlRegex = /<\/?(?:html|head|body|div|span|h[1-6]|p|a|img|ul|ol|li|table|tr|td|th|form|input|button|section|nav|header|footer)(?:\s[^>]*)?>/i;
+  // Also check for common HTML entities
+  const htmlEntityRegex = /&[a-z]+;|&#\d+;/i;
+  
+  return htmlRegex.test(content) || htmlEntityRegex.test(content);
 };
 
 const extractCodeBlocks = (content: string): Array<{code: string, language: string}> => {
@@ -32,7 +39,122 @@ const extractCodeBlocks = (content: string): Array<{code: string, language: stri
   return blocks;
 };
 
-const MessageItem: React.FC<MessageItemProps> = ({ role, content, timestamp }) => {
+// Tab interface component for code and previews
+const TabInterface: React.FC<{
+  codeBlocks: Array<{code: string, language: string}>,
+  htmlContent: string,
+  isDarkTheme: boolean
+}> = ({ codeBlocks, htmlContent, isDarkTheme }) => {
+  const [activeTab, setActiveTab] = useState<string>(codeBlocks.length > 0 ? 'code-0' : 'html-code');
+  
+  const hasHtml = containsHtml(htmlContent);
+  
+  // Generate tabs data
+  const tabs = [
+    ...(codeBlocks.map((block, index) => ({
+      id: `code-${index}`,
+      label: `${block.language.toUpperCase()}`,
+      content: (
+        <CodePreview 
+          key={index} 
+          code={block.code} 
+          language={block.language} 
+          isDarkTheme={isDarkTheme}
+          fullWidth={true}
+        />
+      )
+    }))),
+    ...(hasHtml ? [
+      {
+        id: 'html-code',
+        label: 'HTML',
+        content: (
+          <div style={{
+            maxHeight: '500px',
+            overflowY: 'auto',
+            padding: '12px',
+            backgroundColor: isDarkTheme ? '#1e1e1e' : '#f5f5f5',
+            borderRadius: '4px',
+            fontFamily: 'var(--font-mono, "JetBrains Mono", monospace)',
+          }}>
+            <SyntaxHighlighter
+              language="html"
+              style={isDarkTheme ? vscDarkPlus : vs}
+              customStyle={{
+                margin: 0,
+                padding: 0,
+                backgroundColor: 'transparent',
+              }}
+            >
+              {htmlContent}
+            </SyntaxHighlighter>
+          </div>
+        )
+      },
+      {
+        id: 'html-preview',
+        label: 'PREVIEW',
+        content: <HtmlPreview html={htmlContent} isDarkTheme={isDarkTheme} fullWidth={true} />
+      }
+    ] : [])
+  ];
+  
+  if (tabs.length === 0) return null;
+  
+  return (
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      width: '100%',
+      borderRadius: '4px',
+      overflow: 'hidden',
+      border: `1px solid ${isDarkTheme ? '#2a2a2a' : '#e0e0e0'}`,
+      backgroundColor: isDarkTheme ? '#161616' : '#f8f8f8',
+    }}>
+      {/* Tab buttons */}
+      <div style={{
+        display: 'flex',
+        borderBottom: `1px solid ${isDarkTheme ? '#2a2a2a' : '#e0e0e0'}`,
+        backgroundColor: isDarkTheme ? '#1a1a1a' : '#f0f0f0',
+      }}>
+        {tabs.map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            style={{
+              padding: '8px 16px',
+              border: 'none',
+              borderBottom: activeTab === tab.id 
+                ? `2px solid ${isDarkTheme ? '#3a86ff' : '#3a86ff'}` 
+                : '2px solid transparent',
+              backgroundColor: 'transparent',
+              color: activeTab === tab.id
+                ? (isDarkTheme ? '#ffffff' : '#000000')
+                : (isDarkTheme ? '#aaaaaa' : '#666666'),
+              cursor: 'pointer',
+              fontSize: '12px',
+              fontWeight: activeTab === tab.id ? 'bold' : 'normal',
+              transition: 'all 0.2s ease',
+              fontFamily: 'var(--font-mono, "JetBrains Mono", monospace)',
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+      
+      {/* Tab content */}
+      <div style={{
+        minHeight: '300px',
+        backgroundColor: isDarkTheme ? '#1e1e1e' : '#ffffff',
+      }}>
+        {tabs.find(tab => tab.id === activeTab)?.content}
+      </div>
+    </div>
+  );
+};
+
+const MessageItem: React.FC<MessageItemProps> = ({ role, content, timestamp, isThinking, thinkingContent }) => {
   const { settings } = useAppContext();
   const isDarkTheme = settings?.theme === 'dark';
   const [analysisExpanded, setAnalysisExpanded] = useState(true);
@@ -44,10 +166,10 @@ const MessageItem: React.FC<MessageItemProps> = ({ role, content, timestamp }) =
     
     // If this is going to be shown in an HTML preview too, we should clean it up
     const finalText = containsHtml(text) ? 
-      sanitizedText.replace(/<(?:.*?)>/g, '') : // Remove HTML tags for regular display
+      sanitizedText.replace(/<(?:[^>"']|"[^"]*"|'[^']*')*>/g, '') : // More comprehensive HTML tag removal
       sanitizedText;
     
-    // Return the content without code blocks
+    // Return the content without code blocks and HTML
     return (
       <span style={{ whiteSpace: 'pre-wrap' }}>
         {finalText}
@@ -283,7 +405,22 @@ const MessageItem: React.FC<MessageItemProps> = ({ role, content, timestamp }) =
   const { analysisContent, mainContent } = extractAnalysis(content);
   const hasAnalysis = analysisContent.length > 0;
   
-  // If no analysis, render standard AI message with side-by-side layout
+  // If the message is in "thinking" state, display the thinking indicator
+  if (isThinking) {
+    return (
+      <ThinkingIndicator 
+        isThinking={true}
+        thinkingContent={thinkingContent}
+        isDarkTheme={isDarkTheme}
+      />
+    );
+  }
+  
+  // Extract code blocks
+  const codeBlocks = extractCodeBlocks(content);
+  const hasCodeOrHtml = codeBlocks.length > 0 || containsHtml(content);
+  
+  // If no analysis, render standard AI message with the new tabbed interface
   if (!hasAnalysis) {
     return (
       <div className="message assistant-message" style={{
@@ -294,50 +431,31 @@ const MessageItem: React.FC<MessageItemProps> = ({ role, content, timestamp }) =
       }}>
         <div style={{
           display: 'flex',
-          flexDirection: isMobile ? 'column' : 'row',
+          flexDirection: 'column',
           gap: '1.5rem',
           width: '100%',
         }}>
-          {/* Main content on the left */}
+          {/* Main content */}
           <div style={{
-            flex: isMobile ? '1 1 auto' : '1 1 55%',
             overflowY: 'hidden',
-            paddingRight: isMobile ? '0' : '1rem',
-            marginBottom: isMobile ? '1rem' : '0',
           }}>
             {formatContent(content)}
           </div>
           
-          {/* Preview section on the right - only show if there are previews */}
-          {(extractCodeBlocks(content).length > 0 || containsHtml(content)) && (
-            <div style={{
-              flex: isMobile ? '1 1 auto' : '1 1 45%',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '1rem',
-            }}>
-              {/* Code previews */}
-              {extractCodeBlocks(content).map((block, index) => (
-                <CodePreview 
-                  key={index} 
-                  code={block.code} 
-                  language={block.language} 
-                  isDarkTheme={isDarkTheme} 
-                />
-              ))}
-              
-              {/* HTML preview */}
-              {containsHtml(content) && (
-                <HtmlPreview html={content} isDarkTheme={isDarkTheme} />
-              )}
-            </div>
+          {/* Tabbed interface for code/HTML previews */}
+          {hasCodeOrHtml && (
+            <TabInterface 
+              codeBlocks={codeBlocks} 
+              htmlContent={content} 
+              isDarkTheme={isDarkTheme} 
+            />
           )}
         </div>
       </div>
     );
   }
 
-  // If has analysis, render the agent UI with side-by-side layout
+  // If has analysis, render the agent UI with the new tabbed interface
   return (
     <div className="message assistant-message agent-ui" style={{
       marginBottom: '1rem',
@@ -371,18 +489,16 @@ const MessageItem: React.FC<MessageItemProps> = ({ role, content, timestamp }) =
         </div>
       )}
       
-      {/* Main response with side-by-side layout */}
+      {/* Main response with new tabbed interface */}
       <div style={{
         display: 'flex',
-        flexDirection: isMobile ? 'column' : 'row',
+        flexDirection: 'column',
         padding: '1rem',
         gap: '1.5rem',
       }}>
         {/* Main content */}
         <div style={{
-          flex: isMobile ? '1 1 auto' : '1 1 55%',
           overflowY: 'hidden',
-          marginBottom: isMobile ? '1rem' : '0',
         }}>
           {formatContent(mainContent)}
           <div style={{ display: 'flex', marginTop: '1rem' }}>
@@ -392,29 +508,13 @@ const MessageItem: React.FC<MessageItemProps> = ({ role, content, timestamp }) =
           </div>
         </div>
         
-        {/* Preview section - only show if there are previews */}
-        {(extractCodeBlocks(mainContent).length > 0 || containsHtml(mainContent)) && (
-          <div style={{
-            flex: isMobile ? '1 1 auto' : '1 1 45%',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '1rem',
-          }}>
-            {/* Code previews */}
-            {extractCodeBlocks(mainContent).map((block, index) => (
-              <CodePreview 
-                key={index} 
-                code={block.code} 
-                language={block.language} 
-                isDarkTheme={isDarkTheme} 
-              />
-            ))}
-            
-            {/* HTML preview */}
-            {containsHtml(mainContent) && (
-              <HtmlPreview html={mainContent} isDarkTheme={isDarkTheme} />
-            )}
-          </div>
+        {/* Tabbed interface for code/HTML previews */}
+        {(codeBlocks.length > 0 || containsHtml(mainContent)) && (
+          <TabInterface 
+            codeBlocks={codeBlocks} 
+            htmlContent={mainContent} 
+            isDarkTheme={isDarkTheme} 
+          />
         )}
       </div>
     </div>
