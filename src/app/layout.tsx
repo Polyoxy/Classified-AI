@@ -65,7 +65,9 @@ export default function RootLayout({
       </head>
       <body className="antialiased theme-dark">
         <Providers>
-          {children}
+          <div className="app-container" id="app-container">
+            {children}
+          </div>
         </Providers>
       </body>
     </html>

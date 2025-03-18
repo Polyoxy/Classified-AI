@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAppContext } from '@/context/AppContext';
+import CodeSnippet from './CodeSnippet';
 
 interface MessageItemProps {
   role: 'user' | 'assistant' | 'system';
@@ -112,63 +113,57 @@ const MessageItem: React.FC<MessageItemProps> = ({
           
           if (match) {
             const [, language, code] = match;
-            const isHtml = language === 'html' || code.includes('<html') || code.includes('<!DOCTYPE');
+            
+            // Look for title comment at the beginning of the code
+            let title = '';
+            const titleMatch = code.match(/^\/\/\s*(.+?)\s*\n/);
+            const cleanedCode = titleMatch ? code.substring(titleMatch[0].length) : code;
+            
+            if (titleMatch) {
+              title = titleMatch[1];
+            } else {
+              // Try to guess a title from the code
+              if (language === 'javascript' || language === 'typescript') {
+                const functionMatch = code.match(/function\s+(\w+)/);
+                const constMatch = code.match(/const\s+(\w+)/);
+                const classMatch = code.match(/class\s+(\w+)/);
+                
+                if (functionMatch) {
+                  title = `Function: ${functionMatch[1]}`;
+                } else if (classMatch) {
+                  title = `Class: ${classMatch[1]}`;
+                } else if (constMatch) {
+                  title = `${constMatch[1]}`;
+                } else {
+                  title = language ? `${language.charAt(0).toUpperCase() + language.slice(1)} code` : 'Code snippet';
+                }
+              } else if (language === 'html') {
+                title = 'HTML Template';
+              } else if (language === 'css') {
+                title = 'CSS Styles';
+              } else if (language === 'python') {
+                const defMatch = code.match(/def\s+(\w+)/);
+                const classMatch = code.match(/class\s+(\w+)/);
+                
+                if (defMatch) {
+                  title = `Function: ${defMatch[1]}`;
+                } else if (classMatch) {
+                  title = `Class: ${classMatch[1]}`;
+                } else {
+                  title = 'Python code';
+                }
+              } else {
+                title = language ? `${language.charAt(0).toUpperCase() + language.slice(1)} code` : 'Code snippet';
+              }
+            }
             
             return (
-              <div key={index} className="code-block-container" style={{
-                backgroundColor: isDarkTheme ? '#1E1E1E' : '#F5F5F5',
-                borderRadius: '4px',
-                padding: '0.5rem',
-                margin: '0.5rem 0',
-                overflow: 'auto',
-                fontFamily: 'var(--font-mono)',
-                fontSize: '13px',
-                lineHeight: 1.5,
-                whiteSpace: 'pre',
-                position: 'relative',
-              }}>
-                {/* Copy button for code blocks */}
-                <div className="code-copy-button" style={{
-                  position: 'absolute',
-                  top: '8px',
-                  right: '8px',
-                  cursor: 'pointer',
-                  background: isDarkTheme ? 'rgba(40, 40, 40, 0.6)' : 'rgba(240, 240, 240, 0.8)',
-                  borderRadius: '4px',
-                  padding: '4px',
-                  display: 'none',
-                  zIndex: 10,
-                  transition: 'opacity 0.2s',
-                  opacity: 0.8,
-                }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  navigator.clipboard.writeText(code);
-                  
-                  // Show feedback
-                  const target = e.currentTarget as HTMLDivElement;
-                  const originalText = target.innerHTML;
-                  target.innerHTML = 'Copied!';
-                  setTimeout(() => {
-                    target.innerHTML = originalText;
-                  }, 1000);
-                }}>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                  </svg>
-                </div>
-                
-                {code.split('\n').map((line, lineIndex) => (
-                  <div key={lineIndex} style={{
-                    display: 'block',
-                    color: getCodeColor(line, isDarkTheme),
-                    paddingLeft: getIndentation(line),
-                  }}>
-                    {line}
-                  </div>
-                ))}
-              </div>
+              <CodeSnippet 
+                key={index} 
+                code={cleanedCode}
+                language={language || ''}
+                title={title}
+              />
             );
           }
         } 
