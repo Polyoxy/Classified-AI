@@ -616,22 +616,20 @@ body.has-open-panel .app-container {
 .command-input-container {
   position: fixed;
   bottom: 40px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 964px;
-  max-width: calc(100% - 40px);
+  left: 0;
+  width: 100%;
   padding: 0 20px;
   transition: all 0.3s ease-in-out;
   z-index: 10;
+  max-width: none;
   box-sizing: border-box;
 }
 
 body.has-open-panel .command-input-container {
-  left: 25%;
-  transform: translateX(-50%);
-  width: 482px;
-  max-width: calc(50% - 40px);
-  padding: 0 20px;
+  width: 50%;
+  transform: translateX(0);
+  padding-left: 20px;
+  padding-right: 20px;
 }
 
 /* Status bar should stay fixed and span the full width */
