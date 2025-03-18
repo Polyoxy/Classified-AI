@@ -44,7 +44,8 @@ export const callOpenAI = async (
   model: string,
   apiKey: string,
   temperature: number,
-  onUpdate: (response: StreamResponse) => void
+  onUpdate: (response: StreamResponse) => void,
+  signal?: AbortSignal
 ): Promise<TokenUsage> => {
   try {
     // Prepare messages for OpenAI format
@@ -70,6 +71,7 @@ export const callOpenAI = async (
         temperature,
         stream: true,
       }),
+      signal // Pass the abort signal to fetch
     });
 
     if (!response.ok) {
@@ -85,61 +87,78 @@ export const callOpenAI = async (
 
     // Process the stream
     const processStream = async (): Promise<TokenUsage> => {
-      const { done, value } = await reader.read();
-      
-      if (done) {
-        // Final update with token usage
-        completionTokens = estimateTokens(accumulatedContent);
-        const totalTokens = promptTokens + completionTokens;
-        const estimatedCost = calculateCost(promptTokens, completionTokens, model);
+      try {
+        const { done, value } = await reader.read();
         
-        onUpdate({
-          content: accumulatedContent,
-          done: true,
-          usage: {
+        if (done) {
+          // Final update with token usage
+          completionTokens = estimateTokens(accumulatedContent);
+          const totalTokens = promptTokens + completionTokens;
+          const estimatedCost = calculateCost(promptTokens, completionTokens, model);
+          
+          onUpdate({
+            content: accumulatedContent,
+            done: true,
+            usage: {
+              promptTokens,
+              completionTokens,
+              totalTokens,
+            },
+          });
+          
+          return {
             promptTokens,
             completionTokens,
             totalTokens,
-          },
-        });
-        
-        return {
-          promptTokens,
-          completionTokens,
-          totalTokens,
-          estimatedCost,
-        };
-      }
+            estimatedCost,
+          };
+        }
 
-      // Decode the chunk
-      const chunk = new TextDecoder().decode(value);
-      const lines = chunk
-        .split('\n')
-        .filter(line => line.trim() !== '' && line.trim() !== 'data: [DONE]');
+        // Decode the chunk
+        const chunk = new TextDecoder().decode(value);
+        const lines = chunk
+          .split('\n')
+          .filter(line => line.trim() !== '' && line.trim() !== 'data: [DONE]');
 
-      for (const line of lines) {
-        if (line.startsWith('data: ')) {
-          try {
-            const jsonStr = line.slice(6);
-            if (jsonStr === '[DONE]') continue;
-            
-            const json = JSON.parse(jsonStr);
-            const content = json.choices[0]?.delta?.content || '';
-            
-            if (content) {
-              accumulatedContent += content;
-              onUpdate({
-                content: accumulatedContent,
-                done: false,
-              });
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const jsonStr = line.slice(6);
+              if (jsonStr === '[DONE]') continue;
+              
+              const json = JSON.parse(jsonStr);
+              const content = json.choices[0]?.delta?.content || '';
+              
+              if (content) {
+                accumulatedContent += content;
+                onUpdate({
+                  content: accumulatedContent,
+                  done: false,
+                });
+              }
+            } catch (e) {
+              console.error('Error parsing JSON from stream:', e);
             }
-          } catch (e) {
-            console.error('Error parsing JSON from stream:', e);
           }
         }
-      }
 
-      return processStream();
+        return processStream();
+      } catch (error) {
+        // Check for AbortError and handle it gracefully
+        if (error instanceof DOMException && error.name === 'AbortError') {
+          console.log('OpenAI stream aborted by user');
+          // Return the current state with what we have so far
+          const completionTokens = estimateTokens(accumulatedContent);
+          const totalTokens = promptTokens + completionTokens;
+          return {
+            promptTokens,
+            completionTokens,
+            totalTokens,
+            estimatedCost: calculateCost(promptTokens, completionTokens, model)
+          };
+        }
+        throw error;
+      }
     };
 
     return await processStream();
@@ -155,9 +174,21 @@ export const callOllama = async (
   model: string,
   baseUrl: string,
   temperature: number,
-  onUpdate: (response: StreamResponse) => void
+  onUpdate: (response: StreamResponse) => void,
+  signal?: AbortSignal
 ): Promise<TokenUsage> => {
   try {
+    // Create a local cancellation flag
+    let isCancelled = false;
+    
+    // Set up an abort handler
+    if (signal) {
+      signal.addEventListener('abort', () => {
+        console.log('🚩 Abort signal received in callOllama');
+        isCancelled = true;
+      });
+    }
+    
     // Log initial call details
     console.log('🚀 Initializing Ollama API call:', {
       model,
@@ -299,10 +330,24 @@ export const callOllama = async (
     let accumulatedContent = '';
     let chunkCount = 0;
 
-    // Process the stream
+    // Process the stream with improved abort handling
     const processStream = async (): Promise<void> => {
       try {
+        // Check if we've been cancelled before reading next chunk
+        if (isCancelled) {
+          console.log('🛑 Stream processing cancelled - exiting processStream loop');
+          reader.cancel(); // Explicitly cancel the reader
+          return;
+        }
+        
         const { done, value } = await reader.read();
+        
+        // Check again after read if we've been cancelled
+        if (isCancelled) {
+          console.log('🛑 Stream processing cancelled after read - exiting processStream loop');
+          reader.cancel(); // Explicitly cancel the reader
+          return;
+        }
         
         if (done) {
           // Final update
@@ -335,6 +380,13 @@ export const callOllama = async (
         
         // Split by newlines and filter out empty lines
         const lines = chunk.split('\n').filter(line => line.trim() !== '');
+        
+        // Check cancellation before processing lines
+        if (isCancelled) {
+          console.log('🛑 Stream processing cancelled before lines processing - exiting');
+          reader.cancel();
+          return;
+        }
         
         console.log(`📦 Processing chunk #${chunkCount}:`, {
           numLines: lines.length,
@@ -377,14 +429,41 @@ export const callOllama = async (
           }
         }
 
+        // Check cancellation again before recursive call
+        if (isCancelled) {
+          console.log('🛑 Stream processing cancelled after lines processing - exiting');
+          reader.cancel();
+          return;
+        }
+        
         return processStream();
       } catch (error) {
+        // Check for AbortError and handle it gracefully
+        if (error instanceof DOMException && error.name === 'AbortError') {
+          console.log('🚨 AbortError in Ollama stream processing');
+          isCancelled = true;
+          reader.cancel();
+          return;
+        }
         console.error('❌ Error processing stream:', error);
         throw error;
       }
     };
 
     await processStream();
+    
+    // If cancelled, return early with current content
+    if (isCancelled) {
+      console.log('🛑 Stream was cancelled - returning partial results');
+      const completionTokens = estimateTokens(accumulatedContent);
+      const totalTokens = promptTokens + completionTokens;
+      return {
+        promptTokens,
+        completionTokens,
+        totalTokens,
+        estimatedCost: 0,
+      };
+    }
     
     // Calculate final token usage
     const completionTokens = estimateTokens(accumulatedContent);
@@ -405,6 +484,18 @@ export const callOllama = async (
       estimatedCost: 0, // Local models have no cost
     };
   } catch (error) {
+    // Check for abort error at the top level
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      console.log('🚨 Top-level AbortError in Ollama API call');
+      // Create a minimal result with whatever we have so far
+      return {
+        promptTokens: 0,
+        completionTokens: 0,
+        totalTokens: 0,
+        estimatedCost: 0
+      };
+    }
+    
     console.error('❌ Error in Ollama API call:', error);
     throw error;
   }
@@ -416,7 +507,8 @@ export const callDeepseek = async (
   model: string,
   apiKey: string,
   temperature: number,
-  onUpdate: (response: StreamResponse) => void
+  onUpdate: (response: StreamResponse) => void,
+  signal?: AbortSignal
 ): Promise<TokenUsage> => {
   try {
     // Prepare messages for Deepseek format
@@ -442,6 +534,7 @@ export const callDeepseek = async (
         temperature,
         stream: true,
       }),
+      signal // Pass the abort signal to fetch
     });
 
     if (!response.ok) {
@@ -456,61 +549,78 @@ export const callDeepseek = async (
 
     // Process the stream
     const processStream = async (): Promise<TokenUsage> => {
-      const { done, value } = await reader.read();
-      
-      if (done) {
-        // Final update
-        const completionTokens = estimateTokens(accumulatedContent);
-        const totalTokens = promptTokens + completionTokens;
-        const estimatedCost = calculateCost(promptTokens, completionTokens, 'default');
+      try {
+        const { done, value } = await reader.read();
         
-        onUpdate({
-          content: accumulatedContent,
-          done: true,
-          usage: {
+        if (done) {
+          // Final update
+          const completionTokens = estimateTokens(accumulatedContent);
+          const totalTokens = promptTokens + completionTokens;
+          const estimatedCost = calculateCost(promptTokens, completionTokens, 'default');
+          
+          onUpdate({
+            content: accumulatedContent,
+            done: true,
+            usage: {
+              promptTokens,
+              completionTokens,
+              totalTokens,
+            },
+          });
+          
+          return {
             promptTokens,
             completionTokens,
             totalTokens,
-          },
-        });
-        
-        return {
-          promptTokens,
-          completionTokens,
-          totalTokens,
-          estimatedCost,
-        };
-      }
+            estimatedCost,
+          };
+        }
 
-      // Decode the chunk
-      const chunk = new TextDecoder().decode(value);
-      const lines = chunk
-        .split('\n')
-        .filter(line => line.trim() !== '' && line.trim() !== 'data: [DONE]');
+        // Decode the chunk
+        const chunk = new TextDecoder().decode(value);
+        const lines = chunk
+          .split('\n')
+          .filter(line => line.trim() !== '' && line.trim() !== 'data: [DONE]');
 
-      for (const line of lines) {
-        if (line.startsWith('data: ')) {
-          try {
-            const jsonStr = line.slice(6);
-            if (jsonStr === '[DONE]') continue;
-            
-            const json = JSON.parse(jsonStr);
-            const content = json.choices[0]?.delta?.content || '';
-            
-            if (content) {
-              accumulatedContent += content;
-              onUpdate({
-                content: accumulatedContent,
-                done: false,
-              });
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const jsonStr = line.slice(6);
+              if (jsonStr === '[DONE]') continue;
+              
+              const json = JSON.parse(jsonStr);
+              const content = json.choices[0]?.delta?.content || '';
+              
+              if (content) {
+                accumulatedContent += content;
+                onUpdate({
+                  content: accumulatedContent,
+                  done: false,
+                });
+              }
+            } catch (e) {
+              console.error('Error parsing JSON from Deepseek stream:', e);
             }
-          } catch (e) {
-            console.error('Error parsing JSON from Deepseek stream:', e);
           }
         }
-      }
 
-      return processStream();
+        return processStream();
+      } catch (error) {
+        // Check for AbortError and handle it gracefully
+        if (error instanceof DOMException && error.name === 'AbortError') {
+          console.log('Deepseek stream aborted by user');
+          // Return the current state with what we have so far
+          const completionTokens = estimateTokens(accumulatedContent);
+          const totalTokens = promptTokens + completionTokens;
+          return {
+            promptTokens,
+            completionTokens,
+            totalTokens,
+            estimatedCost: calculateCost(promptTokens, completionTokens, 'default')
+          };
+        }
+        throw error;
+      }
     };
 
     return await processStream();
@@ -528,22 +638,20 @@ export const callAI = async (
   apiKey: string | undefined,
   baseUrl: string | undefined,
   temperature: number,
-  onUpdate: (response: StreamResponse) => void
+  onUpdate: (response: StreamResponse) => void,
+  signal?: AbortSignal
 ): Promise<TokenUsage> => {
+  // Set default temperature if not provided
+  const actualTemperature = typeof temperature === 'number' ? temperature : 0.7;
+  
   switch (provider) {
     case 'openai':
-      if (!apiKey) throw new Error('OpenAI API key is required');
-      return callOpenAI(messages, model, apiKey, temperature, onUpdate);
-    
+      return callOpenAI(messages, model, apiKey || '', actualTemperature, onUpdate, signal);
     case 'ollama':
-      const ollamaBaseUrl = baseUrl || 'http://localhost:11434';
-      return callOllama(messages, model, ollamaBaseUrl, temperature, onUpdate);
-    
+      return callOllama(messages, model, baseUrl || 'http://localhost:11434', actualTemperature, onUpdate, signal);
     case 'deepseek':
-      if (!apiKey) throw new Error('Deepseek API key is required');
-      return callDeepseek(messages, model, apiKey, temperature, onUpdate);
-    
+      return callDeepseek(messages, model, apiKey || '', actualTemperature, onUpdate, signal);
     default:
-      throw new Error(`Unsupported AI provider: ${provider}`);
+      throw new Error(`Unsupported provider: ${provider}`);
   }
 }; 

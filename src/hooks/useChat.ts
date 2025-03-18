@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useAppContext } from '@/context/AppContext';
 import { callAI, StreamResponse } from '@/lib/aiService';
 import { Message } from '@/types';
@@ -16,12 +16,38 @@ export const useChat = () => {
   } = useAppContext();
 
   const [error, setError] = useState<string | null>(null);
+  // Add AbortController reference
+  const abortControllerRef = useRef<AbortController | null>(null);
+  // Add a flag to track whether we've manually stopped the response
+  const isStopped = useRef<boolean>(false);
+
+  const stopResponse = useCallback(() => {
+    // Set the stopped flag to true
+    isStopped.current = true;
+    console.log('🛑 Stopping AI response...');
+    
+    // If there's an active request, abort it
+    if (abortControllerRef.current) {
+      console.log('🛑 Aborting AI response');
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    
+    // Immediately set processing to false to update UI
+    setIsProcessing(false);
+  }, [setIsProcessing]);
 
   const sendMessage = useCallback(async (content: string) => {
     if (!content.trim() || isProcessing || !currentConversation) return;
 
     try {
+      // Reset the stopped flag when sending a new message
+      isStopped.current = false;
+      
       console.log('Sending user message:', content.trim());
+      
+      // Create a new AbortController for this request
+      abortControllerRef.current = new AbortController();
       
       // Add user message to the conversation
       const userMessage: Message = {
@@ -92,6 +118,12 @@ export const useChat = () => {
       // Stream handler for the response
       let accumulatedContent = '';
       const handleStreamUpdate = (response: StreamResponse) => {
+        // Check if we've manually stopped - if so, don't update the UI further
+        if (isStopped.current) {
+          console.log('🛑 Response update ignored because stream was stopped');
+          return;
+        }
+        
         accumulatedContent = response.content;
         
         // Add the response to the conversation
@@ -104,7 +136,7 @@ export const useChat = () => {
       };
       
       try {
-        // Call the AI service with direct connection first
+        // Pass the abort signal to the callAI function
         const tokenUsage = await callAI(
           messages as Message[],
           model,
@@ -112,8 +144,15 @@ export const useChat = () => {
           apiKey,
           providerSettings.baseUrl,
           settings.temperature,
-          handleStreamUpdate
+          handleStreamUpdate,
+          abortControllerRef.current.signal // Pass the signal
         );
+        
+        // Don't update anything if we've manually stopped
+        if (isStopped.current) {
+          console.log('🛑 Token usage update skipped because response was stopped');
+          return;
+        }
         
         // Update token usage
         updateTokenUsage(tokenUsage);
@@ -123,6 +162,20 @@ export const useChat = () => {
           responseLength: accumulatedContent.length 
         });
       } catch (directError) {
+        // If we manually stopped, don't show any errors
+        if (isStopped.current) {
+          console.log('🛑 Error handling skipped because response was stopped');
+          return;
+        }
+        
+        // Check if this is an abort error, which we can ignore
+        if (directError instanceof DOMException && directError.name === 'AbortError') {
+          console.log('Request was aborted by user');
+          // Instead of adding a system message, we'll just stop processing
+          // The accumulated content will remain visible
+          return;
+        }
+        
         console.error('❌ Direct connection failed:', directError);
         
         // If in Electron environment, we can't use the API proxy route
@@ -132,6 +185,18 @@ export const useChat = () => {
         }
       }
     } catch (error) {
+      // If we manually stopped, don't show any errors
+      if (isStopped.current) {
+        console.log('🛑 Final error handling skipped because response was stopped');
+        return;
+      }
+      
+      // Check if this is an abort error, which we can ignore
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        console.log('Request was aborted by user');
+        return;
+      }
+      
       console.error('❌ Error sending message to AI:', error);
       setError(error instanceof Error ? error.message : String(error));
       
@@ -141,7 +206,11 @@ export const useChat = () => {
       // Update connection status
       setConnectionStatus('error');
     } finally {
-      setIsProcessing(false);
+      // Only reset state if we haven't manually stopped (which would have already reset it)
+      if (!isStopped.current) {
+        setIsProcessing(false);
+      }
+      abortControllerRef.current = null;
     }
   }, [
     addMessage,
@@ -155,6 +224,7 @@ export const useChat = () => {
 
   return {
     sendMessage,
+    stopResponse,
     error,
     isProcessing
   };
