@@ -125,7 +125,7 @@ const CodePanel: React.FC<CodePanelProps> = ({
         top: '60px',
         right: isOpen ? '20px' : '-50%',
         width: 'calc(50% - 40px)',
-        height: 'calc(100vh - 150px)',
+        height: 'calc(100vh - 180px)',
         margin: '0',
         backgroundColor: 'var(--ai-response-background)',
         borderRadius: '8px',
@@ -196,7 +196,7 @@ const CodePanel: React.FC<CodePanelProps> = ({
           top: 60px;
           right: -50%;
           width: calc(50% - 40px);
-          height: calc(100vh - 150px);
+          height: calc(100vh - 180px);
           margin: 0;
           background-color: ${isDarkTheme ? 'var(--code-panel-bg-dark)' : 'var(--code-panel-bg-light)'};
           box-shadow: ${isDarkTheme ? '-5px 0 15px var(--code-panel-shadow-dark)' : '-5px 0 15px var(--code-panel-shadow-light)'};

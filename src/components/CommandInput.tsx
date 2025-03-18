@@ -472,166 +472,185 @@ const CommandInput: React.FC = () => {
   }, [responseStyle]);
 
   return (
-    <div style={{
-      position: 'fixed',
-      bottom: '48px', /* Increase space from bottom */
-      left: '0',
-      right: '0',
-      zIndex: 100,
-      backgroundColor: settings?.theme === 'dark' ? '#121212' : '#f8f9fa',
-      padding: '1rem',
-      transition: 'right 0.3s ease',
-    }}>
-      <div style={{
-        maxWidth: '800px',
-        margin: '0 auto',
-        position: 'relative',
-      }}>
-        <div className="command-input-container" style={{
-          display: 'flex',
-          flexDirection: 'column',
-          backgroundColor: 'transparent',
-          borderRadius: '8px',
-          padding: '0.75rem',
-          minHeight: '85px', // Increased to accommodate the selectors at bottom
-          height: 'auto',
-          position: 'relative',
-          transition: 'height 0.2s ease',
-        }}>
-          <style>
-            {`
-              .command-input-container::before {
-                content: '';
-                position: absolute;
-                top: 0;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                border-radius: 8px;
-                padding: 1px;
-                background: linear-gradient(
-                  45deg,
-                  rgba(128, 128, 128, 0.2),
-                  rgba(64, 64, 64, 0.2),
-                  rgba(128, 128, 128, 0.2)
-                );
-                -webkit-mask: linear-gradient(#fff 0 0) content-box,
-                           linear-gradient(#fff 0 0);
-                mask: linear-gradient(#fff 0 0) content-box,
-                      linear-gradient(#fff 0 0);
-                -webkit-mask-composite: xor;
-                mask-composite: exclude;
-                pointer-events: none;
-                animation: borderGlow 4s linear infinite;
-              }
-              
-              @keyframes borderGlow {
-                0% {
-                  filter: brightness(1) blur(1px);
-                }
-                50% {
-                  filter: brightness(1.2) blur(1.5px);
-                }
-                100% {
-                  filter: brightness(1) blur(1px);
-                }
-              }
-              
-              .selector-button {
-                background-color: ${settings?.theme === 'dark' ? '#1A1A1A' : '#f0f0f0'};
-                border: 1px solid ${settings?.theme === 'dark' ? '#333' : '#ddd'};
-                border-radius: 4px;
-                color: ${settings?.theme === 'dark' ? '#d0d0d0' : '#333'};
-                padding: 4px 8px;
-                font-size: 12px;
-                cursor: pointer;
-                display: flex;
-                align-items: center;
-                gap: 5px;
-                height: 26px;
-                transition: background 0.2s;
-                user-select: none;
-              }
-              
-              .selector-button:hover {
-                background-color: ${settings?.theme === 'dark' ? '#252525' : '#e5e5e5'};
-              }
-            `}
-          </style>
+    <div className="command-input-container">
+      <style>
+        {`
+          .command-input-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            border-radius: 8px;
+            padding: 1px;
+            background: linear-gradient(
+              45deg,
+              rgba(128, 128, 128, 0.2),
+              rgba(64, 64, 64, 0.2),
+              rgba(128, 128, 128, 0.2)
+            );
+            -webkit-mask: linear-gradient(#fff 0 0) content-box,
+                       linear-gradient(#fff 0 0);
+            mask: linear-gradient(#fff 0 0) content-box,
+                  linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            pointer-events: none;
+            animation: borderGlow 4s linear infinite;
+          }
           
-          {/* Top section: Input and send button */}
-          <div style={{ 
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.75rem',
-            marginBottom: '12px',
-            flexGrow: 1,
-          }}>
-            <div 
-              onClick={handleInputClick}
-              style={{ 
-                flex: 1, 
-                cursor: 'text',
+          @keyframes borderGlow {
+            0% {
+              filter: brightness(1) blur(1px);
+            }
+            50% {
+              filter: brightness(1.2) blur(1.5px);
+            }
+            100% {
+              filter: brightness(1) blur(1px);
+            }
+          }
+          
+          .selector-button {
+            background-color: ${settings?.theme === 'dark' ? '#1A1A1A' : '#f0f0f0'};
+            border: 1px solid ${settings?.theme === 'dark' ? '#333' : '#ddd'};
+            border-radius: 4px;
+            color: ${settings?.theme === 'dark' ? '#d0d0d0' : '#333'};
+            padding: 4px 8px;
+            font-size: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            height: 26px;
+            transition: background 0.2s;
+            user-select: none;
+          }
+          
+          .selector-button:hover {
+            background-color: ${settings?.theme === 'dark' ? '#252525' : '#e5e5e5'};
+          }
+        `}
+      </style>
+      
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        backgroundColor: 'transparent',
+        borderRadius: '8px',
+        padding: '0.75rem',
+        minHeight: '85px',
+        height: 'auto',
+        position: 'relative',
+        transition: 'height 0.2s ease',
+      }}>
+        <div style={{ 
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.75rem',
+          marginBottom: '12px',
+          flexGrow: 1,
+        }}>
+          <div 
+            onClick={handleInputClick}
+            style={{ 
+              flex: 1, 
+              cursor: 'text',
+              outline: 'none',
+              minHeight: '20px',
+              position: 'relative',
+              display: 'flex',
+              alignItems: 'center',
+            }}
+          >
+            <textarea
+              ref={inputRef}
+              value={input}
+              onChange={handleInputChange}
+              onKeyDown={handleKeyPress}
+              disabled={isProcessing}
+              placeholder={isProcessing ? messageSummary || 'AI is thinking...' : placeholder}
+              style={{
+                backgroundColor: 'transparent',
+                border: 'none',
+                color: settings?.theme === 'dark' ? '#d0d0d0' : '#505050', 
+                fontFamily: 'var(--font-mono, "JetBrains Mono", monospace)',
+                fontSize: '14px',
+                resize: 'none',
+                height: '24px',
+                minHeight: '24px',
+                maxHeight: '200px',
+                width: '100%',
                 outline: 'none',
-                minHeight: '20px',
+                padding: '0',
+                paddingTop: '0',
+                overflow: 'auto',
+                lineHeight: 1.4,
+                verticalAlign: 'middle',
+                caretColor: settings?.theme === 'dark' ? '#d0d0d0' : '#505050',
                 position: 'relative',
-                display: 'flex',
-                alignItems: 'center',
+                zIndex: 2,
+                letterSpacing: '0.01em',
               }}
+              rows={1}
+              autoFocus={false}
+              className="no-focus-visible"
+            />
+          </div>
+          
+          <button
+            onClick={handleSendMessage}
+            disabled={!input.trim() || isProcessing}
+            className={`command-button ${(!input.trim() || isProcessing) ? 'command-button-disabled' : ''}`}
+            style={{
+              backgroundColor: 'transparent',
+              border: 'none',
+              color: settings?.theme === 'dark' ? 'rgba(208, 208, 208, 0.6)' : 'rgba(64, 64, 64, 0.6)',
+              cursor: input.trim() && !isProcessing ? 'pointer' : 'not-allowed',
+              padding: '0.25rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              opacity: input.trim() && !isProcessing ? 0.6 : 0.3,
+              transition: 'opacity 0.2s ease',
+              flexShrink: 0,
+            }}
+            title="Send message"
+          >
+            <svg 
+              width="16" 
+              height="16" 
+              viewBox="0 0 24 24" 
+              fill="none" 
+              stroke="currentColor" 
+              strokeWidth="2" 
+              strokeLinecap="round" 
+              strokeLinejoin="round"
             >
-              <textarea
-                ref={inputRef}
-                value={input}
-                onChange={handleInputChange}
-                onKeyDown={handleKeyPress}
-                disabled={isProcessing}
-                placeholder={isProcessing ? "Processing request..." : placeholder}
-                style={{
-                  backgroundColor: 'transparent',
-                  border: 'none',
-                  color: settings?.theme === 'dark' ? '#d0d0d0' : '#505050', 
-                  fontFamily: 'var(--font-mono, "JetBrains Mono", monospace)',
-                  fontSize: '14px',
-                  resize: 'none',
-                  height: '24px', // Start with a minimum height
-                  minHeight: '24px',
-                  maxHeight: '200px', // Maximum height
-                  width: '100%',
-                  outline: 'none',
-                  padding: '0',
-                  paddingTop: '0',
-                  overflow: 'auto', // Allow scrolling
-                  lineHeight: 1.4,
-                  verticalAlign: 'middle',
-                  caretColor: settings?.theme === 'dark' ? '#d0d0d0' : '#505050',
-                  position: 'relative',
-                  zIndex: 2,
-                  letterSpacing: '0.01em',
-                }}
-                rows={1}
-                autoFocus={false}
-                className="no-focus-visible"
-              />
-            </div>
-            
+              <line x1="22" y1="2" x2="11" y2="13"></line>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+            </svg>
+          </button>
+          
+          {isProcessing && (
             <button
-              onClick={handleSendMessage}
-              disabled={!input.trim() || isProcessing}
-              className={`command-button ${(!input.trim() || isProcessing) ? 'command-button-disabled' : ''}`}
+              onClick={handleCancelMessage}
+              className="command-button"
               style={{
                 backgroundColor: 'transparent',
                 border: 'none',
                 color: settings?.theme === 'dark' ? 'rgba(208, 208, 208, 0.6)' : 'rgba(64, 64, 64, 0.6)',
-                cursor: input.trim() && !isProcessing ? 'pointer' : 'not-allowed',
+                cursor: 'pointer',
                 padding: '0.25rem',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                opacity: input.trim() && !isProcessing ? 0.6 : 0.3,
+                opacity: 0.6,
                 transition: 'opacity 0.2s ease',
                 flexShrink: 0,
               }}
-              title="Send message"
+              title="Stop generating"
             >
               <svg 
                 width="16" 
@@ -643,263 +662,223 @@ const CommandInput: React.FC = () => {
                 strokeLinecap="round" 
                 strokeLinejoin="round"
               >
-                <line x1="22" y1="2" x2="11" y2="13"></line>
-                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
               </svg>
             </button>
+          )}
+        </div>
+        
+        <div style={{
+          display: 'flex',
+          gap: '8px',
+          alignSelf: 'flex-start',
+        }}>
+          <div 
+            ref={modelSelectorRef}
+            onClick={() => !isProcessing && setShowModelDropdown(!showModelDropdown)}
+            className="selector-button"
+            style={{
+              opacity: isProcessing ? 0.6 : 1,
+              width: 'auto',
+              minWidth: '120px',
+              whiteSpace: 'nowrap',
+              position: 'relative',
+            }}
+          >
+            <span style={{ 
+              fontWeight: 400,
+              fontSize: '12px',
+              maxWidth: '100px',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}>
+              {currentModel}
+            </span>
+            <svg 
+              width="10" 
+              height="10" 
+              viewBox="0 0 24 24" 
+              fill="none" 
+              stroke="currentColor" 
+              strokeWidth="2" 
+              strokeLinecap="round" 
+              strokeLinejoin="round"
+              style={{
+                marginLeft: 'auto',
+                transform: showModelDropdown ? 'rotate(180deg)' : 'rotate(0deg)',
+                transition: 'transform 0.2s ease',
+              }}
+            >
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
             
-            {isProcessing && (
-              <button
-                onClick={handleCancelMessage}
-                className="command-button"
+            {showModelDropdown && (
+              <div 
+                ref={modelDropdownRef}
                 style={{
-                  backgroundColor: 'transparent',
-                  border: 'none',
-                  color: settings?.theme === 'dark' ? 'rgba(208, 208, 208, 0.6)' : 'rgba(64, 64, 64, 0.6)',
-                  cursor: 'pointer',
-                  padding: '0.25rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  opacity: 0.6,
-                  transition: 'opacity 0.2s ease',
-                  flexShrink: 0,
+                  position: 'absolute',
+                  bottom: '30px',
+                  left: '0',
+                  backgroundColor: settings?.theme === 'dark' ? '#1A1A1A' : '#ffffff',
+                  border: `1px solid ${settings?.theme === 'dark' ? '#333' : '#ddd'}`,
+                  borderRadius: '4px',
+                  marginBottom: '4px',
+                  zIndex: 10000,
+                  maxHeight: '200px',
+                  overflowY: 'auto',
+                  boxShadow: settings?.theme === 'dark' ? '0 -4px 8px rgba(0,0,0,0.3)' : '0 -4px 8px rgba(0,0,0,0.1)',
+                  fontFamily: 'Inter, sans-serif',
+                  minWidth: '120px',
                 }}
-                title="Stop generating"
+                onClick={(e) => e.stopPropagation()}
               >
-                <svg 
-                  width="16" 
-                  height="16" 
-                  viewBox="0 0 24 24" 
-                  fill="none" 
-                  stroke="currentColor" 
-                  strokeWidth="2" 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round"
-                >
-                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                </svg>
-              </button>
+                {availableModels.map((model) => (
+                  <div 
+                    key={model}
+                    className="model-option"
+                    onClick={() => handleModelChange(model)}
+                    style={{
+                      padding: '6px 10px',
+                      cursor: 'pointer',
+                      backgroundColor: model === currentModel
+                        ? (settings?.theme === 'dark' ? '#333' : '#e0e0e0') 
+                        : 'transparent',
+                      transition: 'all 0.1s ease',
+                      fontSize: '12px',
+                      fontWeight: model === currentModel ? 'bold' : 'normal',
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.backgroundColor = settings?.theme === 'dark' ? '#333' : '#e0e0e0';
+                    }}
+                    onMouseOut={(e) => {
+                      if (model !== currentModel) {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                      }
+                    }}
+                  >
+                    {model}
+                  </div>
+                ))}
+              </div>
             )}
           </div>
           
-          {/* Bottom section: Selectors */}
-          <div style={{
-            display: 'flex',
-            gap: '8px',
-            alignSelf: 'flex-start',
-          }}>
-            {/* Model selector (left side) */}
-            <div 
-              ref={modelSelectorRef}
-              onClick={() => !isProcessing && setShowModelDropdown(!showModelDropdown)}
-              className="selector-button"
+          <div 
+            ref={styleSelectorRef}
+            onClick={() => !isProcessing && setShowStyleDropdown(!showStyleDropdown)}
+            className="selector-button"
+            style={{
+              opacity: isProcessing ? 0.6 : 1,
+              whiteSpace: 'nowrap',
+              position: 'relative',
+              width: 'auto',
+            }}
+          >
+            <span style={{ 
+              fontWeight: 400,
+              fontSize: '12px',
+              whiteSpace: 'nowrap',
+            }}>
+              {responseStyle}
+            </span>
+            <svg 
+              width="10" 
+              height="10" 
+              viewBox="0 0 24 24" 
+              fill="none" 
+              stroke="currentColor" 
+              strokeWidth="2" 
+              strokeLinecap="round" 
+              strokeLinejoin="round"
               style={{
-                opacity: isProcessing ? 0.6 : 1,
-                width: 'auto',
-                minWidth: '120px',
-                whiteSpace: 'nowrap',
-                position: 'relative',
+                marginLeft: '5px',
+                transform: showStyleDropdown ? 'rotate(180deg)' : 'rotate(0deg)',
+                transition: 'transform 0.2s ease',
               }}
             >
-              <span style={{ 
-                fontWeight: 400,
-                fontSize: '12px',
-                maxWidth: '100px',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}>
-                {currentModel}
-              </span>
-              <svg 
-                width="10" 
-                height="10" 
-                viewBox="0 0 24 24" 
-                fill="none" 
-                stroke="currentColor" 
-                strokeWidth="2" 
-                strokeLinecap="round" 
-                strokeLinejoin="round"
-                style={{
-                  marginLeft: 'auto',
-                  transform: showModelDropdown ? 'rotate(180deg)' : 'rotate(0deg)',
-                  transition: 'transform 0.2s ease',
-                }}
-              >
-                <polyline points="6 9 12 15 18 9"></polyline>
-              </svg>
-              
-              {/* Model dropdown (opens upward) */}
-              {showModelDropdown && (
-                <div 
-                  ref={modelDropdownRef}
-                  style={{
-                    position: 'absolute',
-                    bottom: '30px', // Position above the selector
-                    left: '0',
-                    backgroundColor: settings?.theme === 'dark' ? '#1A1A1A' : '#ffffff',
-                    border: `1px solid ${settings?.theme === 'dark' ? '#333' : '#ddd'}`,
-                    borderRadius: '4px',
-                    marginBottom: '4px',
-                    zIndex: 10000,
-                    maxHeight: '200px',
-                    overflowY: 'auto',
-                    boxShadow: settings?.theme === 'dark' ? '0 -4px 8px rgba(0,0,0,0.3)' : '0 -4px 8px rgba(0,0,0,0.1)',
-                    fontFamily: 'Inter, sans-serif',
-                    minWidth: '120px',
-                  }}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {availableModels.map((model) => (
-                    <div 
-                      key={model}
-                      className="model-option"
-                      onClick={() => handleModelChange(model)}
-                      style={{
-                        padding: '6px 10px',
-                        cursor: 'pointer',
-                        backgroundColor: model === currentModel
-                          ? (settings?.theme === 'dark' ? '#333' : '#e0e0e0') 
-                          : 'transparent',
-                        transition: 'all 0.1s ease',
-                        fontSize: '12px',
-                        fontWeight: model === currentModel ? 'bold' : 'normal',
-                      }}
-                      onMouseOver={(e) => {
-                        e.currentTarget.style.backgroundColor = settings?.theme === 'dark' ? '#333' : '#e0e0e0';
-                      }}
-                      onMouseOut={(e) => {
-                        if (model !== currentModel) {
-                          e.currentTarget.style.backgroundColor = 'transparent';
-                        }
-                      }}
-                    >
-                      {model}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
             
-            {/* Response style selector (right of model selector) */}
-            <div 
-              ref={styleSelectorRef}
-              onClick={() => !isProcessing && setShowStyleDropdown(!showStyleDropdown)}
-              className="selector-button"
-              style={{
-                opacity: isProcessing ? 0.6 : 1,
-                whiteSpace: 'nowrap',
-                position: 'relative',
-                width: 'auto',
-              }}
-            >
-              <span style={{ 
-                fontWeight: 400,
-                fontSize: '12px',
-                whiteSpace: 'nowrap',
-              }}>
-                {responseStyle}
-              </span>
-              <svg 
-                width="10" 
-                height="10" 
-                viewBox="0 0 24 24" 
-                fill="none" 
-                stroke="currentColor" 
-                strokeWidth="2" 
-                strokeLinecap="round" 
-                strokeLinejoin="round"
+            {showStyleDropdown && (
+              <div 
+                ref={styleDropdownRef}
                 style={{
-                  marginLeft: '5px',
-                  transform: showStyleDropdown ? 'rotate(180deg)' : 'rotate(0deg)',
-                  transition: 'transform 0.2s ease',
+                  position: 'absolute',
+                  bottom: '30px',
+                  left: '0',
+                  backgroundColor: settings?.theme === 'dark' ? '#1A1A1A' : '#ffffff',
+                  border: `1px solid ${settings?.theme === 'dark' ? '#333' : '#ddd'}`,
+                  borderRadius: '4px',
+                  marginBottom: '4px',
+                  zIndex: 10000,
+                  maxHeight: '200px',
+                  overflowY: 'auto',
+                  boxShadow: settings?.theme === 'dark' ? '0 -4px 8px rgba(0,0,0,0.3)' : '0 -4px 8px rgba(0,0,0,0.1)',
+                  fontFamily: 'Inter, sans-serif',
+                  minWidth: '160px',
                 }}
+                onClick={(e) => e.stopPropagation()}
               >
-                <polyline points="6 9 12 15 18 9"></polyline>
-              </svg>
-              
-              {/* Style dropdown (opens upward) */}
-              {showStyleDropdown && (
-                <div 
-                  ref={styleDropdownRef}
-                  style={{
-                    position: 'absolute',
-                    bottom: '30px', // Position above the selector
-                    left: '0', // Align with the left edge of the selector
-                    backgroundColor: settings?.theme === 'dark' ? '#1A1A1A' : '#ffffff',
-                    border: `1px solid ${settings?.theme === 'dark' ? '#333' : '#ddd'}`,
-                    borderRadius: '4px',
-                    marginBottom: '4px',
-                    zIndex: 10000,
-                    maxHeight: '200px',
-                    overflowY: 'auto',
-                    boxShadow: settings?.theme === 'dark' ? '0 -4px 8px rgba(0,0,0,0.3)' : '0 -4px 8px rgba(0,0,0,0.1)',
-                    fontFamily: 'Inter, sans-serif',
-                    minWidth: '160px',
-                  }}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <div className="style-option-label" style={{
-                    padding: '6px 10px',
-                    fontSize: '11px',
-                    color: settings?.theme === 'dark' ? 'rgba(180, 180, 180, 0.7)' : 'rgba(100, 100, 100, 0.7)',
-                    borderBottom: `1px solid ${settings?.theme === 'dark' ? '#333' : '#ddd'}`,
-                    fontStyle: 'italic',
-                  }}>
-                    How should AI write responses?
-                  </div>
-                  {['normal', 'concise', 'explanatory', 'formal'].map((style) => (
-                    <div 
-                      key={style}
-                      onClick={() => {
-                        setResponseStyle(style);
-                        setShowStyleDropdown(false);
-                        
-                        // Provide feedback to user about style change
-                        if (style !== 'normal') {
-                          const description = styleDescriptions[style as keyof typeof styleDescriptions];
-                          console.log(`Response style set to ${style}: ${description}`);
-                        }
-                      }}
-                      style={{
-                        padding: '6px 10px',
-                        cursor: 'pointer',
-                        backgroundColor: style === responseStyle
-                          ? (settings?.theme === 'dark' ? '#333' : '#e0e0e0') 
-                          : 'transparent',
-                        transition: 'all 0.1s ease',
-                        fontSize: '12px',
-                        fontWeight: style === responseStyle ? 'bold' : 'normal',
-                      }}
-                      onMouseOver={(e) => {
-                        e.currentTarget.style.backgroundColor = settings?.theme === 'dark' ? '#333' : '#e0e0e0';
-                      }}
-                      onMouseOut={(e) => {
-                        if (style !== responseStyle) {
-                          e.currentTarget.style.backgroundColor = 'transparent';
-                        }
-                      }}
-                    >
-                      <div>
-                        {style.charAt(0).toUpperCase() + style.slice(1)}
-                        <div style={{
-                          fontSize: '9px',
-                          opacity: 0.7,
-                          fontWeight: 'normal',
-                          marginTop: '2px',
-                          display: style === 'normal' ? 'none' : 'block'
-                        }}>
-                          {style === 'concise' && 'Brief and to the point'}
-                          {style === 'explanatory' && 'Detailed with examples'}
-                          {style === 'formal' && 'Professional and structured'}
-                        </div>
+                <div className="style-option-label" style={{
+                  padding: '6px 10px',
+                  fontSize: '11px',
+                  color: settings?.theme === 'dark' ? 'rgba(180, 180, 180, 0.7)' : 'rgba(100, 100, 100, 0.7)',
+                  borderBottom: `1px solid ${settings?.theme === 'dark' ? '#333' : '#ddd'}`,
+                  fontStyle: 'italic',
+                }}>
+                  How should AI write responses?
+                </div>
+                {['normal', 'concise', 'explanatory', 'formal'].map((style) => (
+                  <div 
+                    key={style}
+                    onClick={() => {
+                      setResponseStyle(style);
+                      setShowStyleDropdown(false);
+                      
+                      // Provide feedback to user about style change
+                      if (style !== 'normal') {
+                        const description = styleDescriptions[style as keyof typeof styleDescriptions];
+                        console.log(`Response style set to ${style}: ${description}`);
+                      }
+                    }}
+                    style={{
+                      padding: '6px 10px',
+                      cursor: 'pointer',
+                      backgroundColor: style === responseStyle
+                        ? (settings?.theme === 'dark' ? '#333' : '#e0e0e0') 
+                        : 'transparent',
+                      transition: 'all 0.1s ease',
+                      fontSize: '12px',
+                      fontWeight: style === responseStyle ? 'bold' : 'normal',
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.backgroundColor = settings?.theme === 'dark' ? '#333' : '#e0e0e0';
+                    }}
+                    onMouseOut={(e) => {
+                      if (style !== responseStyle) {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                      }
+                    }}
+                  >
+                    <div>
+                      {style.charAt(0).toUpperCase() + style.slice(1)}
+                      <div style={{
+                        fontSize: '9px',
+                        opacity: 0.7,
+                        fontWeight: 'normal',
+                        marginTop: '2px',
+                        display: style === 'normal' ? 'none' : 'block'
+                      }}>
+                        {style === 'concise' && 'Brief and to the point'}
+                        {style === 'explanatory' && 'Detailed with examples'}
+                        {style === 'formal' && 'Professional and structured'}
                       </div>
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
