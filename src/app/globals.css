@@ -604,32 +604,38 @@ option:focus {
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
+  padding: 0;
+  max-width: 100%;
 }
 
-body.has-open-panel .app-container {
-  width: 50%;
-  left: 0;
-  position: absolute;
+.chat-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
 }
 
-/* Style for the command input container */
 .command-input-container {
   position: fixed;
   bottom: 40px;
   left: 0;
-  width: 100%;
+  right: 0;
+  max-width: 100%;
   padding: 0 20px;
   transition: all 0.3s ease-in-out;
   z-index: 10;
-  max-width: none;
   box-sizing: border-box;
 }
 
 body.has-open-panel .command-input-container {
   width: 50%;
-  transform: translateX(0);
-  padding-left: 20px;
-  padding-right: 20px;
+  right: 50%;
+}
+
+body.has-open-panel .app-container {
+  width: 50%;
 }
 
 /* Status bar should stay fixed and span the full width */
@@ -652,25 +658,36 @@ body.has-open-panel .command-input-container {
 
 /* Mobile styles */
 @media (max-width: 768px) {
+  .app-container {
+    padding: 0;
+    width: 100%;
+  }
+  
+  .chat-container {
+    padding: 20px;
+  }
+  
+  .command-input-container {
+    padding: 0 20px;
+    width: 100%;
+  }
+  
   .code-panel {
-    width: calc(100% - 40px) !important;
+    width: calc(100% - 20px) !important;
     right: -100% !important;
-    top: 60px !important;
-    height: calc(100vh - 180px) !important; /* Account for status bar */
+    margin: 10px !important;
+    height: calc(100vh - 100px) !important;
   }
   
   body.has-open-panel .app-container {
-    width: 0%;
-    margin-right: 100%;
+    width: 0;
+    overflow: hidden;
   }
   
   body.has-open-panel .command-input-container {
     opacity: 0;
+    visibility: hidden;
     pointer-events: none;
-  }
-  
-  body.has-open-panel .status-bar {
-    width: 100vw;
   }
 }
 
@@ -678,13 +695,13 @@ body.has-open-panel .command-input-container {
   position: fixed;
   top: 0;
   right: -50%;
-  width: calc(50% - 20px); /* Account for margins */
-  height: calc(100vh - 45px); /* Adjust for status bar height */
-  margin: 10px;
+  width: calc(50% - 20px);
+  height: calc(100vh - 50px);
+  margin: 10px 10px 40px 0;
   background-color: var(--code-panel-bg-light);
   box-shadow: -5px 0 15px var(--code-panel-shadow-light);
   transition: right 0.3s ease-in-out;
-  z-index: 990; /* Below status bar */
+  z-index: 50;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -698,7 +715,7 @@ body.has-open-panel .command-input-container {
 }
 
 .code-panel.open {
-  right: 0;
+  right: 10px;
 }
 
 body.has-open-panel {
@@ -791,4 +808,33 @@ body.has-open-panel {
   .code-panel-header {
     padding: 0.75rem;
   }
+}
+
+/* Chat message container styles */
+.message-container {
+  margin-bottom: 20px;
+  max-width: 100%;
+}
+
+/* Adjust content area when panel is open */
+body.has-open-panel .chat-container {
+  width: 100%;
+}
+
+/* Status bar adjustments */
+.status-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 30px;
+  background-color: rgba(0, 0, 0, 0.7);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  font-size: 12px;
+  z-index: 1000;
+  box-sizing: border-box;
 }
