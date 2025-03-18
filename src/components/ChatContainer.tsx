@@ -69,7 +69,20 @@ const ChatContainer: React.FC = () => {
       }
     };
     
-    smoothScrollToBottom();
+    // Always scroll to bottom on initial load/refresh
+    const initialScrollToBottom = () => {
+      if (!containerRef.current) return;
+      
+      const container = containerRef.current;
+      const targetScroll = container.scrollHeight - container.clientHeight;
+      container.scrollTo({
+        top: targetScroll,
+        behavior: 'auto' // Use instant scroll on initial load
+      });
+    };
+    
+    // Run the initial scroll
+    initialScrollToBottom();
     
     // Also add a slight delay to handle content that might render after state updates
     const timeoutId = setTimeout(smoothScrollToBottom, 100);
@@ -90,7 +103,7 @@ const ChatContainer: React.FC = () => {
           maxWidth: '800px',
           margin: '0 auto',
           width: 'calc(100% - 3rem)',
-          paddingBottom: '100px', // Space for the command input
+          paddingBottom: '100px', // Increased space for command input and status bar
           minHeight: 'calc(100vh - 80px)',
         }}
       />
@@ -261,10 +274,12 @@ const ChatContainer: React.FC = () => {
           maxWidth: '800px',
           margin: '0 auto',
           width: 'calc(100% - 3rem)',
-          paddingBottom: '100px', // Space for the command input
+          paddingBottom: '100px', // Increased space for command input and status bar
           overflowY: 'auto',
           scrollBehavior: 'smooth',
-          minHeight: 'calc(100vh - 80px)', // Minimum height to fill viewport
+          minHeight: 'calc(100vh - 120px)', // Adjusted for status bar and command input
+          position: 'relative',
+          zIndex: 5, // Lower than command input and status bar
         }}
       >
         {/* Welcome message if no messages yet */}

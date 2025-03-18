@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 
 interface TitleBarProps {
-  title: string;
+  isElectron?: boolean;
+  title?: string;
 }
 
-const TitleBar: React.FC<TitleBarProps> = ({ title }) => {
+const TitleBar: React.FC<TitleBarProps> = ({ isElectron = false, title = "CLASSIFIED AI" }) => {
   const [hasMaximize, setHasMaximize] = useState(false);
   
   // Check if maximize function exists on mount
@@ -64,6 +65,9 @@ const TitleBar: React.FC<TitleBarProps> = ({ title }) => {
       <line x1="12" y1="19" x2="20" y2="19"></line>
     </svg>
   );
+
+  // If not in Electron mode, don't show the title bar
+  if (!isElectron) return null;
 
   return (
     <div 

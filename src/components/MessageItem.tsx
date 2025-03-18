@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus, vs } from 'react-syntax-highlighter/dist/cjs/styles/prism';
 import { useAppContext } from '@/context/AppContext';
@@ -39,67 +39,14 @@ const extractCodeBlocks = (content: string): Array<{code: string, language: stri
   return blocks;
 };
 
-// Tab interface component for code and previews
-const TabInterface: React.FC<{
+// For code tabs functionality - separate from HTML preview
+const CodeTabs: React.FC<{
   codeBlocks: Array<{code: string, language: string}>,
-  htmlContent: string,
   isDarkTheme: boolean
-}> = ({ codeBlocks, htmlContent, isDarkTheme }) => {
-  const [activeTab, setActiveTab] = useState<string>(codeBlocks.length > 0 ? 'code-0' : 'html-code');
+}> = ({ codeBlocks, isDarkTheme }) => {
+  const [activeTab, setActiveTab] = useState<number>(0);
   
-  const hasHtml = containsHtml(htmlContent);
-  
-  // Generate tabs data
-  const tabs = [
-    ...(codeBlocks.map((block, index) => ({
-      id: `code-${index}`,
-      label: `${block.language.toUpperCase()}`,
-      content: (
-        <CodePreview 
-          key={index} 
-          code={block.code} 
-          language={block.language} 
-          isDarkTheme={isDarkTheme}
-          fullWidth={true}
-        />
-      )
-    }))),
-    ...(hasHtml ? [
-      {
-        id: 'html-code',
-        label: 'HTML',
-        content: (
-          <div style={{
-            maxHeight: '500px',
-            overflowY: 'auto',
-            padding: '12px',
-            backgroundColor: isDarkTheme ? '#1e1e1e' : '#f5f5f5',
-            borderRadius: '4px',
-            fontFamily: 'var(--font-mono, "JetBrains Mono", monospace)',
-          }}>
-            <SyntaxHighlighter
-              language="html"
-              style={isDarkTheme ? vscDarkPlus : vs}
-              customStyle={{
-                margin: 0,
-                padding: 0,
-                backgroundColor: 'transparent',
-              }}
-            >
-              {htmlContent}
-            </SyntaxHighlighter>
-          </div>
-        )
-      },
-      {
-        id: 'html-preview',
-        label: 'PREVIEW',
-        content: <HtmlPreview html={htmlContent} isDarkTheme={isDarkTheme} fullWidth={true} />
-      }
-    ] : [])
-  ];
-  
-  if (tabs.length === 0) return null;
+  if (codeBlocks.length === 0) return null;
   
   return (
     <div style={{
@@ -110,6 +57,7 @@ const TabInterface: React.FC<{
       overflow: 'hidden',
       border: `1px solid ${isDarkTheme ? '#2a2a2a' : '#e0e0e0'}`,
       backgroundColor: isDarkTheme ? '#161616' : '#f8f8f8',
+      marginTop: '1rem',
     }}>
       {/* Tab buttons */}
       <div style={{
@@ -117,38 +65,42 @@ const TabInterface: React.FC<{
         borderBottom: `1px solid ${isDarkTheme ? '#2a2a2a' : '#e0e0e0'}`,
         backgroundColor: isDarkTheme ? '#1a1a1a' : '#f0f0f0',
       }}>
-        {tabs.map(tab => (
+        {codeBlocks.map((block, index) => (
           <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
+            key={index}
+            onClick={() => setActiveTab(index)}
             style={{
               padding: '8px 16px',
               border: 'none',
-              borderBottom: activeTab === tab.id 
+              borderBottom: activeTab === index 
                 ? `2px solid ${isDarkTheme ? '#3a86ff' : '#3a86ff'}` 
                 : '2px solid transparent',
               backgroundColor: 'transparent',
-              color: activeTab === tab.id
+              color: activeTab === index
                 ? (isDarkTheme ? '#ffffff' : '#000000')
                 : (isDarkTheme ? '#aaaaaa' : '#666666'),
               cursor: 'pointer',
               fontSize: '12px',
-              fontWeight: activeTab === tab.id ? 'bold' : 'normal',
+              fontWeight: activeTab === index ? 'bold' : 'normal',
               transition: 'all 0.2s ease',
               fontFamily: 'var(--font-mono, "JetBrains Mono", monospace)',
             }}
           >
-            {tab.label}
+            {block.language.toUpperCase()}
           </button>
         ))}
       </div>
       
       {/* Tab content */}
       <div style={{
-        minHeight: '300px',
         backgroundColor: isDarkTheme ? '#1e1e1e' : '#ffffff',
       }}>
-        {tabs.find(tab => tab.id === activeTab)?.content}
+        <CodePreview 
+          code={codeBlocks[activeTab].code} 
+          language={codeBlocks[activeTab].language} 
+          isDarkTheme={isDarkTheme}
+          fullWidth={true}
+        />
       </div>
     </div>
   );
@@ -158,6 +110,26 @@ const MessageItem: React.FC<MessageItemProps> = ({ role, content, timestamp, isT
   const { settings } = useAppContext();
   const isDarkTheme = settings?.theme === 'dark';
   const [analysisExpanded, setAnalysisExpanded] = useState(true);
+  const [isHtmlExpanded, setIsHtmlExpanded] = useState(true);
+  const [windowWidth, setWindowWidth] = useState(
+    typeof window !== 'undefined' ? window.innerWidth : 0
+  );
+  
+  // Track window resize for responsive layout
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowWidth(window.innerWidth);
+    };
+    
+    if (typeof window !== 'undefined') {
+      window.addEventListener('resize', handleResize);
+      return () => {
+        window.removeEventListener('resize', handleResize);
+      };
+    }
+  }, []);
+  
+  const isMobile = windowWidth < 768;
   
   // Function to format the message content and handle code blocks
   const formatContent = (text: string) => {
@@ -270,22 +242,6 @@ const MessageItem: React.FC<MessageItemProps> = ({ role, content, timestamp, isT
     wordBreak: 'break-word' as const
   };
 
-  // Add code block syntax highlighting
-  const codeBlockStyle = {
-    display: 'block',
-    backgroundColor: isDarkTheme ? '#1e1e1e' : '#f5f5f5',
-    padding: '0.75rem 1rem',
-    borderRadius: '4px',
-    margin: '0.75rem 0',
-    border: `1px solid ${isDarkTheme ? '#2a2a2a' : '#e0e0e0'}`,
-    whiteSpace: 'pre' as const,
-    overflowX: 'auto' as const,
-    overflowY: 'hidden' as const,
-    boxShadow: isDarkTheme ? '0 2px 6px rgba(0, 0, 0, 0.2)' : '0 2px 6px rgba(0, 0, 0, 0.05)',
-    fontFamily: 'var(--font-mono, "JetBrains Mono", monospace)',
-    maxWidth: '100%'
-  };
-
   // Style for system messages
   const systemStyle = {
     ...messageStyle,
@@ -336,16 +292,6 @@ const MessageItem: React.FC<MessageItemProps> = ({ role, content, timestamp, isT
     overflowWrap: 'break-word' as const,
   };
 
-  const responseContentStyle = {
-    padding: '1rem',
-    color: '#fff',
-    fontFamily: 'var(--font-mono, "JetBrains Mono", monospace)',
-    fontSize: '14px',
-    lineHeight: '1.5',
-    whiteSpace: 'pre-wrap' as const,
-    overflowWrap: 'break-word' as const,
-  };
-
   const timestampStyle = {
     color: '#666',
     fontSize: '12px',
@@ -364,8 +310,37 @@ const MessageItem: React.FC<MessageItemProps> = ({ role, content, timestamp, isT
     });
   };
 
-  // Add this to handle responsive layout for small screens
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+  // Toggle HTML preview collapse
+  const toggleHtmlCollapse = () => {
+    setIsHtmlExpanded(!isHtmlExpanded);
+  };
+
+  // HTML preview toggle button
+  const renderHtmlCollapseButton = () => (
+    <button
+      onClick={toggleHtmlCollapse}
+      style={{
+        position: 'absolute',
+        left: isHtmlExpanded ? 'calc(100% - 24px)' : 0,
+        top: '50%',
+        transform: 'translateY(-50%)',
+        width: '24px',
+        height: '60px',
+        backgroundColor: isDarkTheme ? '#2a2a2a' : '#e6e6e6',
+        border: 'none',
+        borderRadius: isHtmlExpanded ? '4px 0 0 4px' : '0 4px 4px 0',
+        cursor: 'pointer',
+        zIndex: 5,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: isDarkTheme ? '#b0b0b0' : '#505060',
+        boxShadow: `0 0 4px ${isDarkTheme ? 'rgba(0, 0, 0, 0.4)' : 'rgba(0, 0, 0, 0.2)'}`,
+      }}
+    >
+      {isHtmlExpanded ? '›' : '‹'}
+    </button>
+  );
 
   // If it's a system message, render with simple style
   if (role === 'system') {
@@ -416,11 +391,12 @@ const MessageItem: React.FC<MessageItemProps> = ({ role, content, timestamp, isT
     );
   }
   
-  // Extract code blocks
+  // Extract code blocks and check if HTML is present
   const codeBlocks = extractCodeBlocks(content);
-  const hasCodeOrHtml = codeBlocks.length > 0 || containsHtml(content);
+  const hasHtml = containsHtml(content);
+  const hasCode = codeBlocks.length > 0;
   
-  // If no analysis, render standard AI message with the new tabbed interface
+  // If no analysis, render standard AI message with side-by-side layout for HTML
   if (!hasAnalysis) {
     return (
       <div className="message assistant-message" style={{
@@ -428,34 +404,60 @@ const MessageItem: React.FC<MessageItemProps> = ({ role, content, timestamp, isT
         padding: '1rem',
         borderLeft: 'none',
         boxShadow: `0 1px 3px ${isDarkTheme ? 'rgba(0, 0, 0, 0.2)' : 'rgba(0, 0, 0, 0.07)'}`,
+        position: 'relative',
       }}>
         <div style={{
           display: 'flex',
-          flexDirection: 'column',
+          flexDirection: isMobile ? 'column' : 'row',
           gap: '1.5rem',
           width: '100%',
         }}>
-          {/* Main content */}
+          {/* Main content on the left */}
           <div style={{
+            flex: isMobile ? '1 1 auto' : hasHtml && isHtmlExpanded ? '1 1 50%' : '1 1 100%',
             overflowY: 'hidden',
+            transition: 'flex 0.3s ease',
           }}>
             {formatContent(content)}
+            
+            {/* Code blocks in tabs below the main content */}
+            {hasCode && (
+              <CodeTabs 
+                codeBlocks={codeBlocks} 
+                isDarkTheme={isDarkTheme} 
+              />
+            )}
           </div>
           
-          {/* Tabbed interface for code/HTML previews */}
-          {hasCodeOrHtml && (
-            <TabInterface 
-              codeBlocks={codeBlocks} 
-              htmlContent={content} 
-              isDarkTheme={isDarkTheme} 
-            />
+          {/* HTML preview on the right - collapsible */}
+          {hasHtml && (
+            <div style={{
+              flex: isMobile ? '1 1 auto' : isHtmlExpanded ? '1 1 50%' : '0 0 0px',
+              overflow: 'hidden',
+              height: isMobile ? 'auto' : '400px',
+              position: 'relative',
+              transition: 'flex 0.3s ease',
+              opacity: isHtmlExpanded ? 1 : 0,
+              marginRight: isHtmlExpanded ? 0 : '-24px',
+            }}>
+              {renderHtmlCollapseButton()}
+              
+              {/* Only render when expanded */}
+              {isHtmlExpanded && (
+                <HtmlPreview 
+                  html={content} 
+                  isDarkTheme={isDarkTheme} 
+                  fullWidth={true}
+                />
+              )}
+            </div>
           )}
         </div>
       </div>
     );
   }
 
-  // If has analysis, render the agent UI with the new tabbed interface
+  // If has analysis, render the agent UI with side-by-side layout for HTML
   return (
     <div className="message assistant-message agent-ui" style={{
       marginBottom: '1rem',
@@ -489,33 +491,63 @@ const MessageItem: React.FC<MessageItemProps> = ({ role, content, timestamp, isT
         </div>
       )}
       
-      {/* Main response with new tabbed interface */}
+      {/* Main response with side-by-side layout for HTML */}
       <div style={{
-        display: 'flex',
-        flexDirection: 'column',
-        padding: '1rem',
-        gap: '1.5rem',
+        position: 'relative',
       }}>
-        {/* Main content */}
         <div style={{
-          overflowY: 'hidden',
+          display: 'flex',
+          flexDirection: isMobile ? 'column' : 'row',
+          padding: '1rem',
+          gap: '1.5rem',
         }}>
-          {formatContent(mainContent)}
-          <div style={{ display: 'flex', marginTop: '1rem' }}>
-            <span style={timestampStyle}>
-              {formatTime(timestamp)}
-            </span>
+          {/* Main content */}
+          <div style={{
+            flex: isMobile ? '1 1 auto' : hasHtml && isHtmlExpanded ? '1 1 50%' : '1 1 100%',
+            overflowY: 'hidden',
+            transition: 'flex 0.3s ease',
+          }}>
+            {formatContent(mainContent)}
+            
+            <div style={{ display: 'flex', marginTop: '1rem' }}>
+              <span style={timestampStyle}>
+                {formatTime(timestamp)}
+              </span>
+            </div>
+            
+            {/* Code blocks in tabs below the main content */}
+            {hasCode && (
+              <CodeTabs 
+                codeBlocks={codeBlocks} 
+                isDarkTheme={isDarkTheme} 
+              />
+            )}
           </div>
+          
+          {/* HTML preview on the right - collapsible */}
+          {hasHtml && (
+            <div style={{
+              flex: isMobile ? '1 1 auto' : isHtmlExpanded ? '1 1 50%' : '0 0 0px',
+              overflow: 'hidden',
+              height: isMobile ? 'auto' : '400px',
+              position: 'relative',
+              transition: 'flex 0.3s ease, opacity 0.3s ease',
+              opacity: isHtmlExpanded ? 1 : 0,
+              marginRight: isHtmlExpanded ? 0 : '-24px',
+            }}>
+              {renderHtmlCollapseButton()}
+              
+              {/* Only render when expanded */}
+              {isHtmlExpanded && (
+                <HtmlPreview 
+                  html={mainContent} 
+                  isDarkTheme={isDarkTheme} 
+                  fullWidth={true}
+                />
+              )}
+            </div>
+          )}
         </div>
-        
-        {/* Tabbed interface for code/HTML previews */}
-        {(codeBlocks.length > 0 || containsHtml(mainContent)) && (
-          <TabInterface 
-            codeBlocks={codeBlocks} 
-            htmlContent={mainContent} 
-            isDarkTheme={isDarkTheme} 
-          />
-        )}
       </div>
     </div>
   );

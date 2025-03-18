@@ -110,6 +110,7 @@ interface AppContextType {
   isLoading: boolean;
   changeModel: (model: string) => void;
   resetConversations: () => void;
+  isAuthenticated: boolean;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -612,6 +613,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     isLoading,
     changeModel,
     resetConversations,
+    isAuthenticated: !!user,
   };
 
   return <AppContext.Provider value={contextValue}>{children}</AppContext.Provider>;

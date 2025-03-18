@@ -3,11 +3,11 @@ import { useAppContext } from '@/context/AppContext';
 import { AIProvider, UserRole } from '@/types';
 
 interface SettingsModalProps {
-  isOpen: boolean;
+  isOpen?: boolean;
   onClose: () => void;
 }
 
-const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
+const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen = true, onClose }) => {
   const { settings, updateSettings } = useAppContext();
   const [activeProvider, setActiveProvider] = useState<AIProvider>(settings.activeProvider);
   const [apiKey, setApiKey] = useState<string>(settings.providers[settings.activeProvider].apiKey || '');

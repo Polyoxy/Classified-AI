@@ -47,15 +47,16 @@ const ThinkingIndicator: React.FC<ThinkingIndicatorProps> = ({
     <div 
       className="thinking-container" 
       style={{
-        marginBottom: '1rem',
-        borderRadius: '6px',
+        marginBottom: '0.75rem',
+        borderRadius: '4px',
         overflow: 'hidden',
         transition: 'all 0.3s ease',
         width: '100%',
         zIndex: 100,
-        boxShadow: `0 2px 8px ${isDarkTheme ? 'rgba(0, 0, 0, 0.15)' : 'rgba(0, 0, 0, 0.05)'}`,
-        backgroundColor: isDarkTheme ? 'var(--thinking-bg-dark)' : 'var(--thinking-bg-light)',
-        color: isDarkTheme ? '#e0e0e0' : '#333',
+        boxShadow: `0 1px 3px ${isDarkTheme ? 'rgba(0, 0, 0, 0.12)' : 'rgba(0, 0, 0, 0.03)'}`,
+        backgroundColor: 'transparent',
+        color: isDarkTheme ? 'rgba(224, 224, 224, 0.85)' : 'rgba(50, 50, 60, 0.85)',
+        border: `1px solid ${isDarkTheme ? 'rgba(60, 60, 70, 0.2)' : 'rgba(200, 200, 220, 0.3)'}`,
       }}
     >
       <div 
@@ -65,11 +66,11 @@ const ThinkingIndicator: React.FC<ThinkingIndicatorProps> = ({
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          padding: '10px 16px',
+          padding: '6px 12px',
           cursor: 'pointer',
           userSelect: 'none',
-          backgroundColor: isDarkTheme ? 'rgba(30, 30, 33, 0.8)' : 'rgba(235, 235, 240, 0.9)',
-          borderBottom: `1px solid ${isDarkTheme ? 'rgba(60, 60, 70, 0.5)' : 'rgba(180, 180, 200, 0.5)'}`,
+          backgroundColor: isDarkTheme ? 'rgba(30, 30, 33, 0.4)' : 'rgba(245, 245, 250, 0.6)',
+          borderBottom: isExpanded ? `1px solid ${isDarkTheme ? 'rgba(60, 60, 70, 0.2)' : 'rgba(200, 200, 220, 0.3)'}` : 'none',
         }}
       >
         <div 
@@ -77,19 +78,19 @@ const ThinkingIndicator: React.FC<ThinkingIndicatorProps> = ({
           style={{
             display: 'flex',
             alignItems: 'center',
-            fontWeight: 600,
-            fontSize: '13px',
-            letterSpacing: '0.7px',
-            textTransform: 'uppercase',
+            fontWeight: 500,
+            fontSize: '12px',
+            letterSpacing: '0.5px',
+            color: isDarkTheme ? 'rgba(200, 200, 220, 0.9)' : 'rgba(80, 80, 90, 0.9)',
           }}
         >
           <div 
             className="pulse-container"
             style={{
               position: 'relative',
-              width: '20px',
-              height: '20px',
-              marginRight: '10px',
+              width: '16px',
+              height: '16px',
+              marginRight: '8px',
             }}
           >
             {isThinking && (
@@ -101,10 +102,11 @@ const ThinkingIndicator: React.FC<ThinkingIndicatorProps> = ({
                     top: '50%',
                     left: '50%',
                     transform: 'translate(-50%, -50%)',
-                    width: '8px',
-                    height: '8px',
+                    width: '6px',
+                    height: '6px',
                     borderRadius: '50%',
                     backgroundColor: 'var(--thinking-color)',
+                    opacity: 0.8,
                     zIndex: 2,
                   }}
                 ></div>
@@ -115,19 +117,19 @@ const ThinkingIndicator: React.FC<ThinkingIndicatorProps> = ({
                     top: '50%',
                     left: '50%',
                     transform: 'translate(-50%, -50%)',
-                    width: '8px',
-                    height: '8px',
+                    width: '6px',
+                    height: '6px',
                     borderRadius: '50%',
                     backgroundColor: 'var(--thinking-color)',
-                    opacity: 0.7,
+                    opacity: 0.4,
                     zIndex: 1,
-                    animation: 'pulse 1.5s ease-out infinite',
+                    animation: 'pulse 1.8s ease-out infinite',
                   }}
                 ></div>
               </>
             )}
           </div>
-          <span>THINKING</span>
+          <span>Thinking...</span>
         </div>
         <button 
           className="collapse-button"
@@ -138,15 +140,16 @@ const ThinkingIndicator: React.FC<ThinkingIndicatorProps> = ({
           style={{
             background: 'none',
             border: 'none',
-            padding: '5px 10px',
-            borderRadius: '4px',
-            fontSize: '12px',
+            padding: '2px 6px',
+            borderRadius: '3px',
+            fontSize: '11px',
             cursor: 'pointer',
             transition: 'all 0.2s ease',
-            color: isDarkTheme ? 'rgba(224, 224, 224, 0.8)' : 'rgba(50, 50, 60, 0.8)',
+            color: isDarkTheme ? 'rgba(190, 190, 200, 0.7)' : 'rgba(80, 80, 90, 0.7)',
+            opacity: 0.7,
           }}
         >
-          {isExpanded ? 'Hide' : 'Show'}
+          {isExpanded ? '−' : '+'}
         </button>
       </div>
       
@@ -154,19 +157,20 @@ const ThinkingIndicator: React.FC<ThinkingIndicatorProps> = ({
         <div 
           className="thinking-content"
           style={{
-            maxHeight: '600px',
+            maxHeight: '300px',
             overflowY: 'auto',
-            padding: '16px',
+            padding: '12px',
             fontFamily: 'monospace',
-            fontSize: '14px',
-            lineHeight: 1.5,
+            fontSize: '13px',
+            lineHeight: 1.4,
             whiteSpace: 'pre-wrap',
             overflowWrap: 'break-word',
             transition: 'max-height 0.3s ease, padding 0.3s ease',
-            backgroundColor: isDarkTheme ? 'rgba(25, 25, 28, 0.8)' : 'rgba(250, 250, 255, 0.8)',
+            backgroundColor: isDarkTheme ? 'rgba(25, 25, 28, 0.3)' : 'rgba(250, 250, 255, 0.5)',
+            color: isDarkTheme ? 'rgba(200, 200, 220, 0.9)' : 'rgba(70, 70, 80, 0.9)',
           }}
         >
-          <pre>{displayedContent || 'Processing...'}</pre>
+          <pre style={{ margin: 0 }}>{displayedContent || 'Processing...'}</pre>
         </div>
       )}
     </div>

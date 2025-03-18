@@ -249,201 +249,132 @@ const globalStyles = `
 `;
 
 export default function Home() {
-  // Check if we're in an Electron environment
-  const [isElectron, setIsElectron] = useState(false);
-
-  useEffect(() => {
-    setIsElectron(window.electron !== undefined);
-  }, []);
-
   return (
-    <main className={`${inter.variable} ${jetbrainsMono.variable}`}>
-      <style jsx global>{globalStyles}</style>
-      <AppProvider>
-        <App isElectron={isElectron} />
-      </AppProvider>
-    </main>
+    <AppProvider>
+      <HomeWithProvider />
+    </AppProvider>
   );
 }
 
-const App: React.FC<{ isElectron: boolean }> = ({ isElectron }) => {
+const HomeWithProvider = () => {
+  const { isAuthenticated, isLoading } = useAppContext();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const { user, isLoading, setUser } = useAppContext();
-
-  // Set up analytics
-  useEffect(() => {
-    const setupAnalytics = async () => {
-      try {
-        // Skip analytics in Electron
-        if (isElectron) {
-          // Only log in development
-          if (process.env.NODE_ENV === 'development') {
-            console.log('Skipping analytics in Electron environment');
-          }
-          return;
-        }
-        
-        // Initialize analytics
-        const { initAnalytics } = await import('@/lib/firebase');
-        initAnalytics();
-        // Only log in development
-        if (process.env.NODE_ENV === 'development') {
-          console.log('Analytics initialized');
-        }
-      } catch (error) {
-        console.error('Error setting up analytics:', error);
-      }
-    };
-    
-    setupAnalytics();
-  }, [isElectron]);
-
-  // Check for offline user
-  useEffect(() => {
-    if (!user && !isLoading) {
-      try {
-        const offlineUserJson = localStorage.getItem('offlineUser');
-        if (offlineUserJson) {
-          const offlineUser = JSON.parse(offlineUserJson);
-          // Only log when actually restoring a user
-          console.log('Restoring offline user session:', offlineUser.uid);
-          setUser(offlineUser);
-        }
-      } catch (error) {
-        console.error('Error checking for offline user:', error);
-      }
-    }
-  }, [user, isLoading, setUser]);
-
-  // We don't need to log every time the settings modal state changes
-  useEffect(() => {
-    // Removing console log to prevent console spam
-  }, [isSettingsOpen]);
-
-  // We don't need to log authentication state on every render
-  useEffect(() => {
-    // Removing console logs to prevent console spam
-  }, [user, isLoading]);
-
-  // Handler for opening settings
-  const handleOpenSettings = () => {
-    // Removed console log
-    setIsSettingsOpen(true);
-  };
-
-  // While authentication is loading, show a loading state
-  if (isLoading) {
-    return (
-      <div style={{ 
-        height: '100vh', 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center',
-        backgroundColor: 'var(--bg-color)',
-        color: 'var(--text-color)',
-      }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ marginBottom: '20px', fontSize: '24px' }}>Loading...</div>
-          <div style={{ fontSize: '14px', opacity: 0.7 }}>Checking authentication state...</div>
-        </div>
-      </div>
-    );
-  }
-
-  // If no user, show the auth page
-  if (!user) {
-    // Only log on first render or during actual state changes
-    return <AuthPage />;
-  }
-
-  // User is authenticated, show the main app
-  return (
-    <div className="app-container" style={{ 
-      height: '100vh', 
-      display: 'flex', 
-      flexDirection: 'column',
-    }}>
-      {/* Title bar (only for Electron) */}
-      {isElectron && <TitleBar title="CLASSIFIED AI" />}
-      
-      {/* Main content */}
-      <AppContent 
-        isSettingsOpen={isSettingsOpen} 
-        setIsSettingsOpen={handleOpenSettings} 
-      />
-      
-      {/* Settings modal */}
-      {isSettingsOpen && (
-        <SettingsModal 
-          isOpen={true}
-          onClose={() => {
-            // Removed console log
-            setIsSettingsOpen(false);
-          }} 
-        />
-      )}
-    </div>
-  );
-};
-
-const AppContent: React.FC<{ 
-  isSettingsOpen: boolean; 
-  setIsSettingsOpen: () => void; 
-}> = ({ 
-  isSettingsOpen, 
-  setIsSettingsOpen 
-}) => {
-  const { settings } = useAppContext();
-  // Check if we're in Electron environment
   const [isElectron, setIsElectron] = useState(false);
-  
+
   // Detect Electron environment
   useEffect(() => {
     if (typeof window !== 'undefined' && window.electron) {
       setIsElectron(true);
     }
   }, []);
+
+  // If still loading auth state, show loading indicator
+  if (isLoading) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '100vh',
+        backgroundColor: 'var(--bg-color)',
+        color: 'var(--text-color)'
+      }}>
+        Loading...
+      </div>
+    );
+  }
+
+  // If not authenticated, show login page
+  if (!isAuthenticated) {
+    return <AuthPage />;
+  }
+
+  return (
+    <main style={{ 
+      display: 'flex', 
+      flexDirection: 'column', 
+      height: '100vh',
+      backgroundColor: 'var(--bg-color)',
+      color: 'var(--text-color)'
+    }}>
+      <style>{globalStyles}</style>
+      <TitleBar isElectron={isElectron} />
+      <App isElectron={isElectron} />
+      {isSettingsOpen && (
+        <SettingsModal isOpen={true} onClose={() => setIsSettingsOpen(false)} />
+      )}
+    </main>
+  );
+};
+
+const App: React.FC<{ isElectron: boolean }> = ({ isElectron }) => {
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   
-  // Apply theme class to body
-  useEffect(() => {
-    // Apply the correct theme class based on the settings
-    document.body.className = `theme-${settings.theme}`;
-    
-    // No need to set individual CSS variables as they're defined in the theme classes
-    // This ensures consistent theme application across the application
-    
-    // Force a re-render of the UI when theme changes
-    const metaThemeColor = document.querySelector('meta[name="theme-color"]');
-    if (metaThemeColor) {
-      metaThemeColor.setAttribute(
-        'content',
-        settings.theme === 'dark' ? '#121212' : '#f8f9fa'
-      );
-    }
-  }, [settings.theme]);
+  // Toggle settings modal
+  const handleOpenSettings = () => {
+    setIsSettingsOpen(!isSettingsOpen);
+  };
   
   return (
-    <>
-      {/* Chat container */}
+    <div style={{ 
+      flex: 1, 
+      display: 'flex', 
+      flexDirection: 'column', 
+      overflow: 'hidden'
+    }}>
+      {/* Main content area with chat and command input */}
       <div style={{ 
         flex: 1, 
-        overflow: 'hidden', 
         display: 'flex', 
-        flexDirection: 'column',
-        border: '1px solid var(--border-color)',
-        borderTop: isElectron ? '1px solid var(--border-color)' : 'none',
-        borderBottom: 'none',
-        borderLeft: 'none',
-        borderRight: 'none'
+        flexDirection: 'column', 
+        overflow: 'hidden',
+        position: 'relative'
       }}>
-        <ChatContainer />
+        {/* Chat container */}
+        <div style={{ 
+          flex: 1, 
+          overflow: 'hidden', 
+          display: 'flex', 
+          flexDirection: 'column',
+          border: '1px solid var(--border-color)',
+          borderRight: 'none',
+          borderLeft: 'none',
+          position: 'relative',
+          paddingBottom: '100px', // Space for command input
+          marginTop: '0', // Position higher on the screen
+        }}>
+          <ChatContainer />
+        </div>
+        
+        {/* Command input positioned above chat but at the bottom of the screen */}
+        <div style={{
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          backgroundColor: 'var(--bg-color)',
+          borderTop: '1px solid var(--border-color)',
+          zIndex: 10
+        }}>
+          <CommandInput />
+        </div>
       </div>
       
-      {/* Command input */}
-      <CommandInput />
+      {/* Status bar at the bottom */}
+      <div style={{
+        position: 'fixed',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        zIndex: 100,
+      }}>
+        <StatusBar onOpenSettings={handleOpenSettings} />
+      </div>
       
-      {/* Status bar */}
-      <StatusBar onOpenSettings={() => setIsSettingsOpen()} />
-    </>
+      {/* Settings modal */}
+      {isSettingsOpen && (
+        <SettingsModal isOpen={true} onClose={() => setIsSettingsOpen(false)} />
+      )}
+    </div>
   );
 };
