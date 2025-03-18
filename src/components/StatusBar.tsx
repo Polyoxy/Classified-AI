@@ -142,95 +142,6 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
     }
   };
 
-  // Get status message
-  const getStatusMessage = () => {
-    switch (connectionStatus) {
-      case 'connected':
-        return `Connected - ${getActiveModelName()}`;
-      case 'disconnected':
-        return 'Disconnected - Check local server';
-      case 'error':
-        return 'Error connecting to model server';
-      default:
-        return 'Status unknown';
-    }
-  };
-
-  // Settings icon SVG
-  const SettingsIcon = () => (
-    <svg 
-      width="14" 
-      height="14" 
-      viewBox="0 0 24 24" 
-      fill="none" 
-      stroke="currentColor" 
-      strokeWidth="2" 
-      strokeLinecap="round" 
-      strokeLinejoin="round"
-      style={{ pointerEvents: 'none' }}
-    >
-      <circle cx="12" cy="12" r="3"></circle>
-      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-    </svg>
-  );
-
-  // Save icon SVG
-  const SaveIcon = () => (
-    <svg 
-      width="14" 
-      height="14" 
-      viewBox="0 0 24 24" 
-      fill="none" 
-      stroke="currentColor" 
-      strokeWidth="2" 
-      strokeLinecap="round" 
-      strokeLinejoin="round"
-      style={{ pointerEvents: 'none' }}
-    >
-      <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
-      <polyline points="17 21 17 13 7 13 7 21"></polyline>
-      <polyline points="7 3 7 8 15 8"></polyline>
-    </svg>
-  );
-
-  // Monitor icon SVG
-  const MonitorIcon = () => (
-    <svg 
-      width="14" 
-      height="14" 
-      viewBox="0 0 24 24" 
-      fill="none" 
-      stroke="currentColor" 
-      strokeWidth="2" 
-      strokeLinecap="round" 
-      strokeLinejoin="round"
-      style={{ pointerEvents: 'none' }}
-    >
-      <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
-      <line x1="8" y1="21" x2="16" y2="21"></line>
-      <line x1="12" y1="17" x2="12" y2="21"></line>
-    </svg>
-  );
-
-  // Logout icon SVG
-  const LogoutIcon = () => (
-    <svg 
-      width="14" 
-      height="14" 
-      viewBox="0 0 24 24" 
-      fill="none" 
-      stroke="currentColor" 
-      strokeWidth="2" 
-      strokeLinecap="round" 
-      strokeLinejoin="round"
-      style={{ pointerEvents: 'none' }}
-    >
-      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-      <polyline points="16 17 21 12 16 7"></polyline>
-      <line x1="21" y1="12" x2="9" y2="12"></line>
-    </svg>
-  );
-
   // Get models for current provider
   const getModelsForProvider = () => {
     const provider = currentConversation?.provider || settings.activeProvider;
@@ -271,87 +182,23 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
     return 'No models available';
   };
 
-  // Check if a model is deepseek-r1:7b
-  const isLocalModel = (model: string) => {
-    return model.toLowerCase().includes('deepseek-r1') ||
-           model.toLowerCase().includes('deepseek');
-  };
-
-  // Handle logout
-  const handleLogout = async () => {
-    console.log('Logout button clicked');
-    
-    try {
-      // Check if we're in Electron environment
-      const isElectron = typeof window !== 'undefined' && window.electron;
-      console.log('Is Electron environment:', isElectron);
-      console.log('Current user:', user);
-      
-      // Store the current user's email before logging out
-      if (user && user.email) {
-        localStorage.setItem('lastLoginEmail', user.email);
-      }
-
-      // Clear the local storage first (important for Electron)
-      localStorage.removeItem('offlineUser');
-      
-      // In Electron, also clear the electron-store
-      if (isElectron && window.electron?.store) {
-        try {
-          // Use type assertion to fix type checking
-          const electronStore = window.electron.store as ElectronStore;
-          await electronStore.clear();
-          console.log('Electron store cleared');
-        } catch (storeError) {
-          console.warn('Failed to clear electron store:', storeError);
-        }
-      }
-      
-      // Check if user is an offline user
-      const isOfflineUser = user && (user.uid.startsWith('offline-') || user.isAnonymous);
-      console.log('Is offline/anonymous user:', isOfflineUser);
-      
-      // Always try to sign out from Firebase
-      try {
-        console.log('Attempting Firebase signOut');
-        await auth.signOut();
-      } catch (firebaseError) {
-        console.warn('Firebase sign out error:', firebaseError);
-      }
-      
-      // Also manually clear the user state (important for Electron)
-      setUser(null);
-      
-      console.log('Logout completed');
-      
-      // In Electron, reload the window to ensure clean state
-      if (isElectron && window.electron?.windowControls) {
-        console.log('Reloading Electron app after logout');
-        // Wait a moment before reloading to ensure state is cleared
-        setTimeout(() => {
-          try {
-            // Use type assertion to fix type checking
-            const windowControls = window.electron.windowControls as ElectronWindowControls;
-            windowControls.reload();
-          } catch (reloadError) {
-            console.warn('Failed to reload window:', reloadError);
-            window.location.href = '/auth'; // Fallback
-          }
-        }, 500);
-      } else {
-        // For non-Electron, reload the page after a delay
-        setTimeout(() => {
-          window.location.href = '/auth';
-        }, 500);
-      }
-    } catch (error) {
-      console.error('Error during logout:', error);
-      // If all else fails, try forcing a hard logout
-      localStorage.removeItem('offlineUser');
-      setUser(null);
-      window.location.href = '/auth';
-    }
-  };
+  // Settings icon SVG
+  const SettingsIcon = () => (
+    <svg 
+      width="14" 
+      height="14" 
+      viewBox="0 0 24 24" 
+      fill="none" 
+      stroke="currentColor" 
+      strokeWidth="2" 
+      strokeLinecap="round" 
+      strokeLinejoin="round"
+      style={{ pointerEvents: 'none' }}
+    >
+      <circle cx="12" cy="12" r="3"></circle>
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+    </svg>
+  );
 
   // Update customStatusBarStyles to ensure model selector displays properly
   const customStatusBarStyles = `
@@ -418,7 +265,10 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          position: 'relative',
+          position: 'fixed',
+          bottom: 0,
+          left: 0,
+          right: 0,
           height: '32px',
           backgroundColor: settings?.theme === 'dark' ? 'rgba(18, 18, 18, 0.92)' : 'rgba(245, 245, 245, 0.92)',
           borderTop: `1px solid ${settings?.theme === 'dark' ? 'rgba(51, 51, 51, 0.8)' : 'rgba(221, 221, 221, 0.8)'}`,
@@ -483,19 +333,19 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
                 className="model-dropdown"
                 style={{
                   position: 'absolute',
-                  top: '100%',
+                  bottom: '100%',
                   left: '0',
                   width: '100%',
                   backgroundColor: settings?.theme === 'dark' ? 'rgba(26, 26, 26, 0.95)' : 'rgba(245, 245, 245, 0.95)',
                   border: `1px solid ${settings?.theme === 'dark' ? 'rgba(60, 60, 60, 0.7)' : 'rgba(200, 200, 200, 0.7)'}`,
                   borderRadius: '4px',
-                  marginTop: '4px',
+                  marginBottom: '4px',
                   zIndex: 10000,
                   maxHeight: '200px',
                   overflowY: 'auto',
                   boxShadow: settings?.theme === 'dark' 
-                    ? '0 4px 8px rgba(0,0,0,0.3)' 
-                    : '0 4px 8px rgba(0,0,0,0.1)',
+                    ? '0 -4px 8px rgba(0,0,0,0.3)' 
+                    : '0 -4px 8px rgba(0,0,0,0.1)',
                   fontFamily: 'Inter, sans-serif',
                   backdropFilter: 'blur(6px)',
                 }}

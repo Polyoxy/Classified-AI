@@ -12,6 +12,7 @@ interface MessageItemProps {
   timestamp?: number;
   isThinking?: boolean;
   thinkingContent?: string;
+  thinkingPhase?: 'reasoning' | 'processing' | null;
 }
 
 // Utility functions to detect HTML and extract code blocks
@@ -106,7 +107,7 @@ const CodeTabs: React.FC<{
   );
 };
 
-const MessageItem: React.FC<MessageItemProps> = ({ role, content, timestamp, isThinking, thinkingContent }) => {
+const MessageItem: React.FC<MessageItemProps> = ({ role, content, timestamp, isThinking, thinkingContent, thinkingPhase }) => {
   const { settings } = useAppContext();
   const isDarkTheme = settings?.theme === 'dark';
   const [analysisExpanded, setAnalysisExpanded] = useState(true);
@@ -133,6 +134,9 @@ const MessageItem: React.FC<MessageItemProps> = ({ role, content, timestamp, isT
   
   // Function to format the message content and handle code blocks
   const formatContent = (text: string) => {
+    // Remove any <think> tags from the content
+    text = text.replace(/<think>[\s\S]*?<\/think>/g, '');
+    
     // Replace code blocks with placeholders since CodePreview will render them
     const sanitizedText = text.replace(/```([a-zA-Z]*)\n([\s\S]*?)```/g, '');
     
@@ -141,10 +145,10 @@ const MessageItem: React.FC<MessageItemProps> = ({ role, content, timestamp, isT
       sanitizedText.replace(/<(?:[^>"']|"[^"]*"|'[^']*')*>/g, '') : // More comprehensive HTML tag removal
       sanitizedText;
     
-    // Return the content without code blocks and HTML
+    // Clean up any extra newlines
     return (
       <span style={{ whiteSpace: 'pre-wrap' }}>
-        {finalText}
+        {finalText.replace(/\n{3,}/g, '\n\n').trim()}
       </span>
     );
   };
@@ -396,6 +400,7 @@ const MessageItem: React.FC<MessageItemProps> = ({ role, content, timestamp, isT
           isThinking={true}
           thinkingContent={thinkingContent}
           isDarkTheme={isDarkTheme}
+          thinkingPhase={thinkingPhase}
         />
       </div>
     );

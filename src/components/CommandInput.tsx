@@ -236,13 +236,12 @@ const CommandInput: React.FC = () => {
   return (
     <div style={{
       position: 'fixed',
-      bottom: '32px', // Leave space for status bar
+      bottom: '32px',
       left: '0',
       right: '0',
       zIndex: 100,
       backgroundColor: settings?.theme === 'dark' ? '#121212' : '#f8f9fa',
-      borderTop: `1px solid ${settings?.theme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
-      padding: '1rem',
+      padding: '0.75rem',
     }}>
       <div style={{
         maxWidth: '800px',
@@ -251,13 +250,54 @@ const CommandInput: React.FC = () => {
       }}>
         <div className="command-input-container" style={{
           display: 'flex',
-          alignItems: 'flex-start',
+          alignItems: 'center',
           gap: '0.5rem',
-          backgroundColor: settings?.theme === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
+          backgroundColor: 'transparent',
           borderRadius: '8px',
-          padding: '0.5rem',
-          border: `1px solid ${settings?.theme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+          padding: '0.75rem',
+          height: '45px',
+          position: 'relative',
         }}>
+          <style>
+            {`
+              .command-input-container::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                border-radius: 8px;
+                padding: 1px;
+                background: linear-gradient(
+                  45deg,
+                  rgba(74, 158, 255, 0.2),
+                  rgba(138, 43, 226, 0.2),
+                  rgba(74, 158, 255, 0.2)
+                );
+                -webkit-mask: linear-gradient(#fff 0 0) content-box,
+                           linear-gradient(#fff 0 0);
+                mask: linear-gradient(#fff 0 0) content-box,
+                      linear-gradient(#fff 0 0);
+                -webkit-mask-composite: xor;
+                mask-composite: exclude;
+                pointer-events: none;
+                animation: borderGlow 4s linear infinite;
+              }
+              
+              @keyframes borderGlow {
+                0% {
+                  filter: brightness(1) blur(1px);
+                }
+                50% {
+                  filter: brightness(1.2) blur(1.5px);
+                }
+                100% {
+                  filter: brightness(1) blur(1px);
+                }
+              }
+            `}
+          </style>
           <div style={{
             color: settings?.theme === 'dark' ? 'rgba(208, 208, 208, 0.6)' : 'rgba(64, 64, 64, 0.6)',
             marginRight: '0.75rem',

@@ -14,38 +14,37 @@ const ChatContainer: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const isDarkTheme = settings?.theme === 'dark';
   
-  // Example thinking content for demonstration
+  // Thinking content state
   const [thinkingContent, setThinkingContent] = React.useState<string>('');
+  const [thinkingPhase, setThinkingPhase] = React.useState<'reasoning' | 'processing' | null>(null);
   
-  // Generate some simulated thinking content when isProcessing changes
+  // Generate thinking content when isProcessing changes
   React.useEffect(() => {
     if (isProcessing) {
-      // Simulate thinking process with content updates
-      let content = "Analyzing query...\n";
-      setThinkingContent(content);
+      let content = "";
+      setThinkingPhase('reasoning');
       
+      // Initial reasoning phase
       const timer1 = setTimeout(() => {
-        content += "Considering relevant context and information...\n";
+        content = "Analyzing context and formulating approach...";
         setThinkingContent(content);
-      }, 800);
+      }, 300);
       
+      // Processing phase
       const timer2 = setTimeout(() => {
-        content += "Formulating response based on best practices...\n";
+        setThinkingPhase('processing');
+        content = "Generating response...";
         setThinkingContent(content);
-      }, 1500);
-      
-      const timer3 = setTimeout(() => {
-        content += "Refining response for clarity and accuracy...\n";
-        setThinkingContent(content);
-      }, 2200);
+      }, 2000);
       
       return () => {
         clearTimeout(timer1);
         clearTimeout(timer2);
-        clearTimeout(timer3);
+        setThinkingPhase(null);
       };
     } else {
       setThinkingContent('');
+      setThinkingPhase(null);
     }
   }, [isProcessing]);
 
@@ -257,6 +256,22 @@ const ChatContainer: React.FC = () => {
     return message;
   };
 
+  // Filter out thinking messages and system messages from being displayed
+  const visibleMessages = currentConversation.messages.filter(message => {
+    // Skip empty messages
+    if (!message.content.trim()) return false;
+    
+    // Skip thinking messages
+    if (message.content.includes('<think>')) return false;
+    
+    // Skip initial system messages unless they contain errors
+    if (message.role === 'system' && !message.content.toLowerCase().includes('error')) {
+      return false;
+    }
+    
+    return true;
+  });
+
   return (
     <div style={{
       position: 'relative',
@@ -284,7 +299,7 @@ const ChatContainer: React.FC = () => {
           overflowX: 'hidden',
           scrollBehavior: 'smooth',
           position: 'relative',
-          paddingBottom: '120px', // Increased padding to prevent content from going under command input
+          paddingBottom: '80px', // Adjusted to account for status bar and command input
         }}
       >
         {/* Welcome message if no messages yet */}
@@ -301,39 +316,14 @@ const ChatContainer: React.FC = () => {
         )}
 
         {/* Display messages */}
-        {currentConversation.messages.map((message, index) => {
-          // Process message content to remove <think> tags
-          let processedContent = message.content;
-          if (message.role === 'assistant') {
-            // Remove <think> tags and their content
-            processedContent = processedContent.replace(/<think>[\s\S]*?<\/think>/g, '');
-            // Clean up any extra newlines
-            processedContent = processedContent.replace(/\n{3,}/g, '\n\n').trim();
-          }
-          
-          // Skip empty messages
-          if (!processedContent && message.role !== 'assistant') {
-            return null;
-          }
-          
-          // Skip initial system messages except errors
-          if (message.role === 'system' && 
-              !processedContent.startsWith('Error') && 
-              index === 0 && 
-              currentConversation.messages.length > 1 &&
-              !settings?.showSystemMessages) {
-            return null;
-          }
-
-          return (
-            <MessageItem
-              key={message.id || `msg-${index}`}
-              role={message.role}
-              content={processedContent}
-              timestamp={message.timestamp}
-            />
-          );
-        })}
+        {visibleMessages.map((message, index) => (
+          <MessageItem
+            key={message.id || `msg-${index}`}
+            role={message.role}
+            content={message.content}
+            timestamp={message.timestamp}
+          />
+        ))}
 
         {/* Show thinking indicator when processing */}
         {isProcessing && (
@@ -341,7 +331,6 @@ const ChatContainer: React.FC = () => {
             role="assistant"
             content=""
             isThinking={true}
-            thinkingContent={thinkingContent}
           />
         )}
 
