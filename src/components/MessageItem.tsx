@@ -77,24 +77,27 @@ const MessageItem: React.FC<MessageItemProps> = ({
         color: isDarkTheme ? '#888' : '#666',
       }}>
         <span style={{ fontWeight: 'bold' }}>
-          {role === 'user' ? 'You' : role === 'assistant' ? 'AI' : 'System'}
+          {role === 'user' ? 'You' : role === 'system' ? 'System' : ''}
         </span>
-        {timestamp && (
-          <>
-            <span>•</span>
-            <span>{formatTime(timestamp)}</span>
-          </>
-        )}
       </div>
+
+      {/* Show thinking display for AI messages above the response if enabled in settings */}
+      {role === 'assistant' && settings?.showAnalysis && !isProcessing && (
+        <ThinkingDisplay content={content} />
+      )}
 
       <div style={{
         padding: '1rem',
-        borderRadius: '8px',
+        paddingBottom: timestamp ? '1.5rem' : '1rem',
+        borderRadius: role === 'assistant' && settings?.showAnalysis && !isProcessing 
+          ? '0 0 8px 8px'
+          : '8px',
         fontSize: '14px',
         lineHeight: '1.5',
         fontFamily: 'var(--font-mono)',
         whiteSpace: 'pre-wrap',
         wordBreak: 'break-word',
+        position: 'relative',
         ...getMessageStyle(),
       }}>
         {isProcessing ? (
@@ -115,12 +118,20 @@ const MessageItem: React.FC<MessageItemProps> = ({
         ) : (
           displayContent
         )}
+        
+        {/* Timestamp positioned at bottom right */}
+        {timestamp && (
+          <div style={{
+            position: 'absolute',
+            bottom: '0.5rem',
+            right: '0.75rem',
+            fontSize: '11px',
+            color: isDarkTheme ? 'rgba(180, 180, 180, 0.6)' : 'rgba(100, 100, 100, 0.6)',
+          }}>
+            {formatTime(timestamp)}
+          </div>
+        )}
       </div>
-
-      {/* Show thinking display for AI messages only if enabled in settings */}
-      {role === 'assistant' && settings?.showAnalysis && !isProcessing && (
-        <ThinkingDisplay content={content} />
-      )}
 
       <style>{`
         @keyframes pulse {

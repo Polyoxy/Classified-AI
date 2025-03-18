@@ -44,18 +44,19 @@ const ThinkingDisplay: React.FC<ThinkingDisplayProps> = ({ content }) => {
   return (
     <div 
       style={{
-        marginTop: '0.5rem',
-        marginBottom: '1rem',
-        borderRadius: '6px',
+        marginTop: '0',
+        marginBottom: '0.5rem',
+        borderRadius: '6px 6px 0 0',
         overflow: 'hidden',
         border: `1px solid ${isDarkTheme ? 'rgba(80, 80, 80, 0.3)' : 'rgba(200, 200, 200, 0.5)'}`,
+        borderBottom: 'none',
         backgroundColor: isDarkTheme ? 'rgba(30, 30, 30, 0.3)' : 'rgba(245, 245, 250, 0.4)',
       }}
     >
       <div 
         onClick={() => setIsCollapsed(!isCollapsed)}
         style={{
-          padding: '0.5rem 0.75rem',
+          padding: '0.4rem 0.75rem',
           cursor: 'pointer',
           display: 'flex',
           alignItems: 'center',
@@ -66,15 +67,15 @@ const ThinkingDisplay: React.FC<ThinkingDisplayProps> = ({ content }) => {
         }}
       >
         <span style={{ 
-          fontSize: '12px', 
+          fontSize: '11px', 
           fontWeight: 500,
           color: isDarkTheme ? '#b0b0b0' : '#505050',
         }}>
-          AI's Thinking Process
+          Thinking Process
         </span>
         <svg 
-          width="14" 
-          height="14" 
+          width="12" 
+          height="12" 
           viewBox="0 0 24 24" 
           fill="none" 
           stroke={isDarkTheme ? '#b0b0b0' : '#505050'} 
@@ -97,7 +98,7 @@ const ThinkingDisplay: React.FC<ThinkingDisplayProps> = ({ content }) => {
           opacity: isCollapsed ? 0 : 1,
           overflow: 'hidden',
           transition: 'max-height 0.3s ease-in-out, opacity 0.2s ease-in-out',
-          fontSize: '13px',
+          fontSize: '12px',
           lineHeight: 1.5,
           color: isDarkTheme ? '#d0d0d0' : '#333333',
           whiteSpace: 'pre-wrap',
