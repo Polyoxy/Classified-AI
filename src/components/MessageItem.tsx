@@ -242,6 +242,9 @@ const MessageItem: React.FC<MessageItemProps> = ({ role, content, timestamp }) =
     });
   };
 
+  // Add this to handle responsive layout for small screens
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+
   // If it's a system message, render with simple style
   if (role === 'system') {
     return (
@@ -257,14 +260,19 @@ const MessageItem: React.FC<MessageItemProps> = ({ role, content, timestamp }) =
     );
   }
 
-  // If it's a user message, render with standard style
+  // If it's a user message, render with enhanced style (without prefix)
   if (role === 'user') {
     return (
-      <div className="message user-message" style={messageStyle}>
-        <span className="prefix" style={prefixStyle}>
-          $ USER:
-        </span>
-        <div style={contentStyle}>
+      <div className="message user-message" style={{
+        ...messageStyle,
+        padding: '1rem',
+        borderLeft: 'none',
+        backgroundColor: isDarkTheme ? 'rgba(58, 134, 255, 0.08)' : 'rgba(58, 134, 255, 0.03)',
+        boxShadow: `0 1px 3px ${isDarkTheme ? 'rgba(0, 0, 0, 0.2)' : 'rgba(0, 0, 0, 0.05)'}`,
+      }}>
+        <div style={{
+          ...contentStyle,
+        }}>
           {formatContent(content)}
         </div>
       </div>
@@ -275,50 +283,77 @@ const MessageItem: React.FC<MessageItemProps> = ({ role, content, timestamp }) =
   const { analysisContent, mainContent } = extractAnalysis(content);
   const hasAnalysis = analysisContent.length > 0;
   
-  // If no analysis, render standard AI message
+  // If no analysis, render standard AI message with side-by-side layout
   if (!hasAnalysis) {
     return (
-      <div className="message assistant-message" style={messageStyle}>
-        <span className="prefix" style={prefixStyle}>
-          $ AI:
-        </span>
+      <div className="message assistant-message" style={{
+        ...messageStyle,
+        padding: '1rem',
+        borderLeft: 'none',
+        boxShadow: `0 1px 3px ${isDarkTheme ? 'rgba(0, 0, 0, 0.2)' : 'rgba(0, 0, 0, 0.07)'}`,
+      }}>
         <div style={{
-          ...contentStyle,
-          overflowY: 'hidden', // Remove scrollbar
+          display: 'flex',
+          flexDirection: isMobile ? 'column' : 'row',
+          gap: '1.5rem',
+          width: '100%',
         }}>
-          {/* Extract and display code blocks as separate previews */}
-          {extractCodeBlocks(content).map((block, index) => (
-            <CodePreview 
-              key={index} 
-              code={block.code} 
-              language={block.language} 
-              isDarkTheme={isDarkTheme} 
-            />
-          ))}
+          {/* Main content on the left */}
+          <div style={{
+            flex: isMobile ? '1 1 auto' : '1 1 55%',
+            overflowY: 'hidden',
+            paddingRight: isMobile ? '0' : '1rem',
+            marginBottom: isMobile ? '1rem' : '0',
+          }}>
+            {formatContent(content)}
+          </div>
           
-          {/* If content contains HTML patterns, offer HTML preview */}
-          {containsHtml(content) && (
-            <HtmlPreview html={content} isDarkTheme={isDarkTheme} />
+          {/* Preview section on the right - only show if there are previews */}
+          {(extractCodeBlocks(content).length > 0 || containsHtml(content)) && (
+            <div style={{
+              flex: isMobile ? '1 1 auto' : '1 1 45%',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '1rem',
+            }}>
+              {/* Code previews */}
+              {extractCodeBlocks(content).map((block, index) => (
+                <CodePreview 
+                  key={index} 
+                  code={block.code} 
+                  language={block.language} 
+                  isDarkTheme={isDarkTheme} 
+                />
+              ))}
+              
+              {/* HTML preview */}
+              {containsHtml(content) && (
+                <HtmlPreview html={content} isDarkTheme={isDarkTheme} />
+              )}
+            </div>
           )}
-          
-          {formatContent(content)}
         </div>
       </div>
     );
   }
 
-  // If has analysis, render the agent UI
+  // If has analysis, render the agent UI with side-by-side layout
   return (
     <div className="message assistant-message agent-ui" style={{
       marginBottom: '1rem',
       width: '100%',
-      borderRadius: '4px',
+      borderRadius: '6px',
       overflow: 'hidden',
-      backgroundColor: '#121212',
-      boxShadow: '0 1px 3px rgba(0, 0, 0, 0.3)',
+      backgroundColor: isDarkTheme ? '#121212' : '#f8f8f8',
+      boxShadow: `0 2px 8px ${isDarkTheme ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.1)'}`,
+      border: 'none',
     }}>
-      {/* Agent header with AGENT and ANALYSIS sections */}
-      <div style={agentHeaderStyle}>
+      {/* Agent header with AGENT badge and ANALYSIS toggle */}
+      <div style={{
+        ...agentHeaderStyle,
+        backgroundColor: isDarkTheme ? '#2a2a2a' : '#e6e6e6',
+        borderBottom: `1px solid ${isDarkTheme ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'}`,
+      }}>
         <div style={agentTitleStyle}>AGENT</div>
         <div 
           style={analysisToggleStyle}
@@ -332,37 +367,55 @@ const MessageItem: React.FC<MessageItemProps> = ({ role, content, timestamp }) =
       {/* Analysis section */}
       {analysisExpanded && (
         <div style={analysisContentStyle}>
-          <div style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>ANALYSIS</div>
           {formatContent(analysisContent)}
         </div>
       )}
       
-      {/* Main response with code and HTML previews */}
+      {/* Main response with side-by-side layout */}
       <div style={{
-        ...responseContentStyle,
-        overflowY: 'hidden', // Remove scrollbar
+        display: 'flex',
+        flexDirection: isMobile ? 'column' : 'row',
+        padding: '1rem',
+        gap: '1.5rem',
       }}>
-        {/* Extract and display code blocks as separate previews */}
-        {extractCodeBlocks(mainContent).map((block, index) => (
-          <CodePreview 
-            key={index} 
-            code={block.code} 
-            language={block.language} 
-            isDarkTheme={true} 
-          />
-        ))}
-        
-        {/* If content contains HTML patterns, offer HTML preview */}
-        {containsHtml(mainContent) && (
-          <HtmlPreview html={mainContent} isDarkTheme={true} />
-        )}
-        
-        {formatContent(mainContent)}
-        <div style={{ display: 'flex', marginTop: '1rem' }}>
-          <span style={timestampStyle}>
-            {formatTime(timestamp)}
-          </span>
+        {/* Main content */}
+        <div style={{
+          flex: isMobile ? '1 1 auto' : '1 1 55%',
+          overflowY: 'hidden',
+          marginBottom: isMobile ? '1rem' : '0',
+        }}>
+          {formatContent(mainContent)}
+          <div style={{ display: 'flex', marginTop: '1rem' }}>
+            <span style={timestampStyle}>
+              {formatTime(timestamp)}
+            </span>
+          </div>
         </div>
+        
+        {/* Preview section - only show if there are previews */}
+        {(extractCodeBlocks(mainContent).length > 0 || containsHtml(mainContent)) && (
+          <div style={{
+            flex: isMobile ? '1 1 auto' : '1 1 45%',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1rem',
+          }}>
+            {/* Code previews */}
+            {extractCodeBlocks(mainContent).map((block, index) => (
+              <CodePreview 
+                key={index} 
+                code={block.code} 
+                language={block.language} 
+                isDarkTheme={isDarkTheme} 
+              />
+            ))}
+            
+            {/* HTML preview */}
+            {containsHtml(mainContent) && (
+              <HtmlPreview html={mainContent} isDarkTheme={isDarkTheme} />
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

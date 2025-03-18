@@ -45,29 +45,32 @@ const HtmlPreview: React.FC<HtmlPreviewProps> = ({ html, isDarkTheme }) => {
   return (
     <div className="html-preview-container" style={{
       marginBottom: '1rem',
-      borderRadius: '8px',
+      borderRadius: '6px',
       overflow: 'hidden',
-      border: `1px solid ${isDarkTheme ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+      border: 'none',
+      height: '400px',
+      boxShadow: `0 1px 3px ${isDarkTheme ? 'rgba(0, 0, 0, 0.4)' : 'rgba(0, 0, 0, 0.1)'}`,
     }}>
       <div className="html-preview-header" style={{
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
         padding: '8px 12px',
-        backgroundColor: isDarkTheme ? '#1e1e2e' : '#f5f5f5',
-        borderBottom: `1px solid ${isDarkTheme ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+        backgroundColor: isDarkTheme ? '#2a2a2a' : '#e6e6e6',
+        borderBottom: `1px solid ${isDarkTheme ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'}`,
       }}>
         <span style={{ 
           fontFamily: 'sans-serif', 
           fontSize: '12px',
-          color: isDarkTheme ? '#a0a0b0' : '#505060',
+          fontWeight: 500,
+          color: isDarkTheme ? '#b0b0b0' : '#505060',
         }}>
           HTML PREVIEW
         </span>
       </div>
       <div style={{
         backgroundColor: isDarkTheme ? '#0f0f0f' : '#ffffff',
-        height: '300px',
+        height: 'calc(100% - 36px)',
         overflow: 'hidden',
       }}>
         {iframeContent && (

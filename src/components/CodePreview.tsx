@@ -12,22 +12,24 @@ const CodePreview: React.FC<CodePreviewProps> = ({ code, language, isDarkTheme }
   return (
     <div className="code-preview-container" style={{
       marginBottom: '1rem',
-      borderRadius: '8px',
+      borderRadius: '6px',
       overflow: 'hidden',
-      border: `1px solid ${isDarkTheme ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+      border: 'none',
+      boxShadow: `0 1px 3px ${isDarkTheme ? 'rgba(0, 0, 0, 0.4)' : 'rgba(0, 0, 0, 0.1)'}`,
     }}>
       <div className="code-preview-header" style={{
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
         padding: '8px 12px',
-        backgroundColor: isDarkTheme ? '#1e1e2e' : '#f5f5f5',
-        borderBottom: `1px solid ${isDarkTheme ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+        backgroundColor: isDarkTheme ? '#2a2a2a' : '#e6e6e6',
+        borderBottom: `1px solid ${isDarkTheme ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'}`,
       }}>
         <span style={{ 
           fontFamily: 'monospace', 
           fontSize: '12px',
-          color: isDarkTheme ? '#a0a0b0' : '#505060',
+          fontWeight: 500,
+          color: isDarkTheme ? '#b0b0b0' : '#505060',
         }}>
           {language.toUpperCase()}
         </span>
@@ -37,9 +39,10 @@ const CodePreview: React.FC<CodePreviewProps> = ({ code, language, isDarkTheme }
         style={isDarkTheme ? vscDarkPlus : vs}
         customStyle={{
           margin: 0,
-          padding: '12px',
-          borderRadius: '0 0 8px 8px',
+          padding: '12px 16px',
+          borderRadius: '0 0 6px 6px',
           fontSize: '14px',
+          backgroundColor: isDarkTheme ? '#1e1e2e' : '#f5f5f5',
         }}
       >
         {code}
