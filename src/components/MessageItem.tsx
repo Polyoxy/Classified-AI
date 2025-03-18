@@ -62,6 +62,75 @@ const MessageItem: React.FC<MessageItemProps> = ({
     }
   }, [isThinkingCollapsed]);
 
+  // Format content with code blocks
+  const formatContent = (content: string) => {
+    // Split by code blocks (triple backticks)
+    const parts = content.split(/(```[\s\S]*?```)/g);
+    
+    return parts.map((part, index) => {
+      // Check if this part is a code block
+      if (part.startsWith('```') && part.endsWith('```')) {
+        // Extract language and code
+        const match = part.match(/```(?:([a-zA-Z0-9]+))?\n([\s\S]*?)```/);
+        
+        if (match) {
+          const [, language, code] = match;
+          
+          return (
+            <div key={index} style={{
+              backgroundColor: isDarkTheme ? '#1E1E1E' : '#F5F5F5',
+              borderRadius: '4px',
+              padding: '0.5rem',
+              margin: '0.5rem 0',
+              overflow: 'auto',
+              fontFamily: 'var(--font-mono)',
+              fontSize: '13px',
+              lineHeight: 1.5,
+              whiteSpace: 'pre',
+            }}>
+              {code.split('\n').map((line, lineIndex) => (
+                <div key={lineIndex} style={{
+                  display: 'block',
+                  color: getCodeColor(line, isDarkTheme),
+                  paddingLeft: getIndentation(line),
+                }}>
+                  {line}
+                </div>
+              ))}
+            </div>
+          );
+        }
+      }
+      
+      // Regular text
+      return <span key={index}>{part}</span>;
+    });
+  };
+  
+  // Helper to determine color based on content
+  const getCodeColor = (line: string, isDark: boolean): string => {
+    // HTML tag detection
+    if (line.match(/<\/?[a-zA-Z]+.*?>/)) {
+      return isDark ? '#CE9178' : '#800000'; // Tags
+    }
+    // HTML attribute detection
+    if (line.match(/\s[a-zA-Z]+=["']/)) {
+      return isDark ? '#9CDCFE' : '#0000FF'; // Attributes
+    }
+    // DOCTYPE declaration
+    if (line.includes('<!DOCTYPE')) {
+      return isDark ? '#569CD6' : '#0000FF';
+    }
+    // Default text color
+    return isDark ? '#D4D4D4' : '#333333';
+  };
+  
+  // Helper to maintain indentation
+  const getIndentation = (line: string): string => {
+    const indent = line.match(/^(\s*)/)?.[1] || '';
+    return indent.replace(/ /g, '\u00A0').replace(/\t/g, '\u00A0\u00A0');
+  };
+
   // Get message style based on role
   const getMessageStyle = () => {
     if (role === 'system') {
@@ -196,7 +265,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
           wordBreak: 'break-word',
           position: 'relative',
         }}>
-          {displayContent}
+          {formatContent(displayContent)}
           
           {/* Timestamp positioned at bottom right */}
           {timestamp && (
