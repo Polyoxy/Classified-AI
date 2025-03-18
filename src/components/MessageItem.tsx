@@ -62,51 +62,6 @@ const MessageItem: React.FC<MessageItemProps> = ({
     }
   }, [isThinkingCollapsed]);
 
-  // Format content with code blocks
-  const formatContent = (content: string) => {
-    // Split by code blocks (triple backticks)
-    const parts = content.split(/(```[\s\S]*?```)/g);
-    
-    return parts.map((part, index) => {
-      // Check if this part is a code block
-      if (part.startsWith('```') && part.endsWith('```')) {
-        // Extract language and code
-        const match = part.match(/```(?:([a-zA-Z0-9]+))?\n([\s\S]*?)```/);
-        
-        if (match) {
-          const [, language, code] = match;
-          
-          return (
-            <div key={index} style={{
-              backgroundColor: isDarkTheme ? '#1E1E1E' : '#F5F5F5',
-              borderRadius: '4px',
-              padding: '0.5rem',
-              margin: '0.5rem 0',
-              overflow: 'auto',
-              fontFamily: 'var(--font-mono)',
-              fontSize: '13px',
-              lineHeight: 1.5,
-              whiteSpace: 'pre',
-            }}>
-              {code.split('\n').map((line, lineIndex) => (
-                <div key={lineIndex} style={{
-                  display: 'block',
-                  color: getCodeColor(line, isDarkTheme),
-                  paddingLeft: getIndentation(line),
-                }}>
-                  {line}
-                </div>
-              ))}
-            </div>
-          );
-        }
-      }
-      
-      // Regular text
-      return <span key={index}>{part}</span>;
-    });
-  };
-  
   // Helper to determine color based on content
   const getCodeColor = (line: string, isDark: boolean): string => {
     // HTML tag detection
@@ -123,6 +78,125 @@ const MessageItem: React.FC<MessageItemProps> = ({
     }
     // Default text color
     return isDark ? '#D4D4D4' : '#333333';
+  };
+
+  // Format content with code blocks - improved to handle live content
+  const formatContent = (content: string) => {
+    // If no content yet during processing, show empty space
+    if (!content && isProcessing) {
+      return <div style={{ minHeight: '20px' }}></div>;
+    }
+    
+    // Split by code blocks (triple backticks)
+    const parts = content.split(/(```[\s\S]*?```)/g);
+    
+    return parts.map((part, index) => {
+      // Check if this part is a code block or a partial code block during processing
+      if (part.startsWith('```')) {
+        // For completed code blocks
+        if (part.endsWith('```')) {
+          const match = part.match(/```(?:([a-zA-Z0-9]+))?\n([\s\S]*?)```/);
+          
+          if (match) {
+            const [, language, code] = match;
+            const isHtml = language === 'html' || code.includes('<html') || code.includes('<!DOCTYPE');
+            
+            return (
+              <div key={index} className="code-block-container" style={{
+                backgroundColor: isDarkTheme ? '#1E1E1E' : '#F5F5F5',
+                borderRadius: '4px',
+                padding: '0.5rem',
+                margin: '0.5rem 0',
+                overflow: 'auto',
+                fontFamily: 'var(--font-mono)',
+                fontSize: '13px',
+                lineHeight: 1.5,
+                whiteSpace: 'pre',
+                position: 'relative',
+              }}>
+                {/* Copy button for code blocks */}
+                <div className="code-copy-button" style={{
+                  position: 'absolute',
+                  top: '8px',
+                  right: '8px',
+                  cursor: 'pointer',
+                  background: isDarkTheme ? 'rgba(40, 40, 40, 0.6)' : 'rgba(240, 240, 240, 0.8)',
+                  borderRadius: '4px',
+                  padding: '4px',
+                  display: 'none',
+                  zIndex: 10,
+                  transition: 'opacity 0.2s',
+                  opacity: 0.8,
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigator.clipboard.writeText(code);
+                  
+                  // Show feedback
+                  const target = e.currentTarget as HTMLDivElement;
+                  const originalText = target.innerHTML;
+                  target.innerHTML = 'Copied!';
+                  setTimeout(() => {
+                    target.innerHTML = originalText;
+                  }, 1000);
+                }}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                  </svg>
+                </div>
+                
+                {code.split('\n').map((line, lineIndex) => (
+                  <div key={lineIndex} style={{
+                    display: 'block',
+                    color: getCodeColor(line, isDarkTheme),
+                    paddingLeft: getIndentation(line),
+                  }}>
+                    {line}
+                  </div>
+                ))}
+              </div>
+            );
+          }
+        } 
+        // For partial/in-progress code blocks during processing
+        else if (isProcessing) {
+          const match = part.match(/```(?:([a-zA-Z0-9]+))?\n?([\s\S]*)/);
+          
+          if (match) {
+            const [, language, code] = match;
+            
+            return (
+              <div key={index} className="code-block-container" style={{
+                backgroundColor: isDarkTheme ? '#1E1E1E' : '#F5F5F5',
+                borderRadius: '4px',
+                padding: '0.5rem',
+                margin: '0.5rem 0',
+                overflow: 'auto',
+                fontFamily: 'var(--font-mono)',
+                fontSize: '13px',
+                lineHeight: 1.5,
+                whiteSpace: 'pre',
+                position: 'relative',
+              }}>
+                {code.split('\n').map((line, lineIndex) => (
+                  <div key={lineIndex} style={{
+                    display: 'block',
+                    color: getCodeColor(line, isDarkTheme),
+                    paddingLeft: getIndentation(line),
+                  }}>
+                    {line}
+                  </div>
+                ))}
+              </div>
+            );
+          }
+        }
+      }
+      
+      // Regular text
+      return <span key={index}>{part}</span>;
+    });
   };
   
   // Helper to maintain indentation
@@ -206,6 +280,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
                 justifyContent: 'space-between',
                 borderBottom: isThinkingCollapsed ? 'none' : `1px solid ${isDarkTheme ? 'rgba(80, 80, 80, 0.3)' : 'rgba(200, 200, 200, 0.5)'}`,
                 transition: 'background-color 0.2s ease',
+                backgroundColor: isDarkTheme ? 'rgba(35, 35, 38, 0.4)' : 'rgba(250, 250, 252, 0.8)',
               }}
             >
               <span style={{ 
@@ -246,6 +321,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
                 whiteSpace: 'pre-wrap',
                 fontFamily: 'var(--font-mono)',
                 borderBottom: !isThinkingCollapsed ? `1px solid ${isDarkTheme ? 'rgba(80, 80, 80, 0.3)' : 'rgba(200, 200, 200, 0.5)'}` : 'none',
+                backgroundColor: isDarkTheme ? 'rgba(32, 32, 34, 0.5)' : 'rgba(248, 248, 250, 0.7)',
               }}
             >
               <div style={{ padding: '0.75rem' }}>
@@ -320,6 +396,14 @@ const MessageItem: React.FC<MessageItemProps> = ({
         @keyframes pulse {
           0%, 100% { opacity: 0.3; }
           50% { opacity: 1; }
+        }
+        
+        .code-block-container:hover .code-copy-button {
+          display: flex !important;
+        }
+        
+        .code-copy-button:hover {
+          opacity: 1 !important;
         }
       `}</style>
     </div>
