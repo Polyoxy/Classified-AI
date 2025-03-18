@@ -612,43 +612,26 @@ body.has-open-panel .app-container {
   position: absolute;
 }
 
-/* Messages container styles to establish consistent alignment */
-.messages-container {
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 0 20px;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-body.has-open-panel .messages-container {
-  max-width: 50%;
-  margin: 0;
-  padding-left: 20px;
-  padding-right: 20px;
-}
-
-/* Command input container uses same alignment */
+/* Style for the command input container */
 .command-input-container {
   position: fixed;
   bottom: 40px;
-  left: 0;
-  right: 0;
-  margin: 0 auto;
-  max-width: 800px;
-  width: calc(100% - 40px);
-  background: transparent;
-  box-sizing: border-box;
-  padding: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 964px;
+  max-width: calc(100% - 40px);
+  padding: 0 20px;
+  transition: all 0.3s ease-in-out;
   z-index: 10;
+  box-sizing: border-box;
 }
 
 body.has-open-panel .command-input-container {
-  left: 0;
-  right: auto;
-  width: calc(50% - 40px);
-  max-width: none;
-  margin-left: 20px;
+  left: 25%;
+  transform: translateX(-50%);
+  width: 482px;
+  max-width: calc(50% - 40px);
+  padding: 0 20px;
 }
 
 /* Status bar should stay fixed and span the full width */
@@ -810,21 +793,4 @@ body.has-open-panel {
   .code-panel-header {
     padding: 0.75rem;
   }
-}
-
-/* Common container width for the entire app */
-.ai-container {
-  max-width: 800px;
-  width: 100%;
-  margin: 0 auto;
-  padding: 0 20px;
-  box-sizing: border-box;
-}
-
-body.has-open-panel .ai-container {
-  max-width: none;
-  width: 50%;
-  margin: 0;
-  padding-left: 20px;
-  padding-right: 20px;
 }
