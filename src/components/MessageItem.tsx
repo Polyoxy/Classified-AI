@@ -17,9 +17,10 @@ const MessageItem: React.FC<MessageItemProps> = ({
   const { settings } = useAppContext();
   const isDarkTheme = settings?.theme === 'dark';
   const [showCopied, setShowCopied] = useState(false);
-  const [isThinkingCollapsed, setIsThinkingCollapsed] = useState(false);
+  const [isThinkingCollapsed, setIsThinkingCollapsed] = useState(true);
   const [contentHeight, setContentHeight] = useState(0);
   const thinkingContentRef = useRef<HTMLDivElement>(null);
+  const prevProcessingRef = useRef(isProcessing);
 
   // Process content to remove thinking tags from display
   const processContent = (content: string): string => {
@@ -61,6 +62,18 @@ const MessageItem: React.FC<MessageItemProps> = ({
       setContentHeight(0);
     }
   }, [isThinkingCollapsed]);
+
+  // Effect to collapse thinking when processing is done
+  useEffect(() => {
+    // Check if processing has just finished
+    if (prevProcessingRef.current === true && isProcessing === false) {
+      // Auto collapse when thinking is done
+      setIsThinkingCollapsed(true);
+    }
+    
+    // Update ref for next check
+    prevProcessingRef.current = isProcessing;
+  }, [isProcessing]);
 
   // Helper to determine color based on content
   const getCodeColor = (line: string, isDark: boolean): string => {
@@ -290,6 +303,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
               }}>
                 Thinking Process
               </span>
+              
               <svg 
                 width="12" 
                 height="12" 
@@ -308,26 +322,127 @@ const MessageItem: React.FC<MessageItemProps> = ({
               </svg>
             </div>
             
-            <div 
-              ref={thinkingContentRef}
-              style={{
-                maxHeight: isThinkingCollapsed ? '0' : `${contentHeight}px`,
-                opacity: isThinkingCollapsed ? 0 : 1,
-                overflow: 'hidden',
-                transition: 'max-height 0.3s ease-in-out, opacity 0.2s ease-in-out',
-                fontSize: '12px',
-                lineHeight: 1.5,
-                color: isDarkTheme ? '#d0d0d0' : '#333333',
-                whiteSpace: 'pre-wrap',
-                fontFamily: 'var(--font-mono)',
-                borderBottom: !isThinkingCollapsed ? `1px solid ${isDarkTheme ? 'rgba(80, 80, 80, 0.3)' : 'rgba(200, 200, 200, 0.5)'}` : 'none',
-                backgroundColor: isDarkTheme ? 'rgba(32, 32, 34, 0.5)' : 'rgba(248, 248, 250, 0.7)',
-              }}
-            >
-              <div style={{ padding: '0.75rem' }}>
-                {thinkingContent || (isProcessing ? 'Thinking...' : '')}
+            {/* True summary - only shown when collapsed */}
+            {isThinkingCollapsed && (
+              <div style={{
+                padding: '0.3rem 0.75rem',
+                fontSize: '11px',
+                fontStyle: 'normal',
+                color: isDarkTheme ? 'rgba(208, 208, 208, 0.7)' : 'rgba(80, 80, 80, 0.7)',
+                backgroundColor: isDarkTheme ? 'rgba(32, 32, 34, 0.3)' : 'rgba(248, 248, 250, 0.5)',
+                borderBottom: `1px solid ${isDarkTheme ? 'rgba(80, 80, 80, 0.2)' : 'rgba(200, 200, 200, 0.4)'}`,
+                borderTop: `1px solid ${isDarkTheme ? 'rgba(80, 80, 80, 0.2)' : 'rgba(200, 200, 200, 0.4)'}`,
+                margin: 0,
+              }}>
+                {(() => {
+                  // Create a true summary of the request instead of showing what the user wrote
+                  
+                  // Extract the core topic or intent from the thinking content
+                  const extractTopic = () => {
+                    // Look for explicit topic mentions
+                    const topicPatterns = [
+                      /(?:about|regarding|concerning|on) ([\w\s-]+)/i,
+                      /topic is ([\w\s-]+)/i,
+                      /([a-z\s]+) poem/i,
+                      /([a-z\s]+) code/i,
+                      /([a-z\s]+) script/i,
+                      /([a-z\s]+) data/i
+                    ];
+                    
+                    for (const pattern of topicPatterns) {
+                      const match = thinkingContent.match(pattern);
+                      if (match && match[1] && match[1].length > 2) {
+                        return match[1].trim();
+                      }
+                    }
+                    
+                    // Extract nouns after key verbs
+                    const verbObjectPatterns = [
+                      /(?:make|create|generate|write)(?: a| an)? ([a-z\s]+)/i,
+                      /(?:explain|describe|clarify)(?: the| about)? ([a-z\s]+)/i,
+                      /(?:find|search for|look up)(?: the| some)? ([a-z\s]+)/i
+                    ];
+                    
+                    for (const pattern of verbObjectPatterns) {
+                      const match = thinkingContent.match(pattern);
+                      if (match && match[1] && match[1].length > 2) {
+                        return match[1].trim();
+                      }
+                    }
+                    
+                    return '';
+                  };
+                  
+                  // Determine the action/intent
+                  const extractIntent = () => {
+                    if (thinkingContent.match(/(?:create|make|generate|write|compose)/i)) 
+                      return 'Create';
+                    if (thinkingContent.match(/(?:explain|describe|tell|clarify)/i)) 
+                      return 'Explain';
+                    if (thinkingContent.match(/(?:analyze|review|evaluate|assess)/i)) 
+                      return 'Analyze';
+                    if (thinkingContent.match(/(?:find|search|locate)/i)) 
+                      return 'Find';
+                    if (thinkingContent.match(/(?:compare|contrast|differentiate)/i)) 
+                      return 'Compare';
+                    if (thinkingContent.match(/(?:summarize|summarise|recap)/i)) 
+                      return 'Summarize';
+                    if (thinkingContent.match(/(?:help|assist|aid)/i)) 
+                      return 'Help with';
+                    
+                    // Default
+                    return 'Request about';
+                  };
+                  
+                  // Build the summary
+                  const topic = extractTopic();
+                  const intent = extractIntent();
+                  
+                  if (topic) {
+                    let summary = `${intent} ${topic}`;
+                    
+                    // Clean up and format the summary
+                    summary = summary
+                      .replace(/\s+/g, ' ')
+                      .trim();
+                      
+                    // Capitalize first letter
+                    summary = summary.charAt(0).toUpperCase() + summary.slice(1);
+                    
+                    // Limit length
+                    if (summary.length > 60) {
+                      summary = summary.substring(0, 57) + '...';
+                    }
+                    
+                    return summary;
+                  }
+                  
+                  // If we can't extract a good summary, fall back to a general one
+                  return 'Request summary';
+                })()}
               </div>
-            </div>
+            )}
+            
+            {/* Only render thinking content when not collapsed */}
+            {!isThinkingCollapsed && (
+              <div 
+                ref={thinkingContentRef}
+                style={{
+                  overflow: 'hidden',
+                  fontSize: '12px',
+                  lineHeight: 1.5,
+                  color: isDarkTheme ? '#d0d0d0' : '#333333',
+                  whiteSpace: 'pre-wrap',
+                  fontFamily: 'var(--font-mono)',
+                  borderBottom: `1px solid ${isDarkTheme ? 'rgba(80, 80, 80, 0.3)' : 'rgba(200, 200, 200, 0.5)'}`,
+                  backgroundColor: isDarkTheme ? 'rgba(32, 32, 34, 0.5)' : 'rgba(248, 248, 250, 0.7)',
+                }}
+              >
+                <div style={{ padding: '0.75rem', fontStyle: 'normal' }}>
+                  {thinkingContent || (isProcessing ? 'Thinking...' : '')}
+                </div>
+              </div>
+            )}
           </>
         )}
 

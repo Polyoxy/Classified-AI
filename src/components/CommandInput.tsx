@@ -41,8 +41,23 @@ const CommandInput: React.FC = () => {
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
   
   // Add state for response style
-  const [responseStyle, setResponseStyle] = useState('normal');
+  const [responseStyle, setResponseStyle] = useState(() => {
+    // Try to load saved style from localStorage
+    if (typeof window !== 'undefined') {
+      const savedStyle = localStorage.getItem('preferredResponseStyle');
+      return savedStyle || 'normal';
+    }
+    return 'normal';
+  });
   const [showStyleDropdown, setShowStyleDropdown] = useState(false);
+  
+  // Add style descriptions for the AI to understand what each style means
+  const styleDescriptions = {
+    normal: "Use a conversational tone with appropriate formatting. Include clear headings for sections using markdown formatting (## for headings), lists when appropriate, and properly format any code blocks with ```language syntax.",
+    concise: "Keep your response very brief and to the point. Minimize explanation and focus only on the most essential information. Still use markdown ## headings for key points and proper code formatting when needed.",
+    explanatory: "Provide a detailed explanation with examples. Break down complex concepts and explain thoroughly. Use proper markdown formatting with ## headings for sections, * for lists, and ```language for code blocks. Make your explanations well-structured and visually organized.",
+    formal: "Use formal language, proper terminology, and structured format. Avoid colloquialisms and maintain a professional tone. Include a proper structure with ## headings and subheadings, and organize content logically with clear sections."
+  };
   
   const { 
     settings,
@@ -183,6 +198,9 @@ const CommandInput: React.FC = () => {
   // Use our chat hook
   const { sendMessage, stopResponse } = useChat();
   
+  // Add state for message summary
+  const [messageSummary, setMessageSummary] = useState<string>('');
+  
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const animationTimerRef = useRef<NodeJS.Timeout | null>(null);
   const cycleTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -311,17 +329,80 @@ const CommandInput: React.FC = () => {
     }
   };
   
+  // Add function to generate a summary of user's message
+  const generateMessageSummary = (message: string): string => {
+    if (!message) return '';
+    
+    // Remove any style prefixes
+    const cleanMessage = message.replace(/^\[Response style: [a-z]+\]\s*/i, '');
+    
+    // If message is short enough, return it as is
+    if (cleanMessage.length <= 60) return cleanMessage;
+    
+    // Try to extract the main intent from the message
+    if (cleanMessage.includes('?')) {
+      // Extract the first question
+      const question = cleanMessage.split('?')[0] + '?';
+      if (question.length <= 100) return question;
+    }
+    
+    // Otherwise truncate with ellipsis
+    return cleanMessage.substring(0, 60) + '...';
+  };
+
   // Handle send message
   const handleSendMessage = () => {
     if (input.trim() && !isProcessing) {
-      // Add response style as a system message if not normal
-      let inputWithStyle = input.trim();
+      // Generate and store a summary of the user's message
+      setMessageSummary(generateMessageSummary(input.trim()));
+      
+      // Use the better approach to inform the AI about the desired response style
+      let messageToSend = input.trim();
+      
+      // If style is not normal, add a system message first to inform the AI
       if (responseStyle !== 'normal') {
-        inputWithStyle = `[${responseStyle}] ${inputWithStyle}`;
+        // Use multiple approaches to ensure the AI understands the style request
+        
+        // 1. If the backend supports system messages before user input
+        if (currentConversation) {
+          // Add a temporary system message that won't be displayed
+          const tempSystemMessage = {
+            id: 'temp-style-instruction',
+            role: 'system',
+            content: `Please format your next response in a ${responseStyle} style. ${styleDescriptions[responseStyle as keyof typeof styleDescriptions]}`,
+            timestamp: Date.now()
+          };
+          
+          // Add this message to the context but don't display it
+          if (window.electron) {
+            // For Electron, update the conversation directly
+            const updatedMessages = [...currentConversation.messages, tempSystemMessage];
+            window.electron.store.set(`conversations.${currentConversation.id}.messages`, updatedMessages);
+          }
+        }
+        
+        // 2. Also include the style instruction at the beginning of the message for redundancy
+        messageToSend = `[Response style: ${responseStyle}] ${messageToSend}`;
+      } else {
+        // Even for normal style, add formatting instructions
+        if (currentConversation) {
+          const formatInstructionMessage = {
+            id: 'format-instruction',
+            role: 'system',
+            content: styleDescriptions.normal,
+            timestamp: Date.now()
+          };
+          
+          if (window.electron) {
+            const updatedMessages = [...currentConversation.messages, formatInstructionMessage];
+            window.electron.store.set(`conversations.${currentConversation.id}.messages`, updatedMessages);
+          }
+        }
       }
       
-      sendMessage(inputWithStyle);
+      sendMessage(messageToSend);
       setInput('');
+      // Don't reset responseStyle here - preserve the user's selection
       if (inputRef.current) {
         // Reset textarea height
         inputRef.current.style.height = '24px';
@@ -382,6 +463,13 @@ const CommandInput: React.FC = () => {
     width: '40px',
     flexShrink: 0,
   };
+
+  // Save style whenever it changes
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('preferredResponseStyle', responseStyle);
+    }
+  }, [responseStyle]);
 
   return (
     <div style={{
@@ -767,6 +855,12 @@ const CommandInput: React.FC = () => {
                       onClick={() => {
                         setResponseStyle(style);
                         setShowStyleDropdown(false);
+                        
+                        // Provide feedback to user about style change
+                        if (style !== 'normal') {
+                          const description = styleDescriptions[style as keyof typeof styleDescriptions];
+                          console.log(`Response style set to ${style}: ${description}`);
+                        }
                       }}
                       style={{
                         padding: '6px 10px',
@@ -787,7 +881,20 @@ const CommandInput: React.FC = () => {
                         }
                       }}
                     >
-                      {style.charAt(0).toUpperCase() + style.slice(1)}
+                      <div>
+                        {style.charAt(0).toUpperCase() + style.slice(1)}
+                        <div style={{
+                          fontSize: '9px',
+                          opacity: 0.7,
+                          fontWeight: 'normal',
+                          marginTop: '2px',
+                          display: style === 'normal' ? 'none' : 'block'
+                        }}>
+                          {style === 'concise' && 'Brief and to the point'}
+                          {style === 'explanatory' && 'Detailed with examples'}
+                          {style === 'formal' && 'Professional and structured'}
+                        </div>
+                      </div>
                     </div>
                   ))}
                 </div>
