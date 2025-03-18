@@ -38,7 +38,7 @@
   --font-family-general: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; /* Secondary General Font */
   
   /* Thinking animation colors - more subtle */
-  --thinking-color: #3a86ff; /* Blue pulse dot/ring */
+  --thinking-color: #4a9eff; /* Blue pulse dot/ring */
   --thinking-bg-dark: rgba(35, 35, 38, 0.3); /* More transparent dark theme thinking container */
   --thinking-bg-light: rgba(245, 245, 250, 0.4); /* More transparent light theme thinking container */
 }
@@ -480,26 +480,25 @@ input[type="range"]:active::-moz-range-thumb {
   
   /* Thinking indicator responsive styles */
   .thinking-content {
-    max-height: 300px;
-    font-size: 13px;
-  }
-  
-  .thinking-title {
+    max-height: 200px;
     font-size: 12px;
   }
   
+  .thinking-title {
+    font-size: 11px;
+  }
+  
   .pulse-container {
-    width: 16px;
-    height: 16px;
-    margin-right: 8px;
+    width: 12px;
+    height: 12px;
   }
 }
 
 @media (max-width: 576px) {
   /* Smaller screens adjustments */
   .thinking-content {
-    max-height: 200px;
-    font-size: 12px;
+    max-height: 150px;
+    font-size: 11px;
   }
 }
 

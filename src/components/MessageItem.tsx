@@ -383,11 +383,21 @@ const MessageItem: React.FC<MessageItemProps> = ({ role, content, timestamp, isT
   // If the message is in "thinking" state, display the thinking indicator
   if (isThinking) {
     return (
-      <ThinkingIndicator 
-        isThinking={true}
-        thinkingContent={thinkingContent}
-        isDarkTheme={isDarkTheme}
-      />
+      <div className="message assistant-message" style={{
+        ...messageStyle,
+        padding: '0.5rem',
+        borderLeft: 'none',
+        boxShadow: `0 1px 3px ${isDarkTheme ? 'rgba(0, 0, 0, 0.2)' : 'rgba(0, 0, 0, 0.07)'}`,
+        position: 'relative',
+        backgroundColor: 'transparent',
+        border: 'none',
+      }}>
+        <ThinkingIndicator 
+          isThinking={true}
+          thinkingContent={thinkingContent}
+          isDarkTheme={isDarkTheme}
+        />
+      </div>
     );
   }
   

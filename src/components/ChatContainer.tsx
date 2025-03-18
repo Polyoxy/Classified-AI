@@ -258,7 +258,13 @@ const ChatContainer: React.FC = () => {
   };
 
   return (
-    <>
+    <div style={{
+      position: 'relative',
+      height: '100%',
+      display: 'flex',
+      flexDirection: 'column',
+      overflow: 'hidden',
+    }}>
       <style>{containerStyles}</style>
       <div 
         ref={containerRef}
@@ -274,12 +280,11 @@ const ChatContainer: React.FC = () => {
           maxWidth: '800px',
           margin: '0 auto',
           width: 'calc(100% - 3rem)',
-          paddingBottom: '100px', // Increased space for command input and status bar
           overflowY: 'auto',
+          overflowX: 'hidden',
           scrollBehavior: 'smooth',
-          minHeight: 'calc(100vh - 120px)', // Adjusted for status bar and command input
           position: 'relative',
-          zIndex: 5, // Lower than command input and status bar
+          paddingBottom: '120px', // Increased padding to prevent content from going under command input
         }}
       >
         {/* Welcome message if no messages yet */}
@@ -297,31 +302,34 @@ const ChatContainer: React.FC = () => {
 
         {/* Display messages */}
         {currentConversation.messages.map((message, index) => {
-          // Skip empty messages (except for streaming assistants)
-          if (message.content === '' && message.role !== 'assistant') {
+          // Process message content to remove <think> tags
+          let processedContent = message.content;
+          if (message.role === 'assistant') {
+            // Remove <think> tags and their content
+            processedContent = processedContent.replace(/<think>[\s\S]*?<\/think>/g, '');
+            // Clean up any extra newlines
+            processedContent = processedContent.replace(/\n{3,}/g, '\n\n').trim();
+          }
+          
+          // Skip empty messages
+          if (!processedContent && message.role !== 'assistant') {
             return null;
           }
           
           // Skip initial system messages except errors
           if (message.role === 'system' && 
-              !message.content.startsWith('Error') && 
+              !processedContent.startsWith('Error') && 
               index === 0 && 
               currentConversation.messages.length > 1 &&
               !settings?.showSystemMessages) {
             return null;
           }
-          
-          // Process AI messages to potentially add ANALYSIS sections
-          const processedMessage = message.role === 'assistant' 
-            ? processAIMessage(message)
-            : message;
-          
-          // Render all other messages
+
           return (
             <MessageItem
               key={message.id || `msg-${index}`}
-              role={processedMessage.role}
-              content={processedMessage.content}
+              role={message.role}
+              content={processedContent}
               timestamp={message.timestamp}
             />
           );
@@ -340,7 +348,7 @@ const ChatContainer: React.FC = () => {
         {/* Scrolling spacer */}
         <div style={{ height: '20px' }} />
       </div>
-    </>
+    </div>
   );
 };
 
