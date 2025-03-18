@@ -45,13 +45,16 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
     };
   }, [isModelDropdownOpen]);
 
-  // Set the initial selected model only once when component mounts or conversation changes
+  // Set the initial selected model when component mounts or conversation changes
   useEffect(() => {
-    if (currentConversation?.model && initialRenderRef.current) {
+    if (currentConversation?.model) {
       setSelectedModel(currentConversation.model);
       initialRenderRef.current = false;
+    } else if (settings?.providers?.[settings.activeProvider]?.defaultModel && initialRenderRef.current) {
+      setSelectedModel(settings.providers[settings.activeProvider].defaultModel);
+      initialRenderRef.current = false;
     }
-  }, [currentConversation]);
+  }, [currentConversation, settings]);
 
   // Clear timeout on unmount
   useEffect(() => {
@@ -230,14 +233,12 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
 
   // Get models for current provider
   const getModelsForProvider = () => {
-    if (!currentConversation) return [];
+    const provider = currentConversation?.provider || settings.activeProvider;
     
-    const provider = currentConversation.provider || settings.activeProvider;
-    
-    // If no models are available from the conversation, get them from settings
+    // Get models from settings
     const models = settings.providers[provider]?.models || [];
     
-    // Make sure llama3.2:1b is included if not already in the list
+    // Make sure llama3.2:1b is included for Ollama if not already in the list
     if (provider === 'ollama' && !models.includes('llama3.2:1b')) {
       return ['llama3.2:1b', ...models];
     }
@@ -247,26 +248,19 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
 
   // Make sure we always have a valid model selected to display
   const getCurrentModel = () => {
-    // Check if there are any models available
-    const models = getModelsForProvider();
-    if (models.length === 0) {
-      return 'No models available';
-    }
-    
-    // For Ollama provider, prioritize llama3.2:1b
-    if (settings?.activeProvider && settings.activeProvider === 'ollama') {
-      return 'llama3.2:1b';
-    }
-    
-    // If a model is explicitly selected, use that
+    // If a model is explicitly selected by the user, prioritize that
     if (selectedModel) return selectedModel;
     
     // If a conversation exists with a model, use that
     if (currentConversation?.model) return currentConversation.model;
     
+    // Check if there are any models available
+    const models = getModelsForProvider();
+    
     // Default to the provider's default model
-    if (settings?.activeProvider === 'ollama') {
-      return settings.providers.ollama.defaultModel || 'llama3.2:1b';
+    if (settings?.activeProvider) {
+      return settings.providers[settings.activeProvider].defaultModel || 
+             (settings.activeProvider === 'ollama' ? 'llama3.2:1b' : 'Unknown');
     }
     
     // Fallback to first available model
@@ -518,19 +512,19 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
                     style={{
                       padding: '0.5rem',
                       cursor: 'pointer',
-                      backgroundColor: model === selectedModel 
+                      backgroundColor: (model === selectedModel || model === currentConversation?.model)
                         ? (settings?.theme === 'dark' ? '#333' : '#e0e0e0') 
                         : 'transparent',
                       transition: 'all 0.1s ease',
                       fontSize: '13px',
                       letterSpacing: '0.2px',
-                      fontWeight: model === selectedModel ? 'bold' : 'normal',
+                      fontWeight: (model === selectedModel || model === currentConversation?.model) ? 'bold' : 'normal',
                     }}
                     onMouseOver={(e) => {
                       e.currentTarget.style.backgroundColor = settings?.theme === 'dark' ? '#333' : '#e0e0e0';
                     }}
                     onMouseOut={(e) => {
-                      if (model !== selectedModel) {
+                      if (model !== selectedModel && model !== currentConversation?.model) {
                         e.currentTarget.style.backgroundColor = 'transparent';
                       }
                     }}
