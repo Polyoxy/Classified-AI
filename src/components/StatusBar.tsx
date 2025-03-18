@@ -218,13 +218,13 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
     
     .model-dropdown {
       position: absolute;
-      bottom: 100% !important;
+      top: 100% !important;
       left: 0;
       width: 100%;
-      margin-bottom: 4px !important;
+      margin-top: 4px !important;
       max-height: 200px;
       z-index: 10000 !important;
-      box-shadow: 0 -4px 12px rgba(0, 0, 0, ${settings?.theme === 'dark' ? '0.4' : '0.2'}) !important;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, ${settings?.theme === 'dark' ? '0.4' : '0.2'}) !important;
     }
     
     @media (max-width: 767px) {
@@ -266,12 +266,12 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
           justifyContent: 'space-between',
           alignItems: 'center',
           position: 'fixed',
-          bottom: 0,
+          top: 0,
           left: 0,
           right: 0,
           height: '32px',
           backgroundColor: settings?.theme === 'dark' ? 'rgba(18, 18, 18, 0.92)' : 'rgba(245, 245, 245, 0.92)',
-          borderTop: `1px solid ${settings?.theme === 'dark' ? 'rgba(51, 51, 51, 0.8)' : 'rgba(221, 221, 221, 0.8)'}`,
+          borderBottom: `1px solid ${settings?.theme === 'dark' ? 'rgba(51, 51, 51, 0.8)' : 'rgba(221, 221, 221, 0.8)'}`,
           color: settings?.theme === 'dark' ? '#b0b0b0' : '#505050',
           padding: '0 12px',
           fontSize: '12px',
@@ -279,7 +279,7 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
           backdropFilter: 'blur(8px)',
           transition: 'all 0.2s ease',
           zIndex: 70,
-          boxShadow: `0 -1px 2px rgba(0, 0, 0, ${settings?.theme === 'dark' ? '0.15' : '0.08'})`,
+          boxShadow: `0 1px 2px rgba(0, 0, 0, ${settings?.theme === 'dark' ? '0.15' : '0.08'})`,
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', padding: '0' }}>
@@ -333,19 +333,19 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
                 className="model-dropdown"
                 style={{
                   position: 'absolute',
-                  bottom: '100%',
+                  top: '100%',
                   left: '0',
                   width: '100%',
                   backgroundColor: settings?.theme === 'dark' ? 'rgba(26, 26, 26, 0.95)' : 'rgba(245, 245, 245, 0.95)',
                   border: `1px solid ${settings?.theme === 'dark' ? 'rgba(60, 60, 60, 0.7)' : 'rgba(200, 200, 200, 0.7)'}`,
                   borderRadius: '4px',
-                  marginBottom: '4px',
+                  marginTop: '4px',
                   zIndex: 10000,
                   maxHeight: '200px',
                   overflowY: 'auto',
                   boxShadow: settings?.theme === 'dark' 
-                    ? '0 -4px 8px rgba(0,0,0,0.3)' 
-                    : '0 -4px 8px rgba(0,0,0,0.1)',
+                    ? '0 4px 8px rgba(0,0,0,0.3)' 
+                    : '0 4px 8px rgba(0,0,0,0.1)',
                   fontFamily: 'Inter, sans-serif',
                   backdropFilter: 'blur(6px)',
                 }}

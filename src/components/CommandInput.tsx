@@ -46,14 +46,86 @@ const CommandInput: React.FC = () => {
     setIsProcessing,
     currentConversation,
     createConversation,
+    changeModel,
   } = useAppContext();
+  
+  // Add state for model dropdown
+  const [showModelDropdown, setShowModelDropdown] = useState(false);
+  
+  // Reference for model dropdown
+  const modelDropdownRef = useRef<HTMLDivElement>(null);
+  const modelSelectorRef = useRef<HTMLDivElement>(null);
+  
+  // Handle click outside to close dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        showModelDropdown && 
+        modelDropdownRef.current && 
+        modelSelectorRef.current && 
+        !modelDropdownRef.current.contains(event.target as Node) &&
+        !modelSelectorRef.current.contains(event.target as Node)
+      ) {
+        setShowModelDropdown(false);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showModelDropdown]);
+  
+  // Define a model interface
+  interface Model {
+    id: string;
+    name: string;
+  }
+  
+  // Get available models or fallback to empty array
+  const getAvailableModels = (): string[] => {
+    const provider = currentConversation?.provider || settings?.activeProvider;
+    
+    // Get models from settings
+    const models = settings?.providers?.[provider]?.models || [];
+    
+    // Make sure llama3.2:1b is included for Ollama if not already in the list
+    if (provider === 'ollama' && !models.includes('llama3.2:1b')) {
+      return ['llama3.2:1b', ...models];
+    }
+    
+    return models;
+  };
+  
+  // Make sure we always have a valid model selected to display
+  const getCurrentModel = () => {
+    // If a conversation exists with a model, use that
+    if (currentConversation?.model) return currentConversation.model;
+    
+    // Default to the provider's default model
+    if (settings?.activeProvider) {
+      return settings.providers[settings.activeProvider].defaultModel || 
+             (settings.activeProvider === 'ollama' ? 'llama3.2:1b' : 'Unknown');
+    }
+    
+    // Fallback to first available model
+    const models = getAvailableModels();
+    if (models.length > 0) {
+      return models[0];
+    }
+    
+    return 'No models available';
+  };
+  
+  const availableModels = getAvailableModels();
+  const currentModel = getCurrentModel();
   
   // Add additional styles for the gradient and mobile optimization
   const customStyles = `
     @media (max-width: 767px) {
       .command-input {
         position: fixed !important;
-        bottom: 60px !important; /* Position higher above the status bar */
+        bottom: 32px !important; /* More space from bottom on mobile */
         left: 10px !important;
         right: 10px !important;
         width: calc(100% - 20px) !important;
@@ -76,7 +148,7 @@ const CommandInput: React.FC = () => {
     @media (min-width: 768px) {
       .command-input {
         position: fixed !important;
-        bottom: 80px !important; /* Move higher up from the status bar */
+        bottom: 48px !important; /* More space from bottom on desktop */
         left: 50% !important;
         transform: translateX(-50%) !important;
         margin: 0 !important;
@@ -170,10 +242,46 @@ const CommandInput: React.FC = () => {
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInput(e.target.value);
     if (inputRef.current) {
-      inputRef.current.style.height = 'auto';
-      inputRef.current.style.height = `${inputRef.current.scrollHeight}px`;
+      // Reset height temporarily to get the correct scrollHeight
+      inputRef.current.style.height = '0px';
+      
+      // Set to scrollHeight to adjust to content
+      const scrollHeight = inputRef.current.scrollHeight;
+      const newHeight = Math.min(scrollHeight, 200);
+      inputRef.current.style.height = `${newHeight}px`;
+      
+      // Enable scrolling if content exceeds max height
+      inputRef.current.style.overflowY = scrollHeight > 200 ? 'auto' : 'hidden';
+      
+      // Adjust container height if needed
+      const container = inputRef.current.closest('.command-input-container') as HTMLElement;
+      if (container) {
+        container.style.height = newHeight > 45 ? 'auto' : '45px';
+      }
     }
   };
+  
+  // Auto-resize when component mounts or input changes
+  useEffect(() => {
+    if (inputRef.current && input) {
+      // Reset height temporarily to get the correct scrollHeight
+      inputRef.current.style.height = '0px';
+      
+      // Set to scrollHeight to adjust to content
+      const scrollHeight = inputRef.current.scrollHeight;
+      const newHeight = Math.min(scrollHeight, 200);
+      inputRef.current.style.height = `${newHeight}px`;
+      
+      // Enable scrolling if content exceeds max height
+      inputRef.current.style.overflowY = scrollHeight > 200 ? 'auto' : 'hidden';
+      
+      // Adjust container height if needed
+      const container = inputRef.current.closest('.command-input-container') as HTMLElement;
+      if (container) {
+        container.style.height = newHeight > 45 ? 'auto' : '45px';
+      }
+    }
+  }, [input]);
   
   // Handle key press
   const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -189,7 +297,15 @@ const CommandInput: React.FC = () => {
       sendMessage(input.trim());
       setInput('');
       if (inputRef.current) {
-        inputRef.current.style.height = 'auto';
+        // Reset textarea height
+        inputRef.current.style.height = '24px';
+        inputRef.current.style.overflowY = 'hidden';
+        
+        // Reset container height
+        const container = inputRef.current.closest('.command-input-container') as HTMLElement;
+        if (container) {
+          container.style.height = '45px';
+        }
       }
     }
   };
@@ -211,6 +327,14 @@ const CommandInput: React.FC = () => {
     if (isProcessing) {
       // Call stopResponse which now handles everything
       stopResponse();
+    }
+  };
+  
+  // Handle model change
+  const handleModelChange = (model: string) => {
+    if (currentConversation && !isProcessing) {
+      changeModel(model);
+      setShowModelDropdown(false);
     }
   };
   
@@ -236,9 +360,9 @@ const CommandInput: React.FC = () => {
   return (
     <div style={{
       position: 'fixed',
-      bottom: '32px', // Leave space for status bar
+      bottom: '48px', /* Increase space from bottom */
       left: '0',
-      right: '0', // Remove the conditional adjustment that was causing the shift
+      right: '0',
       zIndex: 100,
       backgroundColor: settings?.theme === 'dark' ? '#121212' : '#f8f9fa',
       padding: '1rem',
@@ -249,15 +373,127 @@ const CommandInput: React.FC = () => {
         margin: '0 auto',
         position: 'relative',
       }}>
+        {/* Model selector */}
+        <div style={{
+          position: 'absolute',
+          bottom: '-24px',
+          left: '0',
+          fontSize: '12px',
+          color: settings?.theme === 'dark' ? 'rgba(180, 180, 180, 0.7)' : 'rgba(120, 120, 120, 0.7)',
+          cursor: 'pointer',
+          zIndex: 10,
+          userSelect: 'none',
+        }}>
+          <div 
+            ref={modelSelectorRef}
+            onClick={() => !isProcessing && setShowModelDropdown(!showModelDropdown)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              opacity: isProcessing ? 0.5 : 0.8,
+              transition: 'opacity 0.2s',
+              padding: '0.25rem 0.4rem',
+              fontFamily: 'Inter, sans-serif',
+            }}
+            onMouseEnter={(e) => !isProcessing && (e.currentTarget.style.opacity = '1')}
+            onMouseLeave={(e) => !isProcessing && (e.currentTarget.style.opacity = '0.8')}
+          >
+            <span style={{ 
+              fontWeight: 500,
+              fontSize: '11px',
+              maxWidth: '120px',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              marginRight: '4px',
+            }}>
+              {currentModel}
+            </span>
+            <svg 
+              width="10" 
+              height="10" 
+              viewBox="0 0 24 24" 
+              fill="none" 
+              stroke="currentColor" 
+              strokeWidth="2" 
+              strokeLinecap="round" 
+              strokeLinejoin="round"
+              style={{
+                transform: showModelDropdown ? 'rotate(180deg)' : 'rotate(0deg)',
+                transition: 'transform 0.2s ease',
+                opacity: 0.6,
+              }}
+            >
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </div>
+          
+          {/* Model dropdown */}
+          {showModelDropdown && (
+            <div 
+              ref={modelDropdownRef}
+              style={{
+                position: 'absolute',
+                bottom: '22px',
+                left: '0',
+                backgroundColor: settings?.theme === 'dark' ? 'rgba(26, 26, 26, 0.95)' : 'rgba(245, 245, 245, 0.95)',
+                border: `1px solid ${settings?.theme === 'dark' ? 'rgba(60, 60, 60, 0.7)' : 'rgba(200, 200, 200, 0.7)'}`,
+                borderRadius: '4px',
+                marginBottom: '4px',
+                zIndex: 10000,
+                maxHeight: '200px',
+                overflowY: 'auto',
+                boxShadow: settings?.theme === 'dark' ? '0 -4px 8px rgba(0,0,0,0.3)' : '0 -4px 8px rgba(0,0,0,0.1)',
+                fontFamily: 'Inter, sans-serif',
+                backdropFilter: 'blur(6px)',
+                minWidth: '160px',
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {availableModels.map((model) => (
+                <div 
+                  key={model}
+                  className="model-option"
+                  onClick={() => handleModelChange(model)}
+                  style={{
+                    padding: '0.4rem',
+                    cursor: 'pointer',
+                    backgroundColor: model === currentModel
+                      ? (settings?.theme === 'dark' ? '#333' : '#e0e0e0') 
+                      : 'transparent',
+                    transition: 'all 0.1s ease',
+                    fontSize: '12px',
+                    letterSpacing: '0.2px',
+                    fontWeight: model === currentModel ? 'bold' : 'normal',
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.backgroundColor = settings?.theme === 'dark' ? '#333' : '#e0e0e0';
+                  }}
+                  onMouseOut={(e) => {
+                    if (model !== currentModel) {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }
+                  }}
+                >
+                  {model}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        
         <div className="command-input-container" style={{
           display: 'flex',
-          alignItems: 'center',
+          alignItems: 'flex-start',
           gap: '0.5rem',
           backgroundColor: 'transparent',
           borderRadius: '8px',
           padding: '0.75rem',
-          height: '45px',
+          minHeight: '45px',
+          height: 'auto',
           position: 'relative',
+          transition: 'height 0.2s ease',
         }}>
           <style>
             {`
@@ -308,6 +544,7 @@ const CommandInput: React.FC = () => {
             height: '18px',
             opacity: 0.7,
             marginTop: '2px',
+            flexShrink: 0,
           }}>
             {isProcessing ? (
               <svg 
@@ -350,6 +587,8 @@ const CommandInput: React.FC = () => {
               outline: 'none',
               minHeight: '20px',
               position: 'relative',
+              display: 'flex',
+              alignItems: 'flex-start',
             }}
           >
             <textarea
@@ -366,13 +605,14 @@ const CommandInput: React.FC = () => {
                 fontFamily: 'var(--font-mono, "JetBrains Mono", monospace)',
                 fontSize: '14px',
                 resize: 'none',
-                height: 'auto',
-                minHeight: '20px',
+                height: '24px', // Start with a minimum height
+                minHeight: '24px',
+                maxHeight: '200px', // Maximum height
                 width: '100%',
                 outline: 'none',
                 padding: '0',
                 paddingTop: '0',
-                overflow: 'hidden',
+                overflow: 'auto', // Change from 'hidden' to 'auto' to allow scrolling
                 lineHeight: 1.4,
                 verticalAlign: 'middle',
                 caretColor: settings?.theme === 'dark' ? '#d0d0d0' : '#505050',
@@ -386,7 +626,13 @@ const CommandInput: React.FC = () => {
             />
           </div>
           
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <div style={{ 
+              display: 'flex', 
+              gap: '0.5rem',
+              alignSelf: 'flex-start',
+              marginTop: '2px',
+              flexShrink: 0,
+            }}>
             {isProcessing && (
               <button
                 onClick={handleCancelMessage}
@@ -402,6 +648,7 @@ const CommandInput: React.FC = () => {
                   justifyContent: 'center',
                   opacity: 0.6,
                   transition: 'opacity 0.2s ease',
+                  flexShrink: 0,
                 }}
                 title="Stop generating"
               >
@@ -434,6 +681,7 @@ const CommandInput: React.FC = () => {
                 justifyContent: 'center',
                 opacity: input.trim() && !isProcessing ? 0.6 : 0.3,
                 transition: 'opacity 0.2s ease',
+                flexShrink: 0,
               }}
               title="Send message"
             >
@@ -454,6 +702,28 @@ const CommandInput: React.FC = () => {
           </div>
         </div>
       </div>
+      <style>
+        {`
+          .no-focus-visible:focus {
+            outline: none !important;
+            box-shadow: none !important;
+          }
+          
+          .no-focus-visible:focus-visible {
+            outline: none !important;
+            box-shadow: none !important;
+          }
+          
+          textarea::selection {
+            background-color: ${settings?.theme === 'dark' ? 'rgba(100, 100, 100, 0.4)' : 'rgba(200, 200, 200, 0.4)'};
+          }
+          
+          /* For Firefox */
+          textarea::-moz-selection {
+            background-color: ${settings?.theme === 'dark' ? 'rgba(100, 100, 100, 0.4)' : 'rgba(200, 200, 200, 0.4)'};
+          }
+        `}
+      </style>
     </div>
   );
 };

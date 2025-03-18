@@ -322,6 +322,17 @@ const App: React.FC<{ isElectron: boolean }> = ({ isElectron }) => {
       flexDirection: 'column', 
       overflow: 'hidden'
     }}>
+      {/* Status bar positioned below TitleBar */}
+      <div style={{
+        position: 'fixed',
+        top: isElectron ? '36px' : '0', // Account for TitleBar height in Electron mode
+        left: 0,
+        right: 0,
+        zIndex: 100,
+      }}>
+        <StatusBar onOpenSettings={handleOpenSettings} />
+      </div>
+      
       {/* Main content area with chat and command input */}
       <div style={{ 
         flex: 1, 
@@ -341,7 +352,7 @@ const App: React.FC<{ isElectron: boolean }> = ({ isElectron }) => {
           borderLeft: 'none',
           position: 'relative',
           paddingBottom: '100px', // Space for command input
-          marginTop: '0', // Position higher on the screen
+          marginTop: isElectron ? '68px' : '32px', // Adjust for TitleBar + StatusBar or just StatusBar
         }}>
           <ChatContainer />
         </div>
@@ -358,17 +369,6 @@ const App: React.FC<{ isElectron: boolean }> = ({ isElectron }) => {
         }}>
           <CommandInput />
         </div>
-      </div>
-      
-      {/* Status bar at the bottom */}
-      <div style={{
-        position: 'fixed',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        zIndex: 100,
-      }}>
-        <StatusBar onOpenSettings={handleOpenSettings} />
       </div>
       
       {/* Settings modal */}
