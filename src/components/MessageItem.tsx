@@ -255,6 +255,31 @@ const MessageItem: React.FC<MessageItemProps> = ({
     });
   };
 
+  // Get model-based colors
+  const getModelColors = () => {
+    if (!model) return null;
+    
+    if (model.toLowerCase().includes('deepseek') || model.toLowerCase().includes('deepthink')) {
+      return {
+        color: isDarkTheme ? '#88a9e0' : '#1e60cc',
+        bgColor: isDarkTheme ? 'rgba(45, 90, 160, 0.25)' : 'rgba(60, 110, 220, 0.15)',
+        borderColor: isDarkTheme ? 'rgba(45, 90, 160, 0.3)' : 'rgba(60, 110, 220, 0.2)',
+      };
+    }
+    
+    if (model.toLowerCase().includes('vision')) {
+      return {
+        color: isDarkTheme ? '#95d095' : '#1a7a1a',
+        bgColor: isDarkTheme ? 'rgba(80, 155, 80, 0.25)' : 'rgba(90, 180, 90, 0.15)',
+        borderColor: isDarkTheme ? 'rgba(80, 155, 80, 0.3)' : 'rgba(90, 180, 90, 0.2)',
+      };
+    }
+    
+    return null;
+  };
+
+  const modelColors = getModelColors();
+
   return (
     <div className="response-container" style={{
       opacity: isProcessing ? 0.7 : 1,
@@ -295,28 +320,52 @@ const MessageItem: React.FC<MessageItemProps> = ({
                 borderBottom: isThinkingCollapsed ? 'none' : `1px solid ${isDarkTheme ? 'rgba(45, 45, 45, 0.5)' : 'rgba(200, 200, 200, 0.3)'}`,
                 transition: 'background-color 0.2s ease',
                 backgroundColor: isDarkTheme ? 'rgba(22, 22, 22, 0.95)' : 'rgba(250, 250, 252, 0.8)',
+                position: 'relative',
               }}
             >
               <span style={{ 
                 fontSize: '12px', 
                 fontWeight: 500,
-                color: isDarkTheme ? '#b0b0b0' : '#505050',
+                color: modelColors ? modelColors.color : (isDarkTheme ? '#b0b0b0' : '#505050'),
+                position: 'relative',
+                zIndex: 2,
               }}>
                 Thinking Process
               </span>
+              
+              {modelColors && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: `linear-gradient(90deg, ${modelColors.bgColor}, ${modelColors.bgColor.replace('0.25', '0.15')}, ${modelColors.bgColor})`,
+                    opacity: 0.5,
+                    zIndex: 1,
+                    backgroundSize: '200% 200%',
+                    animation: 'movingStroke 3s ease-in-out infinite',
+                    borderTopLeftRadius: '6px',
+                    borderTopRightRadius: '6px',
+                  }}
+                />
+              )}
               
               <svg 
                 width="12" 
                 height="12" 
                 viewBox="0 0 24 24" 
                 fill="none" 
-                stroke={isDarkTheme ? '#b0b0b0' : '#505050'} 
+                stroke={modelColors ? modelColors.color : (isDarkTheme ? '#b0b0b0' : '#505050')} 
                 strokeWidth="2"
                 strokeLinecap="round" 
                 strokeLinejoin="round"
                 style={{
                   transform: isThinkingCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)',
                   transition: 'transform 0.2s ease',
+                  position: 'relative',
+                  zIndex: 2,
                 }}
               >
                 <polyline points="6 9 12 15 18 9"></polyline>
@@ -518,6 +567,12 @@ const MessageItem: React.FC<MessageItemProps> = ({
       )}
 
       <style>{`
+        @keyframes movingStroke {
+          0% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
+        }
+        
         @keyframes pulse {
           0%, 100% { opacity: 0.3; }
           50% { opacity: 1; }
