@@ -64,8 +64,8 @@ const CodePreview: React.FC<CodePreviewProps> = ({ code, language, isDarkTheme, 
           borderBottom: `1px solid ${isDarkTheme ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'}`,
         }}>
           <span style={{ 
-            fontFamily: 'monospace', 
-            fontSize: '12px',
+            fontFamily: '"Söhne Mono", monospace', 
+            fontSize: '14px',
             fontWeight: 500,
             color: isDarkTheme ? '#b0b0b0' : '#505060',
           }}>
@@ -82,7 +82,7 @@ const CodePreview: React.FC<CodePreviewProps> = ({ code, language, isDarkTheme, 
               alignItems: 'center',
               padding: '4px 8px',
               borderRadius: '4px',
-              fontSize: '12px',
+              fontSize: '15px',
             }}
           >
             {isExpanded ? 'Hide' : 'Show'}

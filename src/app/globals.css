@@ -18,16 +18,33 @@
   --spacing-6: 24px;
 
   /* Border radius */
-  --border-radius: 8px;
+  --border-radius: 10px;
+  --chat-bubble-radius-user: 16px 16px 4px 16px;
+  --chat-bubble-radius-ai: 16px 16px 16px 16px;
+  --input-border-radius: 12px;
+  --modal-border-radius: 20px;
   
   /* Typography */
-  --font-size-heading: 24px;
+  --font-size-heading-1: 28px;
+  --font-size-heading-2: 24px;
+  --font-size-heading-3: 20px;
+  --font-size-heading-4: 18px;
   --font-size-body: 16px;
-  --font-size-caption: 14px;
+  --font-size-code: 14px;
+  --font-size-sidebar: 14px;
+  --font-size-button: 15px;
+  --font-size-input: 16px;
+  --font-size-meta: 12px;
+  --font-size-user-message: 17px;
+  --font-size-ai-message: 16px;
   
-  /* Font families - keep existing */
-  --font-family-terminal: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Source Code Pro', monospace;
-  --font-family-general: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  /* Font families */
+  --font-family-primary: "Söhne", sans-serif;
+  --font-family-mono: "Söhne Mono", monospace;
+  --font-family-serif: "Signifier", serif;
+  
+  /* Line height */
+  --line-height-chat: 1.6;
   
   /* Status bar styling */
   --status-bar-height: 42px;
@@ -63,12 +80,11 @@
   --button-text: #ffffff;
   
   /* Button padding */
-  --button-padding: var(--spacing-2) var(--spacing-4);
+  --button-padding: 10px 14px;
   
   /* Message styling */
-  --message-border-radius: var(--border-radius);
-  --message-padding: var(--spacing-4);
-  --message-margin: var(--spacing-3);
+  --message-padding: 12px 16px;
+  --message-margin: 8px;
   
   /* Code panel colors - keep existing */
   --code-panel-bg-dark: #1E1E1E;
@@ -117,7 +133,7 @@ body {
   height: 100vh;
   overflow: hidden;
   font-size: var(--font-size-body);
-  font-family: var(--font-family-general);
+  font-family: var(--font-family-primary);
 }
 
 /* Text selection */
@@ -138,15 +154,15 @@ body {
 
 h1, h2, h3, h4, h5, h6 {
   color: var(--text-color);
-  font-family: var(--font-family-general);
+  font-family: var(--font-family-primary);
   font-weight: 600;
   margin-bottom: var(--spacing-4);
 }
 
-h1 { font-size: calc(var(--font-size-heading) * 1.5); }
-h2 { font-size: var(--font-size-heading); }
-h3 { font-size: calc(var(--font-size-heading) * 0.85); }
-h4 { font-size: calc(var(--font-size-heading) * 0.7); }
+h1 { font-size: calc(var(--font-size-heading-1) * 1.5); }
+h2 { font-size: var(--font-size-heading-2); }
+h3 { font-size: calc(var(--font-size-heading-3) * 0.85); }
+h4 { font-size: calc(var(--font-size-heading-4) * 0.7); }
 
 p {
   margin-bottom: var(--spacing-4);
@@ -156,7 +172,7 @@ p {
 }
 
 .mono-text {
-  font-family: var(--font-family-terminal);
+  font-family: var(--font-family-mono);
 }
 
 /**
@@ -186,7 +202,7 @@ p {
   overflow-y: auto;
   background-color: var(--bg-color);
   color: var(--text-color);
-  border-radius: var(--border-radius);
+  border-radius: var(--modal-border-radius);
   box-shadow: 0 5px 25px rgba(0, 0, 0, 0.5);
   display: flex;
   flex-direction: column;
@@ -203,7 +219,7 @@ p {
 
 .modal-title {
   margin: 0;
-  font-size: var(--font-size-heading);
+  font-size: var(--font-size-heading-1);
 }
 
 .modal-close {
@@ -278,7 +294,7 @@ p {
   margin-bottom: var(--spacing-1);
   font-weight: 600;
   color: var(--text-color);
-  font-family: var(--font-family-general);
+  font-family: var(--font-family-primary);
 }
 
 /* Inputs */
@@ -290,10 +306,10 @@ p {
   background-color: var(--input-bg);
   color: var(--text-color);
   border: 1px solid var(--border-color);
-  border-radius: var(--border-radius);
+  border-radius: var(--input-border-radius);
   margin-bottom: var(--spacing-4);
-  font-size: var(--font-size-body);
-  font-family: var(--font-family-general);
+  font-size: var(--font-size-input);
+  font-family: var(--font-family-primary);
 }
 
 .form-input:focus,
@@ -326,7 +342,7 @@ p {
   cursor: pointer;
   font-weight: bold;
   transition: all 0.2s ease;
-  font-family: var(--font-family-general);
+  font-family: var(--font-family-primary);
 }
 
 .btn-default {
@@ -364,7 +380,7 @@ p {
 }
 
 .form-help-text {
-  font-size: var(--font-size-caption);
+  font-size: var(--font-size-meta);
   color: var(--text-color);
   opacity: 0.7;
   margin: var(--spacing-1) 0 0 0;
@@ -388,13 +404,13 @@ p {
 
 .info-box-content {
   margin-bottom: var(--spacing-2);
-  font-size: var(--font-size-caption);
+  font-size: var(--font-size-code);
   color: var(--text-color);
   opacity: 0.9;
 }
 
 .info-box-footer {
-  font-size: var(--font-size-caption);
+  font-size: var(--font-size-meta);
   color: var(--text-color);
   opacity: 0.7;
 }
@@ -414,7 +430,7 @@ p {
 .slider-value {
   min-width: 30px;
   text-align: right;
-  font-size: var(--font-size-caption);
+  font-size: var(--font-size-meta);
 }
 
 input[type="range"] {
@@ -526,8 +542,11 @@ input[type="range"]:active::-moz-range-thumb {
 @media (max-width: 768px) {
   :root {
     --font-size-body: 14px;
-    --font-size-caption: 12px;
-    --font-size-heading: 20px;
+    --font-size-meta: 12px;
+    --font-size-heading-1: 20px;
+    --font-size-heading-2: 20px;
+    --font-size-heading-3: 18px;
+    --font-size-heading-4: 16px;
   }
   
   /* Thinking indicator responsive styles */
@@ -757,7 +776,7 @@ body.has-open-panel {
   display: inline-flex;
   align-items: center;
   gap: var(--spacing-1);
-  font-size: var(--font-size-caption);
+  font-size: var(--font-size-meta);
   color: var(--accent-color);
   cursor: pointer;
   padding: var(--spacing-1) var(--spacing-2);
@@ -858,7 +877,7 @@ body.has-open-panel {
   /* Smaller text for better readability on small screens */
   :root {
     --font-size-body: 14px;
-    --font-size-caption: 12px;
+    --font-size-meta: 12px;
   }
 }
 
@@ -875,7 +894,7 @@ body.has-open-panel {
   
   :root {
     --font-size-body: 13px;
-    --font-size-caption: 11px;
+    --font-size-meta: 11px;
   }
   
   .selector-button {
@@ -905,8 +924,8 @@ body.has-open-panel {
 button {
   padding: var(--button-padding);
   border-radius: var(--border-radius);
-  font-size: var(--font-size-body);
-  font-family: var(--font-family-general);
+  font-size: var(--font-size-button);
+  font-family: var(--font-family-primary);
   transition: background-color 0.2s ease, transform 0.1s ease;
 }
 

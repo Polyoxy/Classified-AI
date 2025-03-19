@@ -30,8 +30,8 @@ const ChatContainer: React.FC = () => {
         height: '100%',
         overflowY: 'auto',
         overflowX: 'hidden',
-        padding: '1rem',
-        paddingBottom: '3rem', // Increased padding to create more space from the command input
+        padding: '16px',
+        paddingBottom: '3rem',
         backgroundColor: isDarkTheme ? '#121212' : '#ffffff',
         transition: 'background-color 0.2s ease',
         scrollbarWidth: 'thin',
@@ -56,6 +56,8 @@ const ChatContainer: React.FC = () => {
       </style>
       <div style={{
         width: '100%',
+        maxWidth: '800px',
+        margin: '0 auto',
         flex: 1,
       }}>
         {visibleMessages.map((message, index) => (
@@ -65,6 +67,7 @@ const ChatContainer: React.FC = () => {
             content={message.content}
             timestamp={message.timestamp}
             isProcessing={index === visibleMessages.length - 1 && isProcessing}
+            model={currentConversation?.model}
           />
         ))}
       </div>

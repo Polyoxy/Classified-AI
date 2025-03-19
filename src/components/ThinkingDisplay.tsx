@@ -96,7 +96,7 @@ const ThinkingDisplay: React.FC<ThinkingDisplayProps> = ({ content }) => {
           lineHeight: 1.5,
           color: isDarkTheme ? '#d0d0d0' : '#333333',
           whiteSpace: 'pre-wrap',
-          fontFamily: 'var(--font-mono)',
+          fontFamily: 'var(--font-family-mono)',
         }}
       >
         <div style={{ padding: '0.75rem' }}>

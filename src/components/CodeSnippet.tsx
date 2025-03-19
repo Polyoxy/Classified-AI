@@ -55,7 +55,7 @@ const CodeSnippet: React.FC<CodeSnippetProps> = ({
           padding: 'var(--spacing-3)',
           margin: 'var(--spacing-2) 0',
           overflow: 'hidden',
-          fontFamily: 'var(--font-family-terminal)',
+          fontFamily: 'var(--font-family-mono)',
           fontSize: 'var(--font-size-caption)',
           lineHeight: 1.5,
           boxShadow: `0px 2px 4px ${isDarkTheme ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.1)'}`,

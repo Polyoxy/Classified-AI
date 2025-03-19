@@ -327,7 +327,7 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
                 alignItems: 'center',
                 padding: '0.2rem 0.4rem',
                 cursor: 'pointer',
-                fontFamily: 'var(--font-family-general, "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "OpenAI Sans", sans-serif)',
+                fontFamily: 'var(--font-family-general, "Söhne", sans-serif)',
                 fontSize: 'var(--status-bar-font-size)',
                 textAlign: 'center',
               }}
@@ -377,7 +377,7 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
                   boxShadow: settings?.theme === 'dark' 
                     ? '0 4px 8px rgba(0,0,0,0.3)' 
                     : '0 4px 8px rgba(0,0,0,0.1)',
-                  fontFamily: 'var(--font-family-general, "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "OpenAI Sans", sans-serif)',
+                  fontFamily: 'var(--font-family-general, "Söhne", sans-serif)',
                   backdropFilter: 'blur(6px)',
                 }}
               >
@@ -425,7 +425,7 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
               opacity: 0.8,
             }}></div>
             <span style={{ 
-              fontFamily: 'var(--font-family-general, "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "OpenAI Sans", sans-serif)',
+              fontFamily: 'var(--font-family-general, "Söhne", sans-serif)',
               fontSize: 'var(--status-bar-font-size)', 
               letterSpacing: '0.2px',
               opacity: 0.9,
@@ -440,7 +440,7 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
           {tokenUsage.totalTokens > 0 && (
             <>
               <span className="token-display" style={{ 
-                fontFamily: 'var(--font-family-general, "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "OpenAI Sans", sans-serif)',
+                fontFamily: 'var(--font-family-general, "Söhne", sans-serif)',
                 fontSize: 'var(--status-bar-font-size)',
                 letterSpacing: '0.2px',
                 opacity: 0.8,
@@ -474,7 +474,7 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
               color: settings?.theme === 'dark' ? 'rgba(180, 180, 180, 0.7)' : 'rgba(100, 100, 100, 0.7)',
               opacity: 0.8,
               transition: 'opacity 0.2s ease',
-              fontFamily: 'var(--font-family-general, "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "OpenAI Sans", sans-serif)',
+              fontFamily: 'var(--font-family-general, "Söhne", sans-serif)',
             }}
             title="Reload"
             onMouseOver={(e) => e.currentTarget.style.opacity = '1'}
@@ -511,7 +511,7 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
               color: settings?.theme === 'dark' ? 'rgba(180, 180, 180, 0.7)' : 'rgba(100, 100, 100, 0.7)',
               opacity: 0.8,
               transition: 'opacity 0.2s ease',
-              fontFamily: 'var(--font-family-general, "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "OpenAI Sans", sans-serif)',
+              fontFamily: 'var(--font-family-general, "Söhne", sans-serif)',
             }}
             title="Settings"
             onMouseOver={(e) => e.currentTarget.style.opacity = '1'}

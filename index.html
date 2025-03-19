@@ -82,7 +82,7 @@
     body {
       background-color: var(--bg-color);
       color: var(--text-color);
-      font-family: monospace;
+      font-family: "Söhne Mono", monospace;
       margin: 0;
       padding: 0;
       height: 100vh;
@@ -102,7 +102,7 @@
     }
     
     .title-bar-title {
-      font-size: 14px;
+      font-size: 16px;
       color: #ccc;
     }
     
@@ -120,6 +120,7 @@
       border: none;
       color: #ccc;
       cursor: pointer;
+      font-size: 15px;
     }
     
     .window-control-button:hover {
@@ -163,7 +164,7 @@
       border: none;
       color: #999;
       cursor: pointer;
-      font-size: 18px;
+      font-size: 15px;
     }
     
     .conversation-list {
@@ -259,6 +260,14 @@
       color: var(--ai-prefix-color);
     }
     
+    .message-user .message-content {
+      font-size: 17px;
+    }
+    
+    .message-ai .message-content {
+      font-size: 16px;
+    }
+    
     .code-block {
       background-color: var(--code-bg);
       border-left: 3px solid var(--accent-color);
@@ -296,7 +305,8 @@
       border: none;
       border-radius: 4px;
       padding: 10px;
-      font-family: monospace;
+      font-family: "Söhne", sans-serif;
+      font-size: 16px;
       resize: none;
       min-height: 40px;
       outline: none;
@@ -319,9 +329,9 @@
       border: none;
       border-radius: 4px;
       padding: 5px 10px;
-      font-size: 12px;
+      font-size: 15px;
       cursor: pointer;
-      font-family: monospace;
+      font-family: "Söhne Mono", monospace;
     }
     
     .input-button:hover {
@@ -466,6 +476,11 @@
       background-color: #474747 !important;
       color: #474747 !important;
       border-color: #474747 !important;
+    }
+    
+    .mono {
+      font-family: "Söhne Mono", monospace;
+      font-size: 14px;
     }
   </style>
 </head>

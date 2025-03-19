@@ -7,13 +7,15 @@ interface MessageItemProps {
   content: string;
   timestamp?: number;
   isProcessing?: boolean;
+  model?: string;
 }
 
 const MessageItem: React.FC<MessageItemProps> = ({ 
   role, 
   content, 
   timestamp,
-  isProcessing 
+  isProcessing,
+  model 
 }) => {
   const { settings } = useAppContext();
   const isDarkTheme = settings?.theme === 'dark';
@@ -220,6 +222,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
         backgroundColor: isDarkTheme ? 'rgba(0, 0, 0, 0.2)' : 'rgba(0, 0, 0, 0.05)',
         color: isDarkTheme ? '#888' : '#666',
         fontStyle: 'italic' as const,
+        borderRadius: '10px',
       };
     }
 
@@ -228,6 +231,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
         backgroundColor: isDarkTheme ? 'rgba(58, 134, 255, 0.08)' : 'rgba(58, 134, 255, 0.03)',
         color: isDarkTheme ? '#d4d4d4' : '#2d2d2d',
         border: `1px solid ${isDarkTheme ? 'rgba(58, 134, 255, 0.2)' : 'rgba(58, 134, 255, 0.1)'}`,
+        borderRadius: 'var(--chat-bubble-radius-user)',
       };
     }
 
@@ -235,6 +239,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
       backgroundColor: isDarkTheme ? 'rgba(23, 23, 23, 0.6)' : 'rgba(255, 255, 255, 0.6)',
       color: isDarkTheme ? '#d4d4d4' : '#2d2d2d',
       backdropFilter: 'blur(8px)',
+      borderRadius: 'var(--chat-bubble-radius-ai)',
     };
   };
 
@@ -270,7 +275,6 @@ const MessageItem: React.FC<MessageItemProps> = ({
       </div>
 
       <div style={{
-        borderRadius: 'var(--message-border-radius)',
         overflow: 'hidden',
         position: 'relative',
         boxShadow: role === 'assistant' ? `0px 2px 4px ${isDarkTheme ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.1)'}` : 'none',
@@ -429,7 +433,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
                   lineHeight: 1.5,
                   color: isDarkTheme ? '#d0d0d0' : '#333333',
                   whiteSpace: 'pre-wrap',
-                  fontFamily: 'var(--font-family-terminal)',
+                  fontFamily: 'var(--font-family-mono)',
                   borderBottom: `1px solid ${isDarkTheme ? 'rgba(80, 80, 80, 0.3)' : 'rgba(200, 200, 200, 0.5)'}`,
                   backgroundColor: isDarkTheme ? 'rgba(32, 32, 34, 0.5)' : 'rgba(248, 248, 250, 0.7)',
                 }}
@@ -446,8 +450,8 @@ const MessageItem: React.FC<MessageItemProps> = ({
           padding: 'var(--message-padding)',
           paddingBottom: timestamp ? '1.5rem' : 'var(--message-padding)',
           fontSize: 'var(--font-size-body)',
-          lineHeight: '1.5',
-          fontFamily: 'var(--font-family-general)',
+          lineHeight: 'var(--line-height-chat)',
+          fontFamily: 'var(--font-family-primary)',
           whiteSpace: 'pre-wrap',
           wordBreak: 'break-word',
           position: 'relative',
@@ -462,6 +466,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
               right: 'var(--spacing-2)',
               fontSize: '11px',
               color: isDarkTheme ? 'rgba(180, 180, 180, 0.6)' : 'rgba(100, 100, 100, 0.6)',
+              fontFamily: 'var(--font-family-primary)',
             }}>
               {formatTime(timestamp)}
             </div>

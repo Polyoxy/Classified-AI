@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAppContext } from '@/context/AppContext';
-import useChat from '@/hooks/useChat';
+import { useChat } from '@/hooks/useChat';
 
 // Add styles for the pulsing animation
 const pulsingLightningStyles = `
@@ -322,7 +322,7 @@ const CommandInput: React.FC = () => {
       inputRef.current.style.overflowY = scrollHeight > maxHeight ? 'auto' : 'hidden';
       
       // Calculate total height for container (textarea + selector row)
-      const selectorRowHeight = 30; // Height of the selector row
+      const selectorRowHeight = 34; // Height of the selector row
       const paddingSpace = 24; // Top and bottom padding combined
       const containerHeight = newHeight + selectorRowHeight + paddingSpace;
       
@@ -330,7 +330,7 @@ const CommandInput: React.FC = () => {
       const container = inputRef.current.closest('.command-input-container') as HTMLElement;
       if (container) {
         // Set minimum container height to 118px, but allow it to grow with content
-        const minContainerHeight = 118;
+        const minContainerHeight = 130;
         container.style.height = `${Math.max(minContainerHeight, containerHeight)}px`;
       }
     }
@@ -356,7 +356,7 @@ const CommandInput: React.FC = () => {
       inputRef.current.style.overflowY = scrollHeight > maxHeight ? 'auto' : 'hidden';
       
       // Calculate total height for container (textarea + selector row)
-      const selectorRowHeight = 30; // Height of the selector row
+      const selectorRowHeight = 34; // Height of the selector row
       const paddingSpace = 24; // Top and bottom padding combined
       const containerHeight = newHeight + selectorRowHeight + paddingSpace;
       
@@ -364,7 +364,7 @@ const CommandInput: React.FC = () => {
       const container = inputRef.current.closest('.command-input-container') as HTMLElement;
       if (container) {
         // Set minimum container height to 118px, but allow it to grow with content
-        const minContainerHeight = 118;
+        const minContainerHeight = 130;
         container.style.height = `${Math.max(minContainerHeight, containerHeight)}px`;
       }
     }
@@ -460,7 +460,7 @@ const CommandInput: React.FC = () => {
         // Reset container height to minimum
         const container = inputRef.current.closest('.command-input-container') as HTMLElement;
         if (container) {
-          container.style.height = '118px'; // Reset to minimum height
+          container.style.height = '130px'; // Reset to minimum height
         }
       }
     }
@@ -540,10 +540,10 @@ const CommandInput: React.FC = () => {
           display: 'flex',
           flexDirection: 'column',
           backgroundColor: 'transparent',
-          borderRadius: 'var(--border-radius)',
-          padding: '0.75rem',
+          borderRadius: 'var(--input-border-radius)',
+          padding: '14px 18px',
           height: 'auto',
-          minHeight: '118px',
+          minHeight: '60px',
           maxHeight: '300px',
           position: 'relative',
           transition: 'height 0.3s ease, width 0.3s ease, transform 0.3s ease',
@@ -559,7 +559,7 @@ const CommandInput: React.FC = () => {
                 left: 0;
                 right: 0;
                 bottom: 0;
-                border-radius: var(--border-radius);
+                border-radius: var(--input-border-radius);
                 background: transparent;
                 pointer-events: none;
               }
@@ -573,6 +573,18 @@ const CommandInput: React.FC = () => {
                 }
                 100% {
                   filter: brightness(1) blur(1px);
+                }
+              }
+              
+              @keyframes movingStroke {
+                0% {
+                  background-position: 0% 50%;
+                }
+                50% {
+                  background-position: 100% 50%;
+                }
+                100% {
+                  background-position: 0% 50%;
                 }
               }
               
@@ -597,6 +609,30 @@ const CommandInput: React.FC = () => {
                 transform: scale(1.02);
               }
               
+              .badge-container {
+                position: relative;
+                border-radius: 6px;
+                overflow: hidden;
+              }
+              
+              .badge-container::before {
+                content: '';
+                position: absolute;
+                top: -1px;
+                left: -1px;
+                right: -1px;
+                bottom: -1px;
+                background: ${settings?.theme === 'dark' ? 
+                  'linear-gradient(90deg, rgba(255,255,255,0.01), rgba(255,255,255,0.15), rgba(255,255,255,0.01))' : 
+                  'linear-gradient(90deg, rgba(255,255,255,0.3), rgba(255,255,255,0.9), rgba(255,255,255,0.3))'
+                };
+                z-index: 0;
+                background-size: 200% 200%;
+                animation: movingStroke 2s ease-in-out infinite;
+                pointer-events: none;
+                border-radius: 6px;
+              }
+              
               @media (max-width: 767px) {
                 .command-input-container-wrapper {
                   width: 100% !important;
@@ -606,7 +642,7 @@ const CommandInput: React.FC = () => {
                 
                 .command-input-container {
                   width: 100% !important;
-                  padding: 0.5rem !important;
+                  padding: 10px 14px !important;
                 }
                 
                 .selector-button {
@@ -627,10 +663,10 @@ const CommandInput: React.FC = () => {
           <div style={{ 
             display: 'flex',
             alignItems: 'flex-start', // Changed from center to flex-start to handle multi-line input
-            gap: '0.75rem',
-            marginBottom: '8px',
-            flexGrow: 1,
-            minHeight: '50px',
+            gap: '12px',
+            outline: 'none',
+            minHeight: '20px',
+            position: 'relative',
           }}>
             <div 
               onClick={handleInputClick}
@@ -640,8 +676,6 @@ const CommandInput: React.FC = () => {
                 outline: 'none',
                 minHeight: '20px',
                 position: 'relative',
-                display: 'flex',
-                alignItems: 'flex-start', // Changed from center to flex-start
               }}
             >
               <textarea
@@ -655,11 +689,11 @@ const CommandInput: React.FC = () => {
                   backgroundColor: 'transparent',
                   border: 'none',
                   color: settings?.theme === 'dark' ? '#d0d0d0' : '#505050', 
-                  fontFamily: 'var(--font-mono, "JetBrains Mono", monospace)',
+                  fontFamily: 'var(--font-family-mono)',
                   fontSize: '14px',
                   resize: 'none',
                   height: 'auto', // Changed from fixed to auto
-                  minHeight: '24px',
+                  minHeight: '32px',
                   maxHeight: '200px', // Maximum height
                   width: '100%',
                   outline: 'none',
@@ -756,150 +790,77 @@ const CommandInput: React.FC = () => {
           {/* Bottom section: Style selector and model selector */}
           <div style={{
             display: 'flex',
-            gap: '8px',
+            gap: 'var(--spacing-2)',
             alignSelf: 'flex-start',
-            marginTop: '0', 
+            justifyContent: 'space-between',
+            marginTop: '4px', 
             paddingTop: '0',
-            height: '30px',
+            height: '38px',
+            width: '100%',
           }}>
-            {/* Model selector (left side) */}
-            <div 
-              ref={modelSelectorRef}
-              onClick={() => !isProcessing && setShowModelDropdown(!showModelDropdown)}
-              className="selector-button"
-              style={{
-                opacity: isProcessing ? 0.6 : 1,
-                width: 'auto',
-                minWidth: '120px',
-                whiteSpace: 'nowrap',
-                position: 'relative',
-              }}
-            >
-              <span style={{ 
-                fontWeight: 400,
-                fontSize: '12px',
-                maxWidth: '100px',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}>
-                {currentModel}
-              </span>
-              <svg 
-                width="10" 
-                height="10" 
-                viewBox="0 0 24 24" 
-                fill="none" 
-                stroke="currentColor" 
-                strokeWidth="2" 
-                strokeLinecap="round" 
-                strokeLinejoin="round"
-                style={{
-                  marginLeft: 'auto',
-                  transform: showModelDropdown ? 'rotate(180deg)' : 'rotate(0deg)',
-                  transition: 'transform 0.2s ease',
-                }}
-              >
-                <polyline points="6 9 12 15 18 9"></polyline>
-              </svg>
-            </div>
-            
-            {/* Model dropdown (opens upward) */}
-            {showModelDropdown && (
+            <div style={{
+              display: 'flex',
+              gap: 'var(--spacing-2)',
+            }}>
+              {/* Model selector (left side) */}
               <div 
-                ref={modelDropdownRef}
+                ref={modelSelectorRef}
+                onClick={() => !isProcessing && setShowModelDropdown(!showModelDropdown)}
+                className="selector-button"
                 style={{
-                  position: 'absolute',
-                  bottom: '30px', // Position above the selector
-                  left: '0',
-                  backgroundColor: settings?.theme === 'dark' ? '#1A1A1A' : '#ffffff',
-                  border: `1px solid ${settings?.theme === 'dark' ? '#333' : '#ddd'}`,
-                  borderRadius: '4px',
-                  marginBottom: '4px',
-                  zIndex: 10000,
-                  maxHeight: '200px',
-                  overflowY: 'auto',
-                  boxShadow: settings?.theme === 'dark' ? '0 -4px 8px rgba(0,0,0,0.3)' : '0 -4px 8px rgba(0,0,0,0.1)',
-                  fontFamily: 'Inter, sans-serif',
-                  minWidth: '120px',
+                  opacity: isProcessing ? 0.6 : 1,
+                  width: 'auto',
+                  minWidth: '130px',
+                  whiteSpace: 'nowrap',
+                  position: 'relative',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 'var(--spacing-1)',
+                  height: '32px',
+                  background: settings?.theme === 'dark' ? 'rgba(58, 58, 58, 0.2)' : 'rgba(240, 240, 240, 0.5)',
+                  borderRadius: '6px',
+                  padding: '0 12px',
                 }}
-                onClick={(e) => e.stopPropagation()}
               >
-                {availableModels.map((model) => (
-                  <div 
-                    key={model}
-                    className="model-option"
-                    onClick={() => handleModelChange(model)}
-                    style={{
-                      padding: '6px 10px',
-                      cursor: 'pointer',
-                      backgroundColor: model === currentModel
-                        ? (settings?.theme === 'dark' ? '#333' : '#e0e0e0') 
-                        : 'transparent',
-                      transition: 'all 0.1s ease',
-                      fontSize: '12px',
-                      fontWeight: model === currentModel ? 'bold' : 'normal',
-                    }}
-                    onMouseOver={(e) => {
-                      e.currentTarget.style.backgroundColor = settings?.theme === 'dark' ? '#333' : '#e0e0e0';
-                    }}
-                    onMouseOut={(e) => {
-                      if (model !== currentModel) {
-                        e.currentTarget.style.backgroundColor = 'transparent';
-                      }
-                    }}
-                  >
-                    {model}
-                  </div>
-                ))}
+                <span style={{ 
+                  fontWeight: 400,
+                  fontSize: '13px',
+                  maxWidth: '110px',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  lineHeight: '32px',
+                }}>
+                  {currentModel}
+                </span>
+                
+                <svg 
+                  width="12" 
+                  height="12" 
+                  viewBox="0 0 24 24" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  strokeWidth="2" 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round"
+                  style={{
+                    transform: showModelDropdown ? 'rotate(180deg)' : 'rotate(0deg)',
+                    transition: 'transform 0.2s ease',
+                  }}
+                >
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
               </div>
-            )}
-            
-            {/* Response style selector (right of model selector) */}
-            <div 
-              ref={styleSelectorRef}
-              onClick={() => !isProcessing && setShowStyleDropdown(!showStyleDropdown)}
-              className="selector-button"
-              style={{
-                opacity: isProcessing ? 0.6 : 1,
-                whiteSpace: 'nowrap',
-                position: 'relative',
-                width: 'auto',
-              }}
-            >
-              <span style={{ 
-                fontWeight: 400,
-                fontSize: '12px',
-                whiteSpace: 'nowrap',
-              }}>
-                {responseStyle}
-              </span>
-              <svg 
-                width="10" 
-                height="10" 
-                viewBox="0 0 24 24" 
-                fill="none" 
-                stroke="currentColor" 
-                strokeWidth="2" 
-                strokeLinecap="round" 
-                strokeLinejoin="round"
-                style={{
-                  marginLeft: '5px',
-                  transform: showStyleDropdown ? 'rotate(180deg)' : 'rotate(0deg)',
-                  transition: 'transform 0.2s ease',
-                }}
-              >
-                <polyline points="6 9 12 15 18 9"></polyline>
-              </svg>
               
-              {/* Style dropdown (opens upward) */}
-              {showStyleDropdown && (
+              {/* Model dropdown (opens upward) */}
+              {showModelDropdown && (
                 <div 
-                  ref={styleDropdownRef}
+                  ref={modelDropdownRef}
                   style={{
                     position: 'absolute',
-                    bottom: '30px', // Position above the selector
-                    left: '0', // Align with the left edge of the selector
+                    bottom: '38px', // Position above the selector
+                    left: '0',
                     backgroundColor: settings?.theme === 'dark' ? '#1A1A1A' : '#ffffff',
                     border: `1px solid ${settings?.theme === 'dark' ? '#333' : '#ddd'}`,
                     borderRadius: '4px',
@@ -908,70 +869,268 @@ const CommandInput: React.FC = () => {
                     maxHeight: '200px',
                     overflowY: 'auto',
                     boxShadow: settings?.theme === 'dark' ? '0 -4px 8px rgba(0,0,0,0.3)' : '0 -4px 8px rgba(0,0,0,0.1)',
-                    fontFamily: 'Inter, sans-serif',
-                    minWidth: '160px',
+                    fontFamily: 'Söhne, sans-serif',
+                    minWidth: '130px',
                   }}
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <div className="style-option-label" style={{
-                    padding: '6px 10px',
-                    fontSize: '11px',
-                    color: settings?.theme === 'dark' ? 'rgba(180, 180, 180, 0.7)' : 'rgba(100, 100, 100, 0.7)',
-                    borderBottom: `1px solid ${settings?.theme === 'dark' ? '#333' : '#ddd'}`,
-                    fontStyle: 'italic',
-                  }}>
-                    How should AI write responses?
-                  </div>
-                  {['normal', 'concise', 'explanatory', 'formal'].map((style) => (
+                  {availableModels.map((model) => (
                     <div 
-                      key={style}
-                      onClick={() => {
-                        setResponseStyle(style);
-                        setShowStyleDropdown(false);
-                        
-                        // Provide feedback to user about style change
-                        if (style !== 'normal') {
-                          const description = styleDescriptions[style as keyof typeof styleDescriptions];
-                          console.log(`Response style set to ${style}: ${description}`);
-                        }
-                      }}
+                      key={model}
+                      className="model-option"
+                      onClick={() => handleModelChange(model)}
                       style={{
-                        padding: '6px 10px',
+                        padding: '8px 12px',
                         cursor: 'pointer',
-                        backgroundColor: style === responseStyle
+                        backgroundColor: model === currentModel
                           ? (settings?.theme === 'dark' ? '#333' : '#e0e0e0') 
                           : 'transparent',
                         transition: 'all 0.1s ease',
-                        fontSize: '12px',
-                        fontWeight: style === responseStyle ? 'bold' : 'normal',
+                        fontSize: '13px',
+                        fontWeight: model === currentModel ? 'bold' : 'normal',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 'var(--spacing-1)',
                       }}
                       onMouseOver={(e) => {
                         e.currentTarget.style.backgroundColor = settings?.theme === 'dark' ? '#333' : '#e0e0e0';
                       }}
                       onMouseOut={(e) => {
-                        if (style !== responseStyle) {
+                        if (model !== currentModel) {
                           e.currentTarget.style.backgroundColor = 'transparent';
                         }
                       }}
                     >
-                      <div>
-                        {style.charAt(0).toUpperCase() + style.slice(1)}
-                        <div style={{
-                          fontSize: '9px',
-                          opacity: 0.7,
-                          fontWeight: 'normal',
-                          marginTop: '2px',
-                          display: style === 'normal' ? 'none' : 'block'
-                        }}>
-                          {style === 'concise' && 'Brief and to the point'}
-                          {style === 'explanatory' && 'Detailed with examples'}
-                          {style === 'formal' && 'Professional and structured'}
-                        </div>
-                      </div>
+                      <span>{model}</span>
                     </div>
                   ))}
                 </div>
               )}
+              
+              {/* Response style selector */}
+              <div 
+                ref={styleSelectorRef}
+                onClick={() => !isProcessing && setShowStyleDropdown(!showStyleDropdown)}
+                className="selector-button"
+                style={{
+                  opacity: isProcessing ? 0.6 : 1,
+                  whiteSpace: 'nowrap',
+                  position: 'relative',
+                  width: 'auto',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 'var(--spacing-1)',
+                  background: settings?.theme === 'dark' ? 'rgba(58, 58, 58, 0.2)' : 'rgba(240, 240, 240, 0.5)',
+                  borderRadius: '6px',
+                  padding: '0 12px',
+                  height: '32px',
+                }}
+              >
+                <span style={{ 
+                  fontWeight: 500,
+                  fontSize: '13px',
+                  whiteSpace: 'nowrap',
+                  lineHeight: '32px',
+                }}>
+                  {responseStyle.charAt(0).toUpperCase() + responseStyle.slice(1)}
+                </span>
+                <svg 
+                  width="12" 
+                  height="12" 
+                  viewBox="0 0 24 24" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  strokeWidth="2" 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round"
+                  style={{
+                    transform: showStyleDropdown ? 'rotate(180deg)' : 'rotate(0deg)',
+                    transition: 'transform 0.2s ease',
+                  }}
+                >
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+                
+                {/* Style dropdown (opens upward) */}
+                {showStyleDropdown && (
+                  <div 
+                    ref={styleDropdownRef}
+                    style={{
+                      position: 'absolute',
+                      bottom: '38px', // Position above the selector
+                      left: '0',
+                      backgroundColor: settings?.theme === 'dark' ? '#1A1A1A' : '#ffffff',
+                      border: `1px solid ${settings?.theme === 'dark' ? '#333' : '#ddd'}`,
+                      borderRadius: '4px',
+                      marginBottom: '4px',
+                      zIndex: 10000,
+                      maxHeight: '200px',
+                      overflowY: 'auto',
+                      boxShadow: settings?.theme === 'dark' ? '0 -4px 8px rgba(0,0,0,0.3)' : '0 -4px 8px rgba(0,0,0,0.1)',
+                      fontFamily: 'Söhne, sans-serif',
+                      minWidth: '160px',
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="style-option-label" style={{
+                      padding: '6px 10px',
+                      fontSize: '11px',
+                      color: settings?.theme === 'dark' ? 'rgba(180, 180, 180, 0.7)' : 'rgba(100, 100, 100, 0.7)',
+                      borderBottom: `1px solid ${settings?.theme === 'dark' ? '#333' : '#ddd'}`,
+                      fontStyle: 'italic',
+                    }}>
+                      How should AI write responses?
+                    </div>
+                    {['normal', 'concise', 'explanatory', 'formal'].map((style) => (
+                      <div 
+                        key={style}
+                        onClick={() => {
+                          setResponseStyle(style);
+                          setShowStyleDropdown(false);
+                          
+                          // Provide feedback to user about style change
+                          if (style !== 'normal') {
+                            const description = styleDescriptions[style as keyof typeof styleDescriptions];
+                            console.log(`Response style set to ${style}: ${description}`);
+                          }
+                        }}
+                        style={{
+                          padding: '8px 12px',
+                          cursor: 'pointer',
+                          backgroundColor: style === responseStyle
+                            ? (settings?.theme === 'dark' ? '#333' : '#e0e0e0') 
+                            : 'transparent',
+                          transition: 'all 0.1s ease',
+                          fontSize: '13px',
+                          fontWeight: style === responseStyle ? 'bold' : 'normal',
+                        }}
+                        onMouseOver={(e) => {
+                          e.currentTarget.style.backgroundColor = settings?.theme === 'dark' ? '#333' : '#e0e0e0';
+                        }}
+                        onMouseOut={(e) => {
+                          if (style !== responseStyle) {
+                            e.currentTarget.style.backgroundColor = 'transparent';
+                          }
+                        }}
+                      >
+                        <div>
+                          {style.charAt(0).toUpperCase() + style.slice(1)}
+                          <div style={{
+                            fontSize: '10px',
+                            opacity: 0.7,
+                            fontWeight: 'normal',
+                            marginTop: '2px',
+                            display: style === 'normal' ? 'none' : 'block'
+                          }}>
+                            {style === 'concise' && 'Brief and to the point'}
+                            {style === 'explanatory' && 'Detailed with examples'}
+                            {style === 'formal' && 'Professional and structured'}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              
+              {/* Model badges */}
+              {(currentModel.includes('deepseek') || currentModel.includes('vision')) && (
+                <div style={{ 
+                  display: 'flex',
+                  gap: 'var(--spacing-1)',
+                  height: '32px',
+                  alignItems: 'center',
+                }}>
+                  {currentModel.includes('deepseek') && (
+                    <span className="badge-container" style={{
+                      fontSize: '11px',
+                      padding: '0 10px',
+                      borderRadius: '6px',
+                      backgroundColor: settings?.theme === 'dark' ? 'rgba(45, 90, 160, 0.25)' : 'rgba(60, 110, 220, 0.15)',
+                      color: settings?.theme === 'dark' ? '#88a9e0' : '#1e60cc',
+                      fontWeight: '500',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '5px',
+                      boxShadow: settings?.theme === 'dark' ? '0 1px 2px rgba(0,0,0,0.2)' : '0 1px 2px rgba(0,0,0,0.1)',
+                      border: `1px solid ${settings?.theme === 'dark' ? 'rgba(45, 90, 160, 0.3)' : 'rgba(60, 110, 220, 0.2)'}`,
+                      height: '32px',
+                      position: 'relative',
+                      zIndex: '1',
+                    }}>
+                      <div style={{ position: 'relative', zIndex: '2', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        {/* DeepThink Logo - simple brain icon */}
+                        <svg
+                          width="12"
+                          height="12"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke={settings?.theme === 'dark' ? '#88a9e0' : '#1e60cc'}
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44"></path>
+                          <path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44"></path>
+                          <path d="M4.42 10.61a2.5 2.5 0 0 1 3.5-3.5L12 11.13"></path>
+                          <path d="M19.58 13.39a2.5 2.5 0 0 1-3.5 3.5L12 12.87"></path>
+                        </svg>
+                        DeepThink-R1
+                      </div>
+                    </span>
+                  )}
+                  {currentModel.includes('vision') && (
+                    <span className="badge-container" style={{
+                      fontSize: '11px',
+                      padding: '0 10px',
+                      borderRadius: '6px',
+                      backgroundColor: settings?.theme === 'dark' ? 'rgba(80, 155, 80, 0.25)' : 'rgba(90, 180, 90, 0.15)',
+                      color: settings?.theme === 'dark' ? '#95d095' : '#1a7a1a',
+                      fontWeight: '500',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '5px',
+                      boxShadow: settings?.theme === 'dark' ? '0 1px 2px rgba(0,0,0,0.2)' : '0 1px 2px rgba(0,0,0,0.1)',
+                      border: `1px solid ${settings?.theme === 'dark' ? 'rgba(80, 155, 80, 0.3)' : 'rgba(90, 180, 90, 0.2)'}`,
+                      height: '32px',
+                      position: 'relative',
+                      zIndex: '1',
+                    }}>
+                      <div style={{ position: 'relative', zIndex: '2', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        {/* Vision Logo - simple eye icon */}
+                        <svg
+                          width="12"
+                          height="12"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke={settings?.theme === 'dark' ? '#95d095' : '#1a7a1a'}
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <circle cx="12" cy="12" r="2"></circle>
+                          <path d="M2 12s3-9 10-9 10 9 10 9-3 9-10 9-10-9-10-9Z"></path>
+                        </svg>
+                        Vision
+                      </div>
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+            
+            {/* Disclaimer text on the right */}
+            <div style={{
+              fontSize: '11px',
+              color: settings?.theme === 'dark' ? 'rgba(180, 180, 180, 0.4)' : 'rgba(120, 120, 120, 0.4)',
+              display: 'flex',
+              alignItems: 'center',
+              fontStyle: 'italic',
+            }}>
+              AI generated responses may be inaccurate
             </div>
           </div>
         </div>

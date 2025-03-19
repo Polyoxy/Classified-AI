@@ -18,7 +18,7 @@ const HtmlPreview: React.FC<HtmlPreviewProps> = ({ html, isDarkTheme, fullWidth 
         <head>
           <style>
             body {
-              font-family: Arial, sans-serif;
+              font-family: 'Söhne', sans-serif;
               margin: 0;
               padding: 10px;
               background-color: ${isDarkTheme ? '#121212' : '#ffffff'};
@@ -96,8 +96,8 @@ const HtmlPreview: React.FC<HtmlPreviewProps> = ({ html, isDarkTheme, fullWidth 
           borderBottom: `1px solid ${isDarkTheme ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'}`,
         }}>
           <span style={{ 
-            fontFamily: 'sans-serif', 
-            fontSize: '12px',
+            fontFamily: "'Söhne', sans-serif", 
+            fontSize: '14px',
             fontWeight: 500,
             color: isDarkTheme ? '#b0b0b0' : '#505060',
           }}>
@@ -114,7 +114,7 @@ const HtmlPreview: React.FC<HtmlPreviewProps> = ({ html, isDarkTheme, fullWidth 
               alignItems: 'center',
               padding: '4px 8px',
               borderRadius: '4px',
-              fontSize: '12px',
+              fontSize: '15px',
             }}
           >
             {isExpanded ? 'Hide' : 'Show'}

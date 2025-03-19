@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAppContext } from '@/context/AppContext';
 import { AIProvider, UserRole } from '@/types';
+import { X } from 'lucide-react';
 
 interface SettingsModalProps {
   isOpen?: boolean;
@@ -19,6 +20,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen = true, onClose })
   const [theme, setTheme] = useState<'dark' | 'light'>(settings.theme === 'dark' ? 'dark' : 'light');
   const [showAnalysis, setShowAnalysis] = useState<boolean>(settings.showAnalysis !== false);
   const [activeTab, setActiveTab] = useState<'appearance' | 'api' | 'prompts' | 'about'>('appearance');
+  const [codeFontSize, setCodeFontSize] = useState<number>(settings.codeFontSize);
+  const [lineHeight, setLineHeight] = useState<number>(settings.lineHeight);
+  const [codeLineHeight, setCodeLineHeight] = useState<number>(settings.codeLineHeight);
 
   // Update state when settings change
   useEffect(() => {
@@ -30,6 +34,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen = true, onClose })
     setUserRole(settings.userRole);
     setCustomPrompts(settings.customSystemPrompts);
     setShowAnalysis(settings.showAnalysis !== false);
+    setCodeFontSize(settings.codeFontSize);
+    setLineHeight(settings.lineHeight);
+    setCodeLineHeight(settings.codeLineHeight);
   }, [settings]);
 
   // Save settings and close modal
@@ -51,7 +58,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen = true, onClose })
           apiKey,
           baseUrl,
         }
-      }
+      },
+      codeFontSize,
+      lineHeight,
+      codeLineHeight
     };
 
     // Update the settings
@@ -68,300 +78,150 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen = true, onClose })
   };
 
   return (
-    <div className="modal-overlay" onClick={(e) => {
-      if (e.target === e.currentTarget) onClose();
-    }}>
-      <div className="modal-container" onClick={(e) => e.stopPropagation()}>
-        {/* Header */}
-        <div className="modal-header">
-          <h2 className="modal-title">Settings</h2>
-          <button 
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
+      <div className="bg-[#1a1a1a] rounded-lg p-6 w-full max-w-md shadow-xl border border-[#2a2a2a]">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-[1.5rem] font-medium text-white">Settings</h2>
+          <button
             onClick={onClose}
-            className="modal-close"
+            className="text-[#666] hover:text-white transition-colors"
           >
-            ×
+            <X className="w-5 h-5" />
           </button>
         </div>
+        
+        <div className="space-y-6">
+          <div>
+            <label className="block text-[1rem] font-medium text-white mb-2">
+              Theme
+            </label>
+            <select
+              value={theme}
+              onChange={(e) => setTheme(e.target.value as 'light' | 'dark')}
+              className="w-full bg-[#2a2a2a] text-[1rem] text-white rounded-md px-3 py-2 border border-[#3a3a3a] focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="light">Light</option>
+              <option value="dark">Dark</option>
+            </select>
+          </div>
 
-        {/* Tabs */}
-        <div className="tabs-container">
-          <button 
-            onClick={() => setActiveTab('appearance')}
-            className={`tab-button ${activeTab === 'appearance' ? 'active' : ''}`}
-          >
-            Appearance
-          </button>
-          <button 
-            onClick={() => setActiveTab('api')}
-            className={`tab-button ${activeTab === 'api' ? 'active' : ''}`}
-          >
-            API Settings
-          </button>
-          <button 
-            onClick={() => setActiveTab('prompts')}
-            className={`tab-button ${activeTab === 'prompts' ? 'active' : ''}`}
-          >
-            System Prompts
-          </button>
-          <button 
-            onClick={() => setActiveTab('about')}
-            className={`tab-button ${activeTab === 'about' ? 'active' : ''}`}
-          >
-            About
-          </button>
+          <div>
+            <label className="block text-[1rem] font-medium text-white mb-2">
+              Font Size
+            </label>
+            <select
+              value={fontSize}
+              onChange={(e) => setFontSize(parseInt(e.target.value))}
+              className="w-full bg-[#2a2a2a] text-[1rem] text-white rounded-md px-3 py-2 border border-[#3a3a3a] focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="14">Small (14px)</option>
+              <option value="16">Medium (16px)</option>
+              <option value="18">Large (18px)</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-[1rem] font-medium text-white mb-2">
+              Code Font Size
+            </label>
+            <select
+              value={codeFontSize}
+              onChange={(e) => setCodeFontSize(parseInt(e.target.value))}
+              className="w-full bg-[#2a2a2a] text-[1rem] text-white rounded-md px-3 py-2 border border-[#3a3a3a] focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="14">Small (14px)</option>
+              <option value="16">Medium (16px)</option>
+              <option value="18">Large (18px)</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-[1rem] font-medium text-white mb-2">
+              Line Height
+            </label>
+            <select
+              value={lineHeight}
+              onChange={(e) => setLineHeight(parseFloat(e.target.value))}
+              className="w-full bg-[#2a2a2a] text-[1rem] text-white rounded-md px-3 py-2 border border-[#3a3a3a] focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="1.2">Compact (1.2)</option>
+              <option value="1.5">Normal (1.5)</option>
+              <option value="1.8">Relaxed (1.8)</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-[1rem] font-medium text-white mb-2">
+              Code Line Height
+            </label>
+            <select
+              value={codeLineHeight}
+              onChange={(e) => setCodeLineHeight(parseFloat(e.target.value))}
+              className="w-full bg-[#2a2a2a] text-[1rem] text-white rounded-md px-3 py-2 border border-[#3a3a3a] focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="1.2">Compact (1.2)</option>
+              <option value="1.5">Normal (1.5)</option>
+              <option value="1.8">Relaxed (1.8)</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-[1rem] font-medium text-white mb-2">
+              Model Temperature
+            </label>
+            <div className="slider-container">
+              <input 
+                type="range" 
+                min="0" 
+                max="1" 
+                step="0.1" 
+                value={temperature} 
+                onChange={(e) => setTemperature(parseFloat(e.target.value))}
+              />
+              <span className="slider-value">{temperature}</span>
+            </div>
+            <p className="form-help-text">
+              Lower values make responses more deterministic, higher values make responses more random.
+            </p>
+          </div>
+          
+          <div>
+            <label className="block text-[1rem] font-medium text-white mb-2">
+              User Role
+            </label>
+            <select 
+              value={userRole}
+              onChange={(e) => setUserRole(e.target.value as UserRole)}
+              className="w-full bg-[#2a2a2a] text-[1rem] text-white rounded-md px-3 py-2 border border-[#3a3a3a] focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="developer">Developer</option>
+              <option value="casual">Casual User</option>
+              <option value="code-helper">Code Helper</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-[1rem] font-medium text-white mb-2">
+              Show Analysis
+            </label>
+            <div className="switch-container">
+              <label className="switch">
+                <input
+                  type="checkbox"
+                  checked={showAnalysis}
+                  onChange={(e) => setShowAnalysis(e.target.checked)}
+                />
+                <span className="slider round"></span>
+              </label>
+              <span className="switch-label">{showAnalysis ? 'On' : 'Off'}</span>
+            </div>
+            <p className="form-help-text">
+              Show AI's internal analysis/thinking process in a collapsible section with each response.
+            </p>
+          </div>
         </div>
 
-        {/* Content */}
-        <div className="modal-content">
-          {/* Appearance Tab */}
-          {activeTab === 'appearance' && (
-            <div>
-              <div className="form-group">
-                <label className="form-label">Theme</label>
-                <select 
-                  value={theme}
-                  onChange={(e) => setTheme(e.target.value as 'dark' | 'light')}
-                  className="form-select"
-                >
-                  <option value="dark">Dark</option>
-                  <option value="light">Light</option>
-                </select>
-              </div>
-              
-              <div className="form-group">
-                <label className="form-label">Font Size</label>
-                <div className="slider-container">
-                  <input 
-                    type="range" 
-                    min="10" 
-                    max="20" 
-                    value={fontSize} 
-                    onChange={(e) => setFontSize(parseInt(e.target.value))}
-                  />
-                  <span className="slider-value">{fontSize}px</span>
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Model Temperature</label>
-                <div className="slider-container">
-                  <input 
-                    type="range" 
-                    min="0" 
-                    max="1" 
-                    step="0.1" 
-                    value={temperature} 
-                    onChange={(e) => setTemperature(parseFloat(e.target.value))}
-                  />
-                  <span className="slider-value">{temperature}</span>
-                </div>
-                <p className="form-help-text">
-                  Lower values make responses more deterministic, higher values make responses more random.
-                </p>
-              </div>
-              
-              <div className="form-group">
-                <label className="form-label">User Role</label>
-                <select 
-                  value={userRole}
-                  onChange={(e) => setUserRole(e.target.value as UserRole)}
-                  className="form-select"
-                >
-                  <option value="developer">Developer</option>
-                  <option value="casual">Casual User</option>
-                  <option value="code-helper">Code Helper</option>
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Show Analysis</label>
-                <div className="switch-container">
-                  <label className="switch">
-                    <input
-                      type="checkbox"
-                      checked={showAnalysis}
-                      onChange={(e) => setShowAnalysis(e.target.checked)}
-                    />
-                    <span className="slider round"></span>
-                  </label>
-                  <span className="switch-label">{showAnalysis ? 'On' : 'Off'}</span>
-                </div>
-                <p className="form-help-text">
-                  Show AI's internal analysis/thinking process in a collapsible section with each response.
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* API Settings Tab */}
-          {activeTab === 'api' && (
-            <div>
-              <div className="form-group">
-                <label className="form-label">Active Provider</label>
-                <select 
-                  value={activeProvider}
-                  onChange={(e) => setActiveProvider(e.target.value as AIProvider)}
-                  className="form-select"
-                  disabled={true}
-                >
-                  <option value="ollama">Ollama (Local LLM)</option>
-                </select>
-                <p className="form-help-text">
-                  Currently focused on Ollama with deepseek-r1:7b
-                </p>
-              </div>
-              
-              {/* Ollama Quick Setup for deepseek-r1:7b */}
-              <div className="info-box">
-                <h3 className="info-box-title">
-                  Ollama Quick Setup
-                </h3>
-                <p className="info-box-content">
-                  Configure Ollama to use the locally running deepseek-r1:7b model
-                </p>
-                <button
-                  onClick={() => {
-                    const newSettings = { ...settings };
-                    newSettings.activeProvider = 'ollama';
-                    newSettings.providers.ollama.baseUrl = 'http://localhost:11434';
-                    newSettings.providers.ollama.defaultModel = 'deepseek-r1:7b';
-                    updateSettings(newSettings);
-                  }}
-                  className="btn btn-primary"
-                >
-                  Set Ollama as Active Provider
-                </button>
-                <p className="info-box-footer">
-                  Note: Make sure Ollama is running with the command: <code>ollama run deepseek-r1:7b</code>
-                </p>
-              </div>
-              
-              <div className="form-group">
-                <label className="form-label">API Key</label>
-                <input 
-                  type="password"
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  placeholder="Enter your API key"
-                  className="form-input"
-                />
-                {activeProvider === 'ollama' && (
-                  <p className="form-help-text">
-                    Ollama doesn't require an API key
-                  </p>
-                )}
-              </div>
-              
-              <div className="form-group">
-                <label className="form-label">Base URL</label>
-                <input 
-                  type="text"
-                  value={baseUrl}
-                  onChange={(e) => setBaseUrl(e.target.value)}
-                  placeholder="Enter base URL (optional)"
-                  className="form-input"
-                />
-                {activeProvider === 'ollama' && (
-                  <p className="form-help-text">
-                    Default: http://localhost:11434
-                  </p>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* System Prompts Tab */}
-          {activeTab === 'prompts' && (
-            <div>
-              <div className="form-group">
-                <p className="form-help-text">
-                  Customize the system prompts for each user role to control how the AI responds.
-                </p>
-              </div>
-              
-              <div className="form-group">
-                <label className="form-label">Developer Prompt</label>
-                <textarea 
-                  value={customPrompts.developer}
-                  onChange={(e) => handlePromptChange('developer', e.target.value)}
-                  className="form-textarea"
-                  style={{ minHeight: '100px', fontFamily: 'monospace' }}
-                />
-              </div>
-              
-              <div className="form-group">
-                <label className="form-label">Casual User Prompt</label>
-                <textarea 
-                  value={customPrompts.casual}
-                  onChange={(e) => handlePromptChange('casual', e.target.value)}
-                  className="form-textarea"
-                  style={{ minHeight: '100px', fontFamily: 'monospace' }}
-                />
-              </div>
-              
-              <div className="form-group">
-                <label className="form-label">Code Helper Prompt</label>
-                <textarea 
-                  value={customPrompts['code-helper']}
-                  onChange={(e) => handlePromptChange('code-helper', e.target.value)}
-                  className="form-textarea"
-                  style={{ minHeight: '100px', fontFamily: 'monospace' }}
-                />
-              </div>
-            </div>
-          )}
-
-          {/* About Tab */}
-          {activeTab === 'about' && (
-            <div className="about-section">
-              <h3>Classified AI</h3>
-              <p>A terminal-inspired chat application for interacting with AI models.</p>
-              
-              <div className="about-features">
-                <h4>Features</h4>
-                <ul>
-                  <li>Multiple AI provider support</li>
-                  <li>Customizable system prompts</li>
-                  <li>Dark and light themes</li>
-                  <li>Offline mode support</li>
-                  <li>Firebase integration for account management</li>
-                </ul>
-              </div>
-              
-              <div className="about-version">
-                <p>Version</p>
-                <p>1.0.0</p>
-              </div>
-
-              <div className="info-box">
-                <h3 className="info-box-title">
-                  Ollama Setup
-                </h3>
-                <p className="info-box-content">
-                  Configure Ollama to use the locally running Deepseek model
-                </p>
-                <button
-                  onClick={() => {
-                    const newSettings = { ...settings };
-                    newSettings.activeProvider = 'ollama';
-                    newSettings.providers.ollama.baseUrl = 'http://localhost:11434';
-                    newSettings.providers.ollama.defaultModel = 'deepseek-r1:7b';
-                    updateSettings(newSettings);
-                  }}
-                  className="btn btn-primary"
-                >
-                  Set Ollama as Active Provider
-                </button>
-                <p className="info-box-footer">
-                  Note: Make sure Ollama is running with the command: <code>ollama run deepseek-r1:7b</code>
-                </p>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className="modal-footer">
+        <div className="mt-6 space-x-2">
           <button 
             onClick={onClose}
             className="btn btn-default"

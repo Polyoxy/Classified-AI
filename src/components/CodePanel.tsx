@@ -230,7 +230,7 @@ const CodePanel: React.FC<CodePanelProps> = ({
           flex: 1;
           overflow: auto;
           padding: var(--spacing-4);
-          font-family: var(--font-family-terminal);
+          font-family: var(--font-family-mono);
           font-size: var(--font-size-caption);
           line-height: 1.5;
           background-color: ${isDarkTheme ? 'var(--code-panel-bg-dark)' : 'var(--code-panel-bg-light)'};

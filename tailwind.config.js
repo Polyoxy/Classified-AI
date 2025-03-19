@@ -20,7 +20,7 @@ module.exports = {
         border: 'var(--border-color)',
       },
       fontFamily: {
-        mono: ['var(--font-inter)', 'monospace'],
+        mono: ['Söhne Mono', 'monospace'],
       },
     },
   },

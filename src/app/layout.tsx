@@ -1,20 +1,17 @@
 import type { Metadata } from "next";
-import { Inter, JetBrains_Mono } from "next/font/google";
 import { Providers } from "@/components/Providers";
 import "./globals.css";
 
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-inter",
+// Define custom font variables
+const sohne = {
+  variable: "--font-inter", // Keep the variable name for compatibility
   display: "swap",
-});
+};
 
-const jetbrainsMono = JetBrains_Mono({
-  subsets: ["latin"],
-  variable: "--font-mono",
-  weight: ["400", "500", "600", "700"],
+const sohneMono = {
+  variable: "--font-mono", // Keep the variable name for compatibility
   display: "swap",
-});
+};
 
 // Define base CSP that works for both development and production
 const baseCSP = `
@@ -59,7 +56,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`}>
+    <html lang="en" className={`${sohne.variable} ${sohneMono.variable}`}>
       <head>
         <meta name="theme-color" content="#121212" />
         <script dangerouslySetInnerHTML={{

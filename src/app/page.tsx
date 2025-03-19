@@ -44,8 +44,8 @@ const globalStyles = `
   
   /* Font variables */
   :root {
-    --font-terminal: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Source Code Pro', monospace;
-    --font-general: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    --font-terminal: 'Söhne Mono', monospace;
+    --font-general: 'Söhne', sans-serif;
   }
   
   :root {
@@ -136,7 +136,7 @@ const globalStyles = `
     background-color: var(--bg-color);
     color: var(--text-color);
     font-family: var(--font-terminal);
-    font-size: 14px;
+    font-size: 16px;
     line-height: 1.6;
     height: 100vh;
     display: flex;
@@ -150,6 +150,7 @@ const globalStyles = `
 
   p, div.description, .help-text {
     font-family: var(--font-general);
+    font-size: 16px;
   }
   
   .chat-container::-webkit-scrollbar {
@@ -168,10 +169,12 @@ const globalStyles = `
   
   .user-message .prefix {
     color: var(--user-prefix-color);
+    font-size: 17px;
   }
   
   .ai-message .prefix {
     color: var(--ai-prefix-color);
+    font-size: 16px;
   }
   
   .prefix {
@@ -191,7 +194,7 @@ const globalStyles = `
     border: 1px solid var(--border-color);
     color: var(--text-color);
     font-family: var(--font-terminal);
-    font-size: 0.875rem;
+    font-size: 15px;
     cursor: pointer;
     transition: all 0.2s ease;
   }
@@ -207,7 +210,7 @@ const globalStyles = `
     border: 1px solid var(--accent-color);
     color: var(--bg-color);
     font-family: inherit;
-    font-size: 0.875rem;
+    font-size: 15px;
     cursor: pointer;
     transition: all 0.2s ease;
   }
@@ -224,6 +227,7 @@ const globalStyles = `
     font-weight: bold;
     color: var(--text-color);
     font-family: var(--font-mono);
+    font-size: 15px;
   }
 
   .form-select, .form-input {
@@ -233,7 +237,7 @@ const globalStyles = `
     border: 1px solid var(--border-color);
     color: var(--text-color);
     font-family: var(--font-mono);
-    font-size: 0.875rem;
+    font-size: 16px;
     border-radius: 0.25rem;
     margin-bottom: 1rem;
   }
