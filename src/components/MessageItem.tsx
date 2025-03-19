@@ -259,9 +259,9 @@ const MessageItem: React.FC<MessageItemProps> = ({
       <div style={{
         display: 'flex',
         alignItems: 'center',
-        gap: '0.5rem',
-        marginBottom: '0.25rem',
-        fontSize: '12px',
+        gap: 'var(--spacing-1)',
+        marginBottom: 'var(--spacing-1)',
+        fontSize: 'var(--font-size-caption)',
         color: isDarkTheme ? '#888' : '#666',
       }}>
         <span style={{ fontWeight: 'bold' }}>
@@ -270,7 +270,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
       </div>
 
       <div style={{
-        borderRadius: '8px',
+        borderRadius: 'var(--message-border-radius)',
         overflow: 'hidden',
         position: 'relative',
         boxShadow: role === 'assistant' ? `0px 2px 4px ${isDarkTheme ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.1)'}` : 'none',
@@ -282,7 +282,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
             <div 
               onClick={() => setIsThinkingCollapsed(!isThinkingCollapsed)}
               style={{
-                padding: '0.4rem 0.75rem',
+                padding: 'var(--spacing-1) var(--spacing-2)',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
@@ -321,7 +321,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
             {/* True summary - only shown when collapsed */}
             {isThinkingCollapsed && (
               <div style={{
-                padding: '0.3rem 0.75rem',
+                padding: 'var(--spacing-1) var(--spacing-2)',
                 fontSize: '11px',
                 fontStyle: 'normal',
                 color: isDarkTheme ? 'rgba(208, 208, 208, 0.7)' : 'rgba(80, 80, 80, 0.7)',
@@ -425,16 +425,16 @@ const MessageItem: React.FC<MessageItemProps> = ({
                 ref={thinkingContentRef}
                 style={{
                   overflow: 'hidden',
-                  fontSize: '12px',
+                  fontSize: 'var(--font-size-caption)',
                   lineHeight: 1.5,
                   color: isDarkTheme ? '#d0d0d0' : '#333333',
                   whiteSpace: 'pre-wrap',
-                  fontFamily: 'var(--font-mono)',
+                  fontFamily: 'var(--font-family-terminal)',
                   borderBottom: `1px solid ${isDarkTheme ? 'rgba(80, 80, 80, 0.3)' : 'rgba(200, 200, 200, 0.5)'}`,
                   backgroundColor: isDarkTheme ? 'rgba(32, 32, 34, 0.5)' : 'rgba(248, 248, 250, 0.7)',
                 }}
               >
-                <div style={{ padding: '0.75rem', fontStyle: 'normal' }}>
+                <div style={{ padding: 'var(--spacing-3)', fontStyle: 'normal' }}>
                   {thinkingContent || (isProcessing ? 'Thinking...' : '')}
                 </div>
               </div>
@@ -443,11 +443,11 @@ const MessageItem: React.FC<MessageItemProps> = ({
         )}
 
         <div style={{
-          padding: '1rem',
-          paddingBottom: timestamp ? '1.5rem' : '1rem',
-          fontSize: '14px',
+          padding: 'var(--message-padding)',
+          paddingBottom: timestamp ? '1.5rem' : 'var(--message-padding)',
+          fontSize: 'var(--font-size-body)',
           lineHeight: '1.5',
-          fontFamily: 'var(--font-mono)',
+          fontFamily: 'var(--font-family-general)',
           whiteSpace: 'pre-wrap',
           wordBreak: 'break-word',
           position: 'relative',
@@ -458,8 +458,8 @@ const MessageItem: React.FC<MessageItemProps> = ({
           {timestamp && (
             <div style={{
               position: 'absolute',
-              bottom: '0.5rem',
-              right: '0.75rem',
+              bottom: 'var(--spacing-1)',
+              right: 'var(--spacing-2)',
               fontSize: '11px',
               color: isDarkTheme ? 'rgba(180, 180, 180, 0.6)' : 'rgba(100, 100, 100, 0.6)',
             }}>
@@ -486,14 +486,23 @@ const MessageItem: React.FC<MessageItemProps> = ({
             transition: 'all 0.2s ease',
             opacity: showCopied ? 1 : 0.7,
             color: isDarkTheme ? 'rgba(180, 180, 180, 0.8)' : 'rgba(120, 120, 120, 0.8)',
-            fontSize: '12px',
-            padding: '3px',
+            fontSize: 'var(--font-size-caption)',
+            padding: 'var(--spacing-1)',
+            borderRadius: 'var(--border-radius)',
           }}
-          onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
-          onMouseLeave={(e) => e.currentTarget.style.opacity = showCopied ? '1' : '0.7'}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.opacity = '1';
+            e.currentTarget.style.backgroundColor = isDarkTheme ? 'rgba(80, 80, 80, 0.3)' : 'rgba(200, 200, 200, 0.5)';
+            e.currentTarget.style.transform = 'scale(1.05)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.opacity = showCopied ? '1' : '0.7';
+            e.currentTarget.style.backgroundColor = 'transparent';
+            e.currentTarget.style.transform = 'scale(1)';
+          }}
         >
           {showCopied ? (
-            <span style={{ fontSize: '12px', marginRight: '4px' }}>Copied</span>
+            <span style={{ fontSize: 'var(--font-size-caption)', marginRight: 'var(--spacing-1)' }}>Copied</span>
           ) : (
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
@@ -515,6 +524,17 @@ const MessageItem: React.FC<MessageItemProps> = ({
         
         .code-copy-button:hover {
           opacity: 1 !important;
+        }
+        
+        /* Styling for lists in messages */
+        .response-container ul, 
+        .response-container ol {
+          margin-left: var(--spacing-4);
+          margin-bottom: var(--spacing-3);
+        }
+        
+        .response-container li {
+          margin-bottom: var(--spacing-1);
         }
       `}</style>
     </div>

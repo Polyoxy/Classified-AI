@@ -62,6 +62,28 @@ export default function RootLayout({
     <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`}>
       <head>
         <meta name="theme-color" content="#121212" />
+        <script dangerouslySetInnerHTML={{
+          __html: `
+            // Monitor for code panel opening/closing
+            (function() {
+              const observer = new MutationObserver(mutations => {
+                mutations.forEach(mutation => {
+                  if (mutation.attributeName === 'class') {
+                    const hasOpenPanel = document.body.classList.contains('has-open-panel');
+                    const container = document.getElementById('app-container');
+                    if (container) {
+                      container.style.transition = 'margin-right 0.3s ease-in-out, width 0.3s ease-in-out';
+                      container.style.width = hasOpenPanel ? '50%' : '100%';
+                      container.style.marginRight = hasOpenPanel ? '50%' : '0';
+                    }
+                  }
+                });
+              });
+              // Start observing the body element
+              observer.observe(document.body, { attributes: true });
+            })();
+          `
+        }} />
       </head>
       <body className="antialiased theme-dark">
         <Providers>

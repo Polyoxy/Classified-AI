@@ -51,12 +51,12 @@ const CodeSnippet: React.FC<CodeSnippetProps> = ({
         onClick={openPanel}
         style={{
           backgroundColor: isDarkTheme ? '#1E1E1E' : '#F5F5F5',
-          borderRadius: '4px',
-          padding: '0.75rem',
-          margin: '0.5rem 0',
+          borderRadius: 'var(--border-radius)',
+          padding: 'var(--spacing-3)',
+          margin: 'var(--spacing-2) 0',
           overflow: 'hidden',
-          fontFamily: 'var(--font-mono)',
-          fontSize: '13px',
+          fontFamily: 'var(--font-family-terminal)',
+          fontSize: 'var(--font-size-caption)',
           lineHeight: 1.5,
           boxShadow: `0px 2px 4px ${isDarkTheme ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.1)'}`,
         }}
@@ -64,7 +64,7 @@ const CodeSnippet: React.FC<CodeSnippetProps> = ({
         <div className="code-snippet-title">
           <span style={{ 
             color: isDarkTheme ? '#e0e0e0' : '#333',
-            fontSize: '14px',
+            fontSize: 'var(--font-size-caption)',
           }}>
             {title || `Code ${language ? `(${language})` : ''}`}
           </span>

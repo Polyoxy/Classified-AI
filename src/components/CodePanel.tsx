@@ -159,6 +159,14 @@ const CodePanel: React.FC<CodePanelProps> = ({
         ))}
       </div>
       
+      {/* Mobile back button */}
+      <div className="mobile-back-button" onClick={onClose}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '8px' }}>
+          <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+        Back to Chat
+      </div>
+      
       <style jsx>{`
         .code-panel {
           position: fixed;
@@ -180,7 +188,7 @@ const CodePanel: React.FC<CodePanelProps> = ({
         }
         
         .code-panel-header {
-          padding: 1rem;
+          padding: var(--spacing-4);
           border-bottom: 1px solid ${isDarkTheme ? 'rgba(80, 80, 80, 0.3)' : 'rgba(200, 200, 200, 0.5)'};
           display: flex;
           justify-content: space-between;
@@ -190,13 +198,13 @@ const CodePanel: React.FC<CodePanelProps> = ({
         .code-panel-title {
           margin: 0;
           color: ${isDarkTheme ? '#e0e0e0' : '#333'};
-          font-size: 16px;
+          font-size: var(--font-size-body);
           font-weight: 500;
         }
         
         .code-panel-actions {
           display: flex;
-          gap: 0.5rem;
+          gap: var(--spacing-2);
         }
         
         .code-panel-button {
@@ -205,32 +213,57 @@ const CodePanel: React.FC<CodePanelProps> = ({
           cursor: pointer;
           display: flex;
           align-items: center;
-          gap: 0.25rem;
+          gap: var(--spacing-1);
           color: ${isDarkTheme ? '#b0b0b0' : '#555'};
-          font-size: 12px;
-          padding: 0.25rem 0.5rem;
-          border-radius: 4px;
-          transition: background-color 0.2s;
+          font-size: var(--font-size-caption);
+          padding: var(--spacing-1) var(--spacing-2);
+          border-radius: var(--border-radius);
+          transition: background-color 0.2s ease, transform 0.1s ease;
         }
         
         .code-panel-button:hover {
           background-color: ${isDarkTheme ? 'rgba(80, 80, 80, 0.3)' : 'rgba(200, 200, 200, 0.5)'};
+          transform: scale(1.05);
         }
         
         .code-panel-content {
           flex: 1;
           overflow: auto;
-          padding: 1rem;
-          font-family: var(--font-mono);
-          font-size: 13px;
+          padding: var(--spacing-4);
+          font-family: var(--font-family-terminal);
+          font-size: var(--font-size-caption);
           line-height: 1.5;
           background-color: ${isDarkTheme ? 'var(--code-panel-bg-dark)' : 'var(--code-panel-bg-light)'};
+        }
+        
+        .mobile-back-button {
+          display: none;
         }
         
         @media (max-width: 768px) {
           .code-panel {
             width: 100%;
             right: -100%;
+          }
+          
+          .mobile-back-button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: var(--accent-color);
+            color: white;
+            position: fixed;
+            bottom: env(safe-area-inset-bottom, 24px);
+            left: 50%;
+            transform: translateX(-50%);
+            width: auto;
+            padding: 8px 16px;
+            border-radius: var(--border-radius);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            z-index: 1001;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
           }
         }
       `}</style>

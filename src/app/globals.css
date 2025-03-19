@@ -5,11 +5,41 @@
 /**
  * Theme System
  * ------------
- * A consistent grayscale color system for the entire application
+ * A consistent system for the entire application
  */
 
 :root {
-  /* Base colors - Light theme (default) */
+  /* Base spacing units */
+  --spacing-1: 4px;
+  --spacing-2: 8px;
+  --spacing-3: 12px;
+  --spacing-4: 16px;
+  --spacing-5: 20px;
+  --spacing-6: 24px;
+
+  /* Border radius */
+  --border-radius: 8px;
+  
+  /* Typography */
+  --font-size-heading: 24px;
+  --font-size-body: 16px;
+  --font-size-caption: 14px;
+  
+  /* Font families - keep existing */
+  --font-family-terminal: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Source Code Pro', monospace;
+  --font-family-general: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  
+  /* Status bar styling */
+  --status-bar-height: 42px;
+  --status-bar-padding: 10px;
+  --status-bar-element-gap: 18px;
+  --status-bar-icon-size: 18px;
+  --status-bar-font-size: 13px;
+  --status-bar-line-height: 1.3;
+  --status-bar-border-color: rgba(221, 221, 221, 0.8);
+  --status-bar-border-dark: rgba(51, 51, 51, 0.8);
+  
+  /* Keep existing colors */
   --bg-color: #f8f9fa;
   --text-color: #212529;
   --input-bg: #ffffff;
@@ -19,37 +49,40 @@
   --button-hover: #e9ecef;
   --secondary-bg: #f5f5f5;
   
-  /* Accent colors - Grayscale */
-  --accent-color: #505050; /* Dark gray for accent */
-  --accent-hover: #333333; /* Darker gray for hover */
-  --accent-light: rgba(80, 80, 80, 0.1); /* Transparent gray for subtle backgrounds */
-  --accent-focus: rgba(80, 80, 80, 0.3); /* Semi-transparent gray for focus states */
+  /* Accent colors - keep existing */
+  --accent-color: #505050;
+  --accent-hover: #333333;
+  --accent-light: rgba(80, 80, 80, 0.1);
+  --accent-focus: rgba(80, 80, 80, 0.3);
   
-  /* Functional colors */
-  --error-color: #707070; /* Gray for errors */
+  /* Functional colors - keep existing */
+  --error-color: #707070;
   
-  /* Button colors */
+  /* Button colors - keep existing */
   --button-bg: #212529;
   --button-text: #ffffff;
   
-  /* Typography */
-  --font-size: 14px;
-  --font-family-terminal: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Source Code Pro', monospace; /* Primary Terminal Font */
-  --font-family-general: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; /* Secondary General Font */
+  /* Button padding */
+  --button-padding: var(--spacing-2) var(--spacing-4);
   
-  /* Thinking animation colors - more subtle */
-  --thinking-color: #4a9eff; /* Blue pulse dot/ring */
-  --thinking-bg-dark: rgba(35, 35, 38, 0.3); /* More transparent dark theme thinking container */
-  --thinking-bg-light: rgba(245, 245, 250, 0.4); /* More transparent light theme thinking container */
+  /* Message styling */
+  --message-border-radius: var(--border-radius);
+  --message-padding: var(--spacing-4);
+  --message-margin: var(--spacing-3);
   
-  /* Code panel colors */
+  /* Code panel colors - keep existing */
   --code-panel-bg-dark: #1E1E1E;
   --code-panel-bg-light: #F5F5F5;
   --code-panel-shadow-dark: rgba(0, 0, 0, 0.5);
   --code-panel-shadow-light: rgba(0, 0, 0, 0.1);
+  
+  /* Thinking animation colors - keep existing */
+  --thinking-color: #4a9eff;
+  --thinking-bg-dark: rgba(35, 35, 38, 0.3);
+  --thinking-bg-light: rgba(245, 245, 250, 0.4);
 }
 
-/* Dark theme */
+/* Dark theme - keep existing colors */
 .theme-dark {
   --bg-color: #121212;
   --text-color: #e9ecef;
@@ -61,10 +94,10 @@
   --secondary-bg: #1a1a1a;
   
   /* Accent colors - Grayscale for dark theme */
-  --accent-color: #aaaaaa; /* Light gray for accent in dark theme */
-  --accent-hover: #cccccc; /* Lighter gray for hover in dark theme */
-  --accent-light: rgba(170, 170, 170, 0.1); /* Transparent light gray for subtle backgrounds */
-  --accent-focus: rgba(170, 170, 170, 0.3); /* Semi-transparent light gray for focus states */
+  --accent-color: #aaaaaa;
+  --accent-hover: #cccccc;
+  --accent-light: rgba(170, 170, 170, 0.1);
+  --accent-focus: rgba(170, 170, 170, 0.3);
   
   /* Button colors in dark theme */
   --button-bg: #e9ecef;
@@ -83,7 +116,7 @@ body {
   padding: 0;
   height: 100vh;
   overflow: hidden;
-  font-size: var(--font-size);
+  font-size: var(--font-size-body);
   font-family: var(--font-family-general);
 }
 
@@ -104,7 +137,22 @@ body {
  */
 
 h1, h2, h3, h4, h5, h6 {
-  font-family: var(--font-family-terminal);
+  color: var(--text-color);
+  font-family: var(--font-family-general);
+  font-weight: 600;
+  margin-bottom: var(--spacing-4);
+}
+
+h1 { font-size: calc(var(--font-size-heading) * 1.5); }
+h2 { font-size: var(--font-size-heading); }
+h3 { font-size: calc(var(--font-size-heading) * 0.85); }
+h4 { font-size: calc(var(--font-size-heading) * 0.7); }
+
+p {
+  margin-bottom: var(--spacing-4);
+  font-size: var(--font-size-body);
+  color: var(--text-color);
+  line-height: 1.5;
 }
 
 .mono-text {
@@ -138,7 +186,7 @@ h1, h2, h3, h4, h5, h6 {
   overflow-y: auto;
   background-color: var(--bg-color);
   color: var(--text-color);
-  border-radius: 8px;
+  border-radius: var(--border-radius);
   box-shadow: 0 5px 25px rgba(0, 0, 0, 0.5);
   display: flex;
   flex-direction: column;
@@ -148,14 +196,14 @@ h1, h2, h3, h4, h5, h6 {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 15px 20px;
+  padding: var(--spacing-4);
   border-bottom: 1px solid var(--border-color);
   background-color: var(--header-bg);
 }
 
 .modal-title {
   margin: 0;
-  font-size: 20px;
+  font-size: var(--font-size-heading);
 }
 
 .modal-close {
@@ -173,17 +221,17 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .modal-content {
-  padding: 20px;
+  padding: var(--spacing-5);
   background-color: var(--bg-color);
 }
 
 .modal-footer {
-  padding: 15px 20px;
+  padding: var(--spacing-4);
   border-top: 1px solid var(--border-color);
   background-color: var(--header-bg);
   display: flex;
   justify-content: flex-end;
-  gap: 10px;
+  gap: var(--spacing-2);
 }
 
 /* Tabs */
@@ -194,7 +242,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .tab-button {
-  padding: 10px 15px;
+  padding: var(--spacing-2) var(--spacing-4);
   background-color: transparent;
   border: none;
   color: var(--text-color);
@@ -227,10 +275,10 @@ h1, h2, h3, h4, h5, h6 {
 /* Labels */
 .form-label {
   display: block;
-  margin-bottom: 5px;
+  margin-bottom: var(--spacing-1);
   font-weight: 600;
   color: var(--text-color);
-  font-family: var(--font-family-terminal);
+  font-family: var(--font-family-general);
 }
 
 /* Inputs */
@@ -238,14 +286,14 @@ h1, h2, h3, h4, h5, h6 {
 .form-select,
 .form-textarea {
   width: 100%;
-  padding: 10px;
+  padding: var(--spacing-2) var(--spacing-3);
   background-color: var(--input-bg);
   color: var(--text-color);
   border: 1px solid var(--border-color);
-  border-radius: 4px;
-  margin-bottom: 15px;
-  font-size: 14px;
-  font-family: var(--font-family-terminal);
+  border-radius: var(--border-radius);
+  margin-bottom: var(--spacing-4);
+  font-size: var(--font-size-body);
+  font-family: var(--font-family-general);
 }
 
 .form-input:focus,
@@ -273,12 +321,12 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Buttons */
 .btn {
-  padding: 8px 15px;
-  border-radius: 4px;
+  padding: var(--button-padding);
+  border-radius: var(--border-radius);
   cursor: pointer;
   font-weight: bold;
   transition: all 0.2s ease;
-  font-family: var(--font-family-terminal);
+  font-family: var(--font-family-general);
 }
 
 .btn-default {
@@ -290,6 +338,7 @@ h1, h2, h3, h4, h5, h6 {
 .btn-default:hover {
   border-color: var(--accent-color);
   color: var(--accent-color);
+  transform: scale(1.02);
 }
 
 .btn-primary {
@@ -301,6 +350,7 @@ h1, h2, h3, h4, h5, h6 {
 
 .btn-primary:hover {
   background-color: var(--accent-hover);
+  transform: scale(1.02);
 }
 
 .btn:focus {
@@ -310,41 +360,41 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Form groups */
 .form-group {
-  margin-bottom: 20px;
+  margin-bottom: var(--spacing-5);
 }
 
 .form-help-text {
-  font-size: 12px;
+  font-size: var(--font-size-caption);
   color: var(--text-color);
   opacity: 0.7;
-  margin: 5px 0 0 0;
+  margin: var(--spacing-1) 0 0 0;
   font-style: italic;
 }
 
 /* Info box */
 .info-box {
-  margin-bottom: 20px;
-  padding: 15px;
+  margin-bottom: var(--spacing-5);
+  padding: var(--spacing-4);
   background-color: var(--code-bg);
-  border-radius: 5px;
+  border-radius: var(--border-radius);
   border: 1px solid var(--border-color);
 }
 
 .info-box-title {
-  margin-bottom: 10px;
-  font-size: 1rem;
+  margin-bottom: var(--spacing-2);
+  font-size: var(--font-size-body);
   font-weight: bold;
 }
 
 .info-box-content {
-  margin-bottom: 10px;
-  font-size: 0.9rem;
+  margin-bottom: var(--spacing-2);
+  font-size: var(--font-size-caption);
   color: var(--text-color);
   opacity: 0.9;
 }
 
 .info-box-footer {
-  font-size: 0.8rem;
+  font-size: var(--font-size-caption);
   color: var(--text-color);
   opacity: 0.7;
 }
@@ -357,14 +407,14 @@ h1, h2, h3, h4, h5, h6 {
 .slider-container {
   display: flex;
   align-items: center;
-  gap: 15px;
-  padding: 5px 0;
+  gap: var(--spacing-4);
+  padding: var(--spacing-1) 0;
 }
 
 .slider-value {
   min-width: 30px;
   text-align: right;
-  font-size: 14px;
+  font-size: var(--font-size-caption);
 }
 
 input[type="range"] {
@@ -374,7 +424,7 @@ input[type="range"] {
   height: 2px;
   background: transparent;
   outline: none;
-  margin: 10px 0;
+  margin: var(--spacing-2) 0;
 }
 
 /* Slider track */
@@ -475,13 +525,9 @@ input[type="range"]:active::-moz-range-thumb {
 /* Responsive font sizes */
 @media (max-width: 768px) {
   :root {
-    --font-size: 13px;
-    --fontSize-small: 12px;
-    --fontSize-base: 14px;
-    --fontSize-large: 16px;
-    --fontSize-xl: 18px;
-    --fontSize-2xl: 20px;
-    --fontSize-3xl: 24px;
+    --font-size-body: 14px;
+    --font-size-caption: 12px;
+    --font-size-heading: 20px;
   }
   
   /* Thinking indicator responsive styles */
@@ -511,7 +557,6 @@ input[type="range"]:active::-moz-range-thumb {
 /**
  * Browser Overrides
  * ----------------
- * Override default browser styles to ensure grayscale theme
  */
 
 /* Override default browser focus styles */
@@ -577,14 +622,14 @@ option:focus {
 }
 
 .about-features {
-  margin-top: 20px;
+  margin-top: var(--spacing-5);
 }
 
 .about-version {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 20px;
-  padding: 10px 0;
+  margin-bottom: var(--spacing-5);
+  padding: var(--spacing-2) 0;
   border-bottom: 1px solid var(--border-color);
 }
 
@@ -623,8 +668,9 @@ body.has-open-panel .response-container,
 body.has-open-panel .command-input-container-wrapper {
   width: 90%;
   min-width: 90%;
-  margin: 0 auto;
-  transform: translateX(-5%);
+  max-width: 90%;
+  margin: 0 5%;
+  transform: translateX(0);
 }
 
 /* Command input position adjustments when code panel is open */
@@ -632,6 +678,12 @@ body.has-open-panel .command-input {
   width: 90% !important;
   left: 5% !important;
   transform: translateX(0) !important;
+}
+
+/* Ensure proper margins for the command input container when the panel is open */
+body.has-open-panel .command-input-container {
+  width: 100% !important;
+  margin: 0 !important;
 }
 
 .code-panel {
@@ -670,12 +722,12 @@ body.has-open-panel {
 
 .code-snippet:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
 .code-snippet-title {
   font-weight: 500;
-  margin-bottom: 0.5rem;
+  margin-bottom: var(--spacing-2);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -704,18 +756,46 @@ body.has-open-panel {
 .expand-button {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  font-size: 12px;
+  gap: var(--spacing-1);
+  font-size: var(--font-size-caption);
   color: var(--accent-color);
   cursor: pointer;
-  padding: 2px 6px;
-  border-radius: 4px;
+  padding: var(--spacing-1) var(--spacing-2);
+  border-radius: var(--border-radius);
+  transition: all 0.2s ease;
 }
 
 .expand-button:hover {
   background-color: var(--accent-light);
+  transform: scale(1.05);
 }
 
+/* Message styling enhancements */
+.response-container {
+  margin-bottom: var(--message-margin);
+}
+
+.response-container a {
+  color: var(--accent-color);
+  text-decoration: underline;
+  transition: color 0.2s ease;
+}
+
+.response-container a:hover {
+  color: var(--accent-hover);
+}
+
+.response-container ul,
+.response-container ol {
+  margin-left: var(--spacing-4);
+  margin-bottom: var(--spacing-3);
+}
+
+.response-container li {
+  margin-bottom: var(--spacing-1);
+}
+
+/* Mobile and tablet compatibility improvements */
 @media (max-width: 768px) {
   .code-panel {
     width: 100%;
@@ -733,14 +813,74 @@ body.has-open-panel {
   body.has-open-panel .command-input-container-wrapper {
     opacity: 0;
     visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
   }
   
   .code-panel-content {
-    padding: 0.75rem;
+    padding: var(--spacing-3);
   }
   
   .code-panel-header {
-    padding: 0.75rem;
+    padding: var(--spacing-3);
+  }
+  
+  /* Add a back button for mobile view */
+  .code-panel .mobile-back-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--accent-color);
+    color: white;
+    position: fixed;
+    bottom: var(--spacing-4);
+    left: 50%;
+    transform: translateX(-50%);
+    width: auto;
+    padding: var(--spacing-2) var(--spacing-4);
+    border-radius: var(--border-radius);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    z-index: 1001;
+    font-size: var(--font-size-body);
+    font-weight: 500;
+  }
+  
+  /* Improve safe area handling for notched phones */
+  .command-input-container {
+    padding-bottom: env(safe-area-inset-bottom, 0.75rem) !important;
+  }
+  
+  /* Fix for iOS height calculations */
+  html, body {
+    height: 100%;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Smaller text for better readability on small screens */
+  :root {
+    --font-size-body: 14px;
+    --font-size-caption: 12px;
+  }
+}
+
+/* Specific iPhone SE and small phone optimizations */
+@media (max-width: 375px) {
+  .response-container,
+  .command-input-container-wrapper {
+    width: 100% !important;
+    min-width: 100% !important;
+    max-width: 100% !important;
+    padding-left: var(--spacing-2);
+    padding-right: var(--spacing-2);
+  }
+  
+  :root {
+    --font-size-body: 13px;
+    --font-size-caption: 11px;
+  }
+  
+  .selector-button {
+    padding: 2px 4px !important;
+    font-size: 10px !important;
   }
 }
 
@@ -759,4 +899,35 @@ body.has-open-panel {
     min-width: 100% !important;
     max-width: 762px !important;
   }
+}
+
+/* Button styles */
+button {
+  padding: var(--button-padding);
+  border-radius: var(--border-radius);
+  font-size: var(--font-size-body);
+  font-family: var(--font-family-general);
+  transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.primary-button {
+  background-color: var(--button-bg);
+  color: var(--button-text);
+  border: none;
+}
+
+.primary-button:hover {
+  background-color: var(--button-hover);
+  transform: scale(1.02);
+}
+
+.secondary-button {
+  background-color: transparent;
+  color: var(--accent-color);
+  border: 1px solid var(--accent-color);
+}
+
+.secondary-button:hover {
+  background-color: var(--accent-light);
+  transform: scale(1.02);
 }

@@ -185,12 +185,12 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
   // Settings icon SVG
   const SettingsIcon = () => (
     <svg 
-      width="14" 
-      height="14" 
+      width="24" 
+      height="24" 
       viewBox="0 0 24 24" 
       fill="none" 
       stroke="currentColor" 
-      strokeWidth="2" 
+      strokeWidth="1.5" 
       strokeLinecap="round" 
       strokeLinejoin="round"
       style={{ pointerEvents: 'none' }}
@@ -202,6 +202,23 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
 
   // Update customStatusBarStyles to ensure model selector displays properly
   const customStatusBarStyles = `
+    .status-bar {
+      height: var(--status-bar-height);
+      padding: var(--status-bar-padding);
+      font-family: var(--font-family-general);
+      font-size: var(--status-bar-font-size);
+      line-height: var(--status-bar-line-height);
+    }
+    
+    .status-bar > div {
+      gap: var(--status-bar-element-gap);
+    }
+    
+    .status-bar svg {
+      width: var(--status-bar-icon-size);
+      height: var(--status-bar-icon-size);
+    }
+    
     .model-selector {
       display: flex !important;
       position: relative;
@@ -213,7 +230,8 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
     }
 
     .selected-model-text {
-      font-size: 12px;
+      font-size: var(--status-bar-font-size);
+      text-align: center;
     }
     
     .model-dropdown {
@@ -229,18 +247,18 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
     
     @media (max-width: 767px) {
       .status-bar {
-        height: 32px !important;
-        padding: 0 8px !important;
+        height: var(--status-bar-height) !important;
+        padding: var(--status-bar-padding) !important;
         justify-content: space-between !important;
       }
       
       .model-selector {
-        max-width: 110px !important;
+        max-width: 140px !important;
         overflow: hidden !important;
       }
       
       .selected-model-text {
-        max-width: 80px !important;
+        max-width: 100px !important;
         overflow: hidden !important;
         text-overflow: ellipsis !important;
         white-space: nowrap !important;
@@ -251,7 +269,7 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
       }
       
       .connection-status span {
-        font-size: 10px !important;
+        font-size: 14px !important;
       }
     }
   `;
@@ -269,20 +287,21 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
           top: 0,
           left: 0,
           right: 0,
-          height: '32px',
+          height: 'var(--status-bar-height)',
           backgroundColor: settings?.theme === 'dark' ? 'rgba(18, 18, 18, 0.92)' : 'rgba(245, 245, 245, 0.92)',
-          borderBottom: `1px solid ${settings?.theme === 'dark' ? 'rgba(51, 51, 51, 0.8)' : 'rgba(221, 221, 221, 0.8)'}`,
+          borderBottom: `1px solid ${settings?.theme === 'dark' ? 'var(--status-bar-border-dark)' : 'var(--status-bar-border-color)'}`,
           color: settings?.theme === 'dark' ? '#b0b0b0' : '#505050',
-          padding: '0 12px',
-          fontSize: '12px',
-          fontFamily: 'var(--font-mono, "JetBrains Mono", monospace)',
+          padding: 'var(--status-bar-padding)',
+          fontSize: 'var(--status-bar-font-size)',
+          fontFamily: 'var(--font-family-general)',
           backdropFilter: 'blur(8px)',
           transition: 'all 0.2s ease',
           zIndex: 70,
           boxShadow: `0 1px 2px rgba(0, 0, 0, ${settings?.theme === 'dark' ? '0.15' : '0.08'})`,
+          lineHeight: 'var(--status-bar-line-height)',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', padding: '0' }}>
+        <div style={{ display: 'flex', alignItems: 'center', padding: '0', gap: 'var(--status-bar-element-gap)' }}>
           <div 
             className="model-selector" 
             ref={dropdownRef}
@@ -296,33 +315,35 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                padding: '0.25rem 0.4rem',
+                padding: '0.2rem 0.4rem',
                 cursor: 'pointer',
-                fontFamily: 'Inter, sans-serif',
-                fontSize: '12px',
+                fontFamily: 'var(--font-family-general, "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "OpenAI Sans", sans-serif)',
+                fontSize: 'var(--status-bar-font-size)',
+                textAlign: 'center',
               }}
             >
               <span 
                 className="selected-model-text"
                 style={{ 
-                  marginRight: '4px',
+                  marginRight: '6px',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
+                  textAlign: 'center',
                 }}
               >
                 {getCurrentModel()}
               </span>
               <svg 
-                width="10" 
-                height="10" 
+                width="var(--status-bar-icon-size)" 
+                height="var(--status-bar-icon-size)" 
                 viewBox="0 0 24 24" 
                 fill="none" 
                 stroke="currentColor" 
-                strokeWidth="2" 
+                strokeWidth="1.5" 
                 strokeLinecap="round" 
                 strokeLinejoin="round"
-                style={{ marginLeft: 'auto', opacity: 0.6 }}
+                style={{ opacity: 0.8 }}
               >
                 <polyline points="6 9 12 15 18 9"></polyline>
               </svg>
@@ -338,7 +359,7 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
                   width: '100%',
                   backgroundColor: settings?.theme === 'dark' ? 'rgba(26, 26, 26, 0.95)' : 'rgba(245, 245, 245, 0.95)',
                   border: `1px solid ${settings?.theme === 'dark' ? 'rgba(60, 60, 60, 0.7)' : 'rgba(200, 200, 200, 0.7)'}`,
-                  borderRadius: '4px',
+                  borderRadius: 'var(--border-radius)',
                   marginTop: '4px',
                   zIndex: 10000,
                   maxHeight: '200px',
@@ -346,7 +367,7 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
                   boxShadow: settings?.theme === 'dark' 
                     ? '0 4px 8px rgba(0,0,0,0.3)' 
                     : '0 4px 8px rgba(0,0,0,0.1)',
-                  fontFamily: 'Inter, sans-serif',
+                  fontFamily: 'var(--font-family-general, "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "OpenAI Sans", sans-serif)',
                   backdropFilter: 'blur(6px)',
                 }}
               >
@@ -356,15 +377,17 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
                     className="model-option"
                     onClick={() => handleModelChange(model)}
                     style={{
-                      padding: '0.4rem',
+                      padding: '6px 10px',
                       cursor: 'pointer',
                       backgroundColor: (model === selectedModel || model === currentConversation?.model)
                         ? (settings?.theme === 'dark' ? '#333' : '#e0e0e0') 
                         : 'transparent',
-                      transition: 'all 0.1s ease',
-                      fontSize: '12px',
+                      transition: 'all 0.2s ease',
+                      fontSize: 'var(--status-bar-font-size)',
                       letterSpacing: '0.2px',
-                      fontWeight: (model === selectedModel || model === currentConversation?.model) ? 'bold' : 'normal',
+                      fontWeight: (model === selectedModel || model === currentConversation?.model) ? '500' : 'normal',
+                      lineHeight: 'var(--status-bar-line-height)',
+                      textAlign: 'left',
                     }}
                     onMouseOver={(e) => {
                       e.currentTarget.style.backgroundColor = settings?.theme === 'dark' ? '#333' : '#e0e0e0';
@@ -382,20 +405,21 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
             )}
           </div>
           
-          <div className="connection-status" style={{ display: 'flex', alignItems: 'center', marginLeft: '8px' }}>
+          <div className="connection-status" style={{ display: 'flex', alignItems: 'center' }}>
             <div style={{
               width: '6px',
               height: '6px',
               borderRadius: '50%',
               backgroundColor: getStatusColor(),
-              marginRight: '4px',
+              marginRight: '6px',
               opacity: 0.8,
             }}></div>
             <span style={{ 
-              fontFamily: 'Inter, sans-serif',
-              fontSize: '11px', 
+              fontFamily: 'var(--font-family-general, "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "OpenAI Sans", sans-serif)',
+              fontSize: 'var(--status-bar-font-size)', 
               letterSpacing: '0.2px',
               opacity: 0.9,
+              textAlign: 'center',
             }}>
               {connectionStatus === 'connected' ? 'Connected' : 
                connectionStatus === 'disconnected' ? 'Disconnected' : 
@@ -406,11 +430,11 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
           {tokenUsage.totalTokens > 0 && (
             <>
               <span className="token-display" style={{ 
-                marginLeft: '8px',
-                fontFamily: 'Inter, sans-serif',
-                fontSize: '11px',
+                fontFamily: 'var(--font-family-general, "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "OpenAI Sans", sans-serif)',
+                fontSize: 'var(--status-bar-font-size)',
                 letterSpacing: '0.2px',
-                opacity: 0.7,
+                opacity: 0.8,
+                textAlign: 'center',
               }}>
                 {formatNumber(tokenUsage.totalTokens)} tokens
               </span>
@@ -418,7 +442,7 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
           )}
         </div>
         
-        <div className="status-buttons" style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '0' }}>
+        <div className="status-buttons" style={{ display: 'flex', alignItems: 'center', gap: 'var(--status-bar-element-gap)', padding: '0' }}>
           <button
             onClick={() => {
               const isElectron = typeof window !== 'undefined' && window.electron;
@@ -436,23 +460,23 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
               alignItems: 'center',
               justifyContent: 'center',
               padding: '3px',
-              borderRadius: '3px',
+              borderRadius: '4px',
               color: settings?.theme === 'dark' ? 'rgba(180, 180, 180, 0.7)' : 'rgba(100, 100, 100, 0.7)',
-              opacity: 0.6,
+              opacity: 0.8,
               transition: 'opacity 0.2s ease',
-              fontFamily: 'Inter, sans-serif',
+              fontFamily: 'var(--font-family-general, "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "OpenAI Sans", sans-serif)',
             }}
             title="Reload"
-            onMouseOver={(e) => e.currentTarget.style.opacity = '0.9'}
-            onMouseOut={(e) => e.currentTarget.style.opacity = '0.6'}
+            onMouseOver={(e) => e.currentTarget.style.opacity = '1'}
+            onMouseOut={(e) => e.currentTarget.style.opacity = '0.8'}
           >
             <svg 
-              width="12" 
-              height="12" 
+              width="var(--status-bar-icon-size)" 
+              height="var(--status-bar-icon-size)" 
               viewBox="0 0 24 24" 
               fill="none" 
               stroke="currentColor" 
-              strokeWidth="2" 
+              strokeWidth="1.5" 
               strokeLinecap="round" 
               strokeLinejoin="round"
             >
@@ -473,15 +497,15 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
               alignItems: 'center',
               justifyContent: 'center',
               padding: '3px',
-              borderRadius: '3px',
+              borderRadius: '4px',
               color: settings?.theme === 'dark' ? 'rgba(180, 180, 180, 0.7)' : 'rgba(100, 100, 100, 0.7)',
-              opacity: 0.6,
+              opacity: 0.8,
               transition: 'opacity 0.2s ease',
-              fontFamily: 'Inter, sans-serif',
+              fontFamily: 'var(--font-family-general, "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "OpenAI Sans", sans-serif)',
             }}
             title="Settings"
-            onMouseOver={(e) => e.currentTarget.style.opacity = '0.9'}
-            onMouseOut={(e) => e.currentTarget.style.opacity = '0.6'}
+            onMouseOver={(e) => e.currentTarget.style.opacity = '1'}
+            onMouseOut={(e) => e.currentTarget.style.opacity = '0.8'}
           >
             <SettingsIcon />
           </button>

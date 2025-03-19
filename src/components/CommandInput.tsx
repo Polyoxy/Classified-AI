@@ -172,11 +172,19 @@ const CommandInput: React.FC = () => {
           : 'linear-gradient(to bottom, rgba(245, 245, 245, 0.85), rgba(250, 250, 250, 0.95))'} !important;
         padding: 12px 16px !important; /* Larger padding for bigger input area */
         min-height: 60px !important; /* Increase minimum height */
+        box-shadow: 0px 2px 4px ${settings?.theme === 'dark' ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.1)'} !important;
+        border-radius: var(--border-radius) !important;
       }
       
       .command-input textarea {
         font-size: 16px !important; /* Larger font size on mobile */
         min-height: 24px !important; /* Taller input area */
+      }
+      
+      body.has-open-panel .command-input {
+        opacity: 0 !important;
+        visibility: hidden !important;
+        transition: opacity 0.3s ease, visibility 0.3s ease !important;
       }
     }
     
@@ -190,7 +198,14 @@ const CommandInput: React.FC = () => {
         z-index: 80 !important;
         width: calc(100% - 3rem) !important;
         max-width: 800px !important;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, ${settings?.theme === 'dark' ? '0.25' : '0.1'}) !important;
+        box-shadow: 0px 2px 4px ${settings?.theme === 'dark' ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.1)'} !important;
+        border-radius: var(--border-radius) !important;
+      }
+      
+      body.has-open-panel .command-input {
+        transform: translateX(calc(-50% - 25%)) !important;
+        max-width: 400px !important;
+        transition: transform 0.3s ease-in-out, max-width 0.3s ease-in-out !important;
       }
     }
   `;
@@ -515,7 +530,7 @@ const CommandInput: React.FC = () => {
           display: 'flex',
           flexDirection: 'column',
           backgroundColor: 'transparent',
-          borderRadius: '8px',
+          borderRadius: 'var(--border-radius)',
           padding: '0.75rem',
           height: 'auto',
           minHeight: '118px',
@@ -523,6 +538,7 @@ const CommandInput: React.FC = () => {
           position: 'relative',
           transition: 'height 0.3s ease, width 0.3s ease, transform 0.3s ease',
           justifyContent: 'space-between',
+          boxShadow: `0px 2px 4px ${settings?.theme === 'dark' ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.1)'}`,
         }}>
           <style>
             {`
@@ -533,22 +549,9 @@ const CommandInput: React.FC = () => {
                 left: 0;
                 right: 0;
                 bottom: 0;
-                border-radius: 8px;
-                padding: 1px;
-                background: linear-gradient(
-                  45deg,
-                  rgba(128, 128, 128, 0.2),
-                  rgba(64, 64, 64, 0.2),
-                  rgba(128, 128, 128, 0.2)
-                );
-                -webkit-mask: linear-gradient(#fff 0 0) content-box,
-                           linear-gradient(#fff 0 0);
-                mask: linear-gradient(#fff 0 0) content-box,
-                      linear-gradient(#fff 0 0);
-                -webkit-mask-composite: xor;
-                mask-composite: exclude;
+                border-radius: var(--border-radius);
+                background: transparent;
                 pointer-events: none;
-                animation: borderGlow 4s linear infinite;
               }
               
               @keyframes borderGlow {
@@ -564,9 +567,9 @@ const CommandInput: React.FC = () => {
               }
               
               .selector-button {
-                background-color: ${settings?.theme === 'dark' ? '#1A1A1A' : '#f0f0f0'};
-                border: 1px solid ${settings?.theme === 'dark' ? '#333' : '#ddd'};
-                border-radius: 4px;
+                background-color: transparent;
+                border: none;
+                border-radius: var(--border-radius);
                 color: ${settings?.theme === 'dark' ? '#d0d0d0' : '#333'};
                 padding: 4px 8px;
                 font-size: 12px;
@@ -575,12 +578,13 @@ const CommandInput: React.FC = () => {
                 alignItems: center;
                 gap: 5px;
                 height: 26px;
-                transition: background 0.2s;
+                transition: background 0.2s, transform 0.1s;
                 user-select: none;
               }
               
               .selector-button:hover {
-                background-color: ${settings?.theme === 'dark' ? '#252525' : '#e5e5e5'};
+                background-color: ${settings?.theme === 'dark' ? 'rgba(58, 58, 58, 0.4)' : 'rgba(240, 240, 240, 0.8)'};
+                transform: scale(1.02);
               }
               
               @media (max-width: 767px) {
@@ -598,6 +602,12 @@ const CommandInput: React.FC = () => {
                 .selector-button {
                   font-size: 11px !important;
                   padding: 3px 6px !important;
+                }
+                
+                body.has-open-panel .command-input-container-wrapper {
+                  opacity: 0 !important;
+                  visibility: hidden !important;
+                  transition: opacity 0.3s ease, visibility 0.3s ease !important;
                 }
               }
             `}
