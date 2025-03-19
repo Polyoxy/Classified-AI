@@ -31,11 +31,13 @@ const ChatContainer: React.FC = () => {
         overflowY: 'auto',
         overflowX: 'hidden',
         padding: '1rem',
-        paddingBottom: '120px', // Space for input
+        paddingBottom: '3rem', // Increased padding to create more space from the command input
         backgroundColor: isDarkTheme ? '#121212' : '#ffffff',
         transition: 'background-color 0.2s ease',
         scrollbarWidth: 'thin',
         scrollbarColor: isDarkTheme ? '#333 #121212' : '#ccc #ffffff',
+        display: 'flex',
+        flexDirection: 'column',
       }}
     >
       <style>
@@ -53,9 +55,8 @@ const ChatContainer: React.FC = () => {
         `}
       </style>
       <div style={{
-        maxWidth: '800px',
-        margin: '0 auto',
         width: '100%',
+        flex: 1,
       }}>
         {visibleMessages.map((message, index) => (
           <MessageItem

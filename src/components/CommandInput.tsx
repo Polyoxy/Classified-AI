@@ -473,8 +473,8 @@ const CommandInput: React.FC = () => {
 
   return (
     <div style={{
-      position: 'fixed',
-      bottom: '48px', /* Increase space from bottom */
+      position: 'sticky',
+      bottom: '0',
       left: '0',
       right: '0',
       zIndex: 100,
@@ -482,8 +482,7 @@ const CommandInput: React.FC = () => {
       padding: '1rem',
       transition: 'right 0.3s ease',
     }}>
-      <div style={{
-        maxWidth: '800px',
+      <div className="command-input-container-wrapper" style={{
         margin: '0 auto',
         position: 'relative',
       }}>
@@ -493,10 +492,12 @@ const CommandInput: React.FC = () => {
           backgroundColor: 'transparent',
           borderRadius: '8px',
           padding: '0.75rem',
-          minHeight: '85px', // Increased to accommodate the selectors at bottom
-          height: 'auto',
+          height: '118px',
+          minHeight: '118px',
+          maxHeight: '118px',
           position: 'relative',
           transition: 'height 0.2s ease',
+          justifyContent: 'space-between',
         }}>
           <style>
             {`
@@ -556,6 +557,13 @@ const CommandInput: React.FC = () => {
               .selector-button:hover {
                 background-color: ${settings?.theme === 'dark' ? '#252525' : '#e5e5e5'};
               }
+              
+              @media (max-width: 767px) {
+                .command-input-container {
+                  width: 100% !important;
+                  min-width: 100% !important;
+                }
+              }
             `}
           </style>
           
@@ -566,6 +574,7 @@ const CommandInput: React.FC = () => {
             gap: '0.75rem',
             marginBottom: '12px',
             flexGrow: 1,
+            height: '50px',
           }}>
             <div 
               onClick={handleInputClick}
@@ -683,11 +692,14 @@ const CommandInput: React.FC = () => {
             )}
           </div>
           
-          {/* Bottom section: Selectors */}
+          {/* Bottom section: Style selector and model selector */}
           <div style={{
             display: 'flex',
             gap: '8px',
             alignSelf: 'flex-start',
+            marginTop: 'auto', 
+            paddingTop: '4px',
+            height: '30px',
           }}>
             {/* Model selector (left side) */}
             <div 

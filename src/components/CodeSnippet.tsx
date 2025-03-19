@@ -50,16 +50,15 @@ const CodeSnippet: React.FC<CodeSnippetProps> = ({
         className="code-snippet"
         onClick={openPanel}
         style={{
-          backgroundColor: isDarkTheme ? 'rgba(23, 23, 23, 0.6)' : 'rgba(255, 255, 255, 0.6)',
-          borderRadius: '8px',
+          backgroundColor: isDarkTheme ? '#1E1E1E' : '#F5F5F5',
+          borderRadius: '4px',
           padding: '0.75rem',
           margin: '0.5rem 0',
           overflow: 'hidden',
           fontFamily: 'var(--font-mono)',
           fontSize: '13px',
           lineHeight: 1.5,
-          border: `1px solid ${isDarkTheme ? 'rgba(80, 80, 80, 0.3)' : 'rgba(200, 200, 200, 0.5)'}`,
-          backdropFilter: 'blur(8px)',
+          boxShadow: `0px 2px 4px ${isDarkTheme ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.1)'}`,
         }}
       >
         <div className="code-snippet-title">

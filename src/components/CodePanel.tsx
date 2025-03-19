@@ -29,19 +29,6 @@ const CodePanel: React.FC<CodePanelProps> = ({
     return () => setMounted(false);
   }, []);
   
-  // Toggle body class when panel opens/closes
-  useEffect(() => {
-    if (isOpen) {
-      document.body.classList.add('has-open-panel');
-    } else {
-      document.body.classList.remove('has-open-panel');
-    }
-    
-    return () => {
-      document.body.classList.remove('has-open-panel');
-    };
-  }, [isOpen]);
-  
   // Handle copy to clipboard
   const handleCopy = () => {
     navigator.clipboard.writeText(code).then(() => {
@@ -118,26 +105,8 @@ const CodePanel: React.FC<CodePanelProps> = ({
   
   // Create portal content
   const panelContent = (
-    <div
+    <div 
       className={`code-panel ${isOpen ? 'open' : ''}`}
-      style={{
-        position: 'fixed',
-        top: '60px',
-        right: isOpen ? '20px' : '-50%',
-        width: 'calc(50% - 40px)',
-        height: 'calc(100vh - 180px)',
-        margin: '0',
-        backgroundColor: 'var(--ai-response-background)',
-        borderRadius: '8px',
-        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-        display: 'flex', 
-        flexDirection: 'column',
-        transition: 'right 0.3s ease-in-out',
-        zIndex: 50,
-        overflow: 'hidden',
-        backdropFilter: 'blur(10px)',
-        WebkitBackdropFilter: 'blur(10px)',
-      }}
       ref={panelRef}
     >
       <div className="code-panel-header">
@@ -193,20 +162,17 @@ const CodePanel: React.FC<CodePanelProps> = ({
       <style jsx>{`
         .code-panel {
           position: fixed;
-          top: 60px;
+          top: 0;
           right: -50%;
-          width: calc(50% - 40px);
-          height: calc(100vh - 180px);
-          margin: 0;
+          width: 50%;
+          height: 100vh;
           background-color: ${isDarkTheme ? 'var(--code-panel-bg-dark)' : 'var(--code-panel-bg-light)'};
           box-shadow: ${isDarkTheme ? '-5px 0 15px var(--code-panel-shadow-dark)' : '-5px 0 15px var(--code-panel-shadow-light)'};
           transition: right 0.3s ease-in-out;
-          z-index: 50;
+          z-index: 1000;
           display: flex;
           flex-direction: column;
           overflow: hidden;
-          border-radius: 8px;
-          border: 1px solid ${isDarkTheme ? 'rgba(80, 80, 80, 0.3)' : 'rgba(200, 200, 200, 0.5)'};
         }
         
         .code-panel.open {
@@ -214,20 +180,17 @@ const CodePanel: React.FC<CodePanelProps> = ({
         }
         
         .code-panel-header {
-          padding: 0.75rem 1rem;
+          padding: 1rem;
           border-bottom: 1px solid ${isDarkTheme ? 'rgba(80, 80, 80, 0.3)' : 'rgba(200, 200, 200, 0.5)'};
           display: flex;
           justify-content: space-between;
           align-items: center;
-          background-color: ${isDarkTheme ? 'rgba(35, 35, 38, 0.4)' : 'rgba(250, 250, 252, 0.8)'};
-          border-top-left-radius: 8px;
-          border-top-right-radius: 8px;
         }
         
         .code-panel-title {
           margin: 0;
           color: ${isDarkTheme ? '#e0e0e0' : '#333'};
-          font-size: 14px;
+          font-size: 16px;
           font-weight: 500;
         }
         
@@ -261,16 +224,13 @@ const CodePanel: React.FC<CodePanelProps> = ({
           font-family: var(--font-mono);
           font-size: 13px;
           line-height: 1.5;
-          background-color: ${isDarkTheme ? 'rgba(23, 23, 23, 0.6)' : 'rgba(255, 255, 255, 0.6)'};
-          backdrop-filter: blur(8px);
+          background-color: ${isDarkTheme ? 'var(--code-panel-bg-dark)' : 'var(--code-panel-bg-light)'};
         }
         
         @media (max-width: 768px) {
           .code-panel {
             width: 100%;
             right: -100%;
-            margin: 0;
-            border-radius: 0;
           }
         }
       `}</style>

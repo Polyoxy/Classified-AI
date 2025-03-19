@@ -250,11 +250,11 @@ const MessageItem: React.FC<MessageItemProps> = ({
   };
 
   return (
-    <div style={{
-      marginBottom: '2.5rem',
+    <div className="response-container" style={{
       opacity: isProcessing ? 0.7 : 1,
       transition: 'opacity 0.2s ease',
       position: 'relative',
+      marginBottom: role === 'assistant' ? '3rem' : '2.5rem',
     }}>
       <div style={{
         display: 'flex',
@@ -273,6 +273,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
         borderRadius: '8px',
         overflow: 'hidden',
         position: 'relative',
+        boxShadow: role === 'assistant' ? `0px 2px 4px ${isDarkTheme ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.1)'}` : 'none',
         ...getMessageStyle(),
       }}>
         {/* Thinking Section */}

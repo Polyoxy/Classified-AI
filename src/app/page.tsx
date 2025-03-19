@@ -351,24 +351,13 @@ const App: React.FC<{ isElectron: boolean }> = ({ isElectron }) => {
           borderRight: 'none',
           borderLeft: 'none',
           position: 'relative',
-          paddingBottom: '100px', // Space for command input
           marginTop: isElectron ? '68px' : '32px', // Adjust for TitleBar + StatusBar or just StatusBar
         }}>
           <ChatContainer />
         </div>
         
-        {/* Command input positioned above chat but at the bottom of the screen */}
-        <div style={{
-          position: 'absolute',
-          bottom: 0,
-          left: 0,
-          right: 0,
-          backgroundColor: 'var(--bg-color)',
-          borderTop: '1px solid var(--border-color)',
-          zIndex: 10
-        }}>
-          <CommandInput />
-        </div>
+        {/* Command input positioned directly below chat container */}
+        <CommandInput />
       </div>
       
       {/* Settings modal */}
