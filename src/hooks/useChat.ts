@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import { useAppContext } from '@/context/AppContext';
-import { callAI, StreamResponse } from '@/lib/aiService';
+import { callAI, StreamResponse, processAIRequest } from '@/lib/aiService';
 import { Message } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -76,7 +76,7 @@ export const useChat = () => {
       }
 
       // Get all messages for the current conversation
-      const messages = currentConversation.messages
+      let conversationMessages = currentConversation.messages
         // Include all messages except empty ones and the temporary one
         .filter(msg => {
           // Keep all non-empty messages except the temporary one
@@ -92,25 +92,74 @@ export const useChat = () => {
         })
         .map(msg => ({
           role: msg.role,
-          content: msg.content
+          content: msg.content,
+          id: msg.id,
+          timestamp: msg.timestamp
         }));
 
       // Add the current user message
-      messages.push({
+      conversationMessages.push({
         role: 'user',
-        content: content.trim()
+        content: content.trim(),
+        id: userMessage.id,
+        timestamp: userMessage.timestamp
       });
 
-      console.log('🚀 Sending message to AI:', { 
-        provider: settings.activeProvider,
-        model,
-        messageCount: messages.length,
-        lastMessage: messages[messages.length - 1]
-      });
+      // Check if this is a data request by looking for special tags
+      const containsDataTag = 
+        content.includes('[WEB_SEARCH_REQUEST]') ||
+        content.includes('[SPORTS_DATA_REQUEST]') ||
+        content.includes('[NEWS_DATA_REQUEST]') ||
+        content.includes('[DATA_REQUEST]');
 
-      // Log the actual conversation for debugging
-      console.log('Full conversation being sent to AI:', 
-        messages.map(m => `${m.role}: ${m.content.substring(0, 30)}${m.content.length > 30 ? '...' : ''}`));
+      if (containsDataTag) {
+        // Determine what kind of data request this is
+        let tag = '';
+        let dataType = '';
+        
+        if (content.includes('[WEB_SEARCH_REQUEST]')) {
+          tag = '[WEB_SEARCH_REQUEST]';
+          dataType = 'web search';
+        } else if (content.includes('[SPORTS_DATA_REQUEST]')) {
+          tag = '[SPORTS_DATA_REQUEST]';
+          dataType = 'sports data';
+        } else if (content.includes('[NEWS_DATA_REQUEST]')) {
+          tag = '[NEWS_DATA_REQUEST]';
+          dataType = 'news';
+        } else if (content.includes('[DATA_REQUEST]')) {
+          tag = '[DATA_REQUEST]';
+          dataType = 'information';
+        }
+        
+        // Extract the actual query
+        const query = content.replace(tag, '').trim();
+        
+        console.log(`Processing ${dataType} request for: "${query}"`);
+                 
+        // Add a temporary message about fetching data
+        addMessage(`Retrieving real-time ${dataType} information for: "${query}"...`, 'assistant');
+        
+        try {
+          // Process the request using the AI service middleware
+          // This will fetch external data and enhance the messages
+          const processedData = await processAIRequest(
+            conversationMessages,
+            model,
+            { temperature: settings.temperature }
+          );
+          
+          if (processedData.includesExternalData) {
+            // Update the conversation with the enhanced messages
+            conversationMessages = processedData.messages;
+            console.log('Successfully retrieved real-time data');
+          } else {
+            console.log('No external data was included in the response');
+          }
+        } catch (dataError) {
+          console.error('Error processing data request:', dataError);
+          addMessage("I encountered an error while retrieving the requested data. Let me try to answer based on my existing knowledge.", 'assistant');
+        }
+      }
 
       // Update connection status to connected
       setConnectionStatus('connected');
@@ -135,39 +184,10 @@ export const useChat = () => {
         }
       };
       
-      // Check if this is a web search request
-      const isWebSearchRequest = content.includes('[WEB_SEARCH_REQUEST]');
-      
-      if (isWebSearchRequest) {
-        // Extract the actual query
-        const query = content.replace('[WEB_SEARCH_REQUEST]', '').trim();
-        console.log('Processing web search for query:', query);
-        
-        // Add a temporary message about searching
-        addMessage(`I'll search the web for information about: "${query}"`, 'assistant');
-        
-        try {
-          // Call the appropriate AI provider with the web search flag
-          // ... provider-specific code ...
-          
-          // For demonstration, we're showing how this would be flagged for processing
-          // The actual web search happens in the backend or aiService
-          console.log('Web search request will be processed by the AI service');
-          
-          // Continue with normal message processing, but the backend will handle the search
-          // The rest of the function should be the same as regular message handling
-        } catch (searchError) {
-          console.error('Error processing web search:', searchError);
-          addMessage("I wasn't able to search the web at this time. Please try again later.", 'assistant');
-          setIsProcessing(false);
-          return;
-        }
-      }
-      
       try {
         // Pass the abort signal to the callAI function
         const tokenUsage = await callAI(
-          messages as Message[],
+          conversationMessages,
           model,
           settings.activeProvider,
           apiKey,

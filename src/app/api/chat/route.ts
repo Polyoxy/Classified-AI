@@ -25,6 +25,7 @@ export async function POST(request: NextRequest) {
       const apiKey = process.env.SEARCH_API_KEY;
       
       if (!apiKey) {
+        console.error('[Search API] Missing SEARCH_API_KEY environment variable');
         return NextResponse.json(
           { error: 'Search API key is not configured' },
           { status: 500 }
@@ -50,29 +51,35 @@ export async function POST(request: NextRequest) {
         
         const searchData = await searchResponse.json();
         
-        // Format search results for AI consumption
-        let searchResults = '';
+        // Format search results for AI consumption in a cleaner way
+        let searchResultsRaw: Array<{title: string, link: string, snippet: string}> = [];
         
         // Add organic results
         if (searchData.organic_results && Array.isArray(searchData.organic_results)) {
-          const topResults = searchData.organic_results.slice(0, 3); // Limit to 3 results
-          topResults.forEach((result: any, index: number) => {
-            searchResults += `Result ${index + 1}:\n`;
-            searchResults += `Title: ${result.title || 'No title'}\n`;
-            searchResults += `Link: ${result.link || 'No link'}\n`;
-            searchResults += `Snippet: ${result.snippet || 'No description'}\n\n`;
-          });
+          const topResults = searchData.organic_results.slice(0, 5); // Get top 5 results
+          searchResultsRaw = topResults.map((result: any) => ({
+            title: result.title || 'No title',
+            link: result.link || 'No link',
+            snippet: result.snippet || 'No description'
+          }));
         }
         
         // Add knowledge graph if available
         if (searchData.knowledge_graph) {
           const kg = searchData.knowledge_graph;
-          searchResults += 'Knowledge Graph:\n';
-          searchResults += `Title: ${kg.title || 'No title'}\n`;
-          searchResults += `Description: ${kg.description || 'No description'}\n`;
-          if (kg.website) searchResults += `Website: ${kg.website}\n`;
-          searchResults += '\n';
+          searchResultsRaw.unshift({
+            title: kg.title || 'Knowledge Graph',
+            link: kg.website || '',
+            snippet: kg.description || 'No description'
+          });
         }
+        
+        // Format results in a structured way with markdown
+        const searchResultsFormatted = searchResultsRaw.map((result, index) => 
+          `## ${index + 1}. ${result.title}\n` +
+          `${result.snippet}\n` +
+          `**Source**: [${result.link}](${result.link})\n`
+        ).join('\n\n');
         
         // Updated the messages array with search results
         const updatedMessages = [...messages];
@@ -83,40 +90,35 @@ export async function POST(request: NextRequest) {
           content: query
         };
         
-        // Add search results as a system message
+        // Add search results as a system message with improved formatting instructions
         updatedMessages.push({
           id: `search-${Date.now()}`,
           role: 'system',
-          content: `I performed a web search for "${query}" and found the following information. Please use this information to help answer the query:\n\n${searchResults}`,
+          content: `I found the following information from the web about "${query}". Please use this information to provide a helpful, clear, and concise answer:\n\n${searchResultsFormatted}\n\nWhen responding:\n1. Start with a direct answer to the query\n2. Organize information in a clear structure with headings\n3. Include relevant source links in your response\n4. Focus only on information relevant to the query`,
           timestamp: Date.now()
         });
         
-        // Now forward to the appropriate AI model endpoint
-        // This is a placeholder - you would integrate with your AI model provider here
-        
+        // Now forward to the appropriate AI model endpoint with updated messages
         return NextResponse.json({
-          answer: `I searched the web for "${query}" and found relevant information. Here's what I found:\n\n${searchResults}\n\nBased on these results, I can tell you that...`,
-          searchResults: searchResults
+          messages: updatedMessages
         });
-      } catch (searchError) {
-        console.error('[Chat API] Search error:', searchError);
+      } catch (error) {
+        console.error('[Search API] Error:', error);
         return NextResponse.json(
-          { error: 'Failed to perform web search' },
+          { error: 'Failed to search the web' },
           { status: 500 }
         );
       }
     }
     
-    // If not a search request, process normally with your AI model
-    // This is a placeholder - implement your AI provider logic here
+    // Handle normal (non-search) chat request
+    // Forward to your AI model service
+    return NextResponse.json({ messages });
     
-    return NextResponse.json({
-      answer: "This is a normal chat response without web search."
-    });
   } catch (error) {
-    console.error('[Chat API] Error processing request:', error);
+    console.error('[Chat API] Error:', error);
     return NextResponse.json(
-      { error: 'Failed to process request' },
+      { error: 'Failed to process chat request' },
       { status: 500 }
     );
   }

@@ -1,18 +1,17 @@
 import { SearchResult } from '@/types';
 
 /**
- * Perform a web search using a search API
- * @param query Search query string
- * @param apiKey API key for the search service
+ * Fetch data from our unified data API
+ * @param query The search query
+ * @param source The data source type (web, sports, news, general)
  * @returns Promise with search results
  */
-export const webSearch = async (
+export const fetchData = async (
   query: string,
-  apiKey: string
-): Promise<SearchResult[]> => {
+  source: 'web' | 'sports' | 'news' | 'general' = 'web'
+): Promise<any> => {
   try {
-    // Using Serpapi as an example; this could be replaced with Google or Bing APIs
-    const response = await fetch(`https://serpapi.com/search?api_key=${apiKey}&q=${encodeURIComponent(query)}&engine=google`, {
+    const response = await fetch(`/api/data?q=${encodeURIComponent(query)}&source=${source}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -21,66 +20,42 @@ export const webSearch = async (
 
     if (!response.ok) {
       const errorData = await response.text();
-      throw new Error(`Search API error: ${errorData}`);
+      throw new Error(`Data API error: ${errorData}`);
     }
 
-    const data = await response.json();
-    
-    // Transform the results from SerpAPI format to our application format
-    const results: SearchResult[] = [];
-    
-    // Process organic results
-    if (data.organic_results && Array.isArray(data.organic_results)) {
-      data.organic_results.forEach((result: any) => {
-        results.push({
-          title: result.title || '',
-          link: result.link || '',
-          snippet: result.snippet || '',
-          source: 'web',
-        });
-      });
-    }
-    
-    // Add knowledge graph info if available
-    if (data.knowledge_graph) {
-      const kg = data.knowledge_graph;
-      results.push({
-        title: kg.title || '',
-        link: kg.website || '',
-        snippet: kg.description || '',
-        source: 'knowledge_graph',
-      });
-    }
-
-    return results;
+    return await response.json();
   } catch (error) {
-    console.error('Error performing web search:', error);
+    console.error(`Error fetching ${source} data:`, error);
     throw error;
   }
 };
 
 /**
- * Alternative implementation using a proxy route to avoid exposing API key in client
+ * Legacy web search function using the proxy route for backward compatibility
  */
 export const webSearchProxy = async (
   query: string
 ): Promise<SearchResult[]> => {
-  try {
-    const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
+  return fetchData(query, 'web') as Promise<SearchResult[]>;
+};
 
-    if (!response.ok) {
-      const errorData = await response.text();
-      throw new Error(`Search API error: ${errorData}`);
-    }
+/**
+ * Fetch sports data, focused on NBA
+ */
+export const fetchSportsData = async (query: string): Promise<any> => {
+  return fetchData(query, 'sports');
+};
 
-    return await response.json();
-  } catch (error) {
-    console.error('Error performing web search via proxy:', error);
-    throw error;
-  }
+/**
+ * Fetch news data
+ */
+export const fetchNewsData = async (query: string): Promise<any> => {
+  return fetchData(query, 'news');
+};
+
+/**
+ * Fetch general data
+ */
+export const fetchGeneralData = async (query: string): Promise<any> => {
+  return fetchData(query, 'general');
 }; 

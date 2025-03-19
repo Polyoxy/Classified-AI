@@ -397,61 +397,60 @@ const CommandInput: React.FC = () => {
     return cleanMessage.substring(0, 60) + '...';
   };
 
+  // Add a state variable for the web search toggle
+  const [webSearchEnabled, setWebSearchEnabled] = useState<boolean>(false);
+
+  // Add state for specialized data sources
+  const [dataSourceType, setDataSourceType] = useState<'web' | 'sports' | 'news' | 'general'>('web');
+  const [showDataSourceDropdown, setShowDataSourceDropdown] = useState(false);
+  const dataSourceDropdownRef = useRef<HTMLDivElement>(null);
+  const dataSourceButtonRef = useRef<HTMLDivElement>(null);
+
   // Handle send message
   const handleSendMessage = () => {
     if (input.trim() && !isProcessing) {
       // Generate and store a summary of the user's message
       setMessageSummary(generateMessageSummary(input.trim()));
       
-      // Use the better approach to inform the AI about the desired response style
+      // Get the message text with appropriate prefix
       let messageToSend = input.trim();
       
-      // If style is not normal, add a system message first to inform the AI
+      // Add the appropriate tag based on data source type
+      if (webSearchEnabled) {
+        console.log(`Sending ${dataSourceType} request with query: ${messageToSend}`);
+        
+        switch (dataSourceType) {
+          case 'sports':
+            messageToSend = `[SPORTS_DATA_REQUEST] ${messageToSend}`;
+            break;
+          case 'news':
+            messageToSend = `[NEWS_DATA_REQUEST] ${messageToSend}`;
+            break;
+          case 'general':
+            messageToSend = `[DATA_REQUEST] ${messageToSend}`;
+            break;
+          default:
+            messageToSend = `[WEB_SEARCH_REQUEST] ${messageToSend}`;
+        }
+        
+        // Log the full message with tag to ensure it's being sent correctly
+        console.log(`Full message with tag: ${messageToSend}`);
+      }
+      
+      // Add response style if not normal
       if (responseStyle !== 'normal') {
         // Use multiple approaches to ensure the AI understands the style request
-        
-        // 1. If the backend supports system messages before user input
-        if (currentConversation) {
-          // Add a temporary system message that won't be displayed
-          const tempSystemMessage = {
-            id: 'temp-style-instruction',
-            role: 'system',
-            content: `Please format your next response in a ${responseStyle} style. ${styleDescriptions[responseStyle as keyof typeof styleDescriptions]}`,
-            timestamp: Date.now()
-          };
-          
-          // Add this message to the context but don't display it
-          if (window.electron) {
-            // For Electron, update the conversation directly
-            const updatedMessages = [...currentConversation.messages, tempSystemMessage];
-            window.electron.store.set(`conversations.${currentConversation.id}.messages`, updatedMessages);
-          }
-        }
-        
-        // 2. Also include the style instruction at the beginning of the message for redundancy
         messageToSend = `[Response style: ${responseStyle}] ${messageToSend}`;
-      } else {
-        // Even for normal style, add formatting instructions
-        if (currentConversation) {
-          const formatInstructionMessage = {
-            id: 'format-instruction',
-            role: 'system',
-            content: styleDescriptions.normal,
-            timestamp: Date.now()
-          };
-          
-          if (window.electron) {
-            const updatedMessages = [...currentConversation.messages, formatInstructionMessage];
-            window.electron.store.set(`conversations.${currentConversation.id}.messages`, updatedMessages);
-          }
-        }
       }
       
       chatSendMessage(messageToSend);
       setInput('');
-      // Don't reset responseStyle here - preserve the user's selection
+      
+      // Reset web search state after sending
+      setWebSearchEnabled(false);
+      
+      // Reset textarea height
       if (inputRef.current) {
-        // Reset textarea height
         inputRef.current.style.height = '24px';
         inputRef.current.style.overflowY = 'hidden';
         
@@ -575,33 +574,6 @@ const CommandInput: React.FC = () => {
     
     // Close the search modal
     setIsSearchModalOpen(false);
-  };
-
-  // Find the handleSearch function and replace it with direct search implementation
-  const handleWebSearch = async () => {
-    if (!input.trim()) {
-      // No input to search with
-      alert("Please enter a query first");
-      return;
-    }
-    
-    setIsProcessing(true);
-    
-    try {
-      // Format message with special search directive
-      const searchMessage = `[WEB_SEARCH_REQUEST] ${input}`;
-      
-      // Add the message to the conversation
-      addMessage(searchMessage, 'user');
-      
-      // Clear the input after sending
-      setInput('');
-      
-      // Send the message to be processed by the AI
-      await chatSendMessage(searchMessage);
-    } catch (error) {
-      console.error('Error triggering web search:', error);
-    }
   };
 
   return (
@@ -1125,46 +1097,92 @@ const CommandInput: React.FC = () => {
               </div>
               
               {/* Search Button - always shown */}
-              <button 
-                onClick={handleWebSearch}
-                className="badge-container"
-                style={{
-                  fontSize: '11px',
-                  padding: '0 10px',
-                  borderRadius: '6px',
-                  backgroundColor: settings?.theme === 'dark' ? 'rgba(145, 85, 170, 0.25)' : 'rgba(160, 100, 190, 0.15)',
-                  color: settings?.theme === 'dark' ? '#c39ddb' : '#6e3b89',
-                  fontWeight: '500',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '5px',
-                  boxShadow: settings?.theme === 'dark' ? '0 1px 2px rgba(0,0,0,0.2)' : '0 1px 2px rgba(0,0,0,0.1)',
-                  border: `1px solid ${settings?.theme === 'dark' ? 'rgba(145, 85, 170, 0.3)' : 'rgba(160, 100, 190, 0.2)'}`,
-                  height: '32px',
-                  position: 'relative',
-                  zIndex: '1',
-                  cursor: 'pointer',
-                }}
-              >
-                <div style={{ position: 'relative', zIndex: '2', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                  {/* Search icon */}
-                  <svg
-                    width="12"
-                    height="12"
-                    viewBox="0 0 24 24"
-                    fill="none"
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <div 
+                  ref={dataSourceButtonRef}
+                  onClick={() => setWebSearchEnabled(!webSearchEnabled)}
+                  className="badge-container"
+                  style={{
+                    fontSize: '11px',
+                    padding: '0 10px',
+                    borderRadius: '6px',
+                    backgroundColor: webSearchEnabled 
+                      ? (settings?.theme === 'dark' ? 'rgba(145, 85, 170, 0.6)' : 'rgba(160, 100, 190, 0.4)') 
+                      : (settings?.theme === 'dark' ? 'rgba(145, 85, 170, 0.25)' : 'rgba(160, 100, 190, 0.15)'),
+                    color: settings?.theme === 'dark' ? '#c39ddb' : '#6e3b89',
+                    fontWeight: '500',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '5px',
+                    boxShadow: settings?.theme === 'dark' ? '0 1px 2px rgba(0,0,0,0.2)' : '0 1px 2px rgba(0,0,0,0.1)',
+                    border: `1px solid ${webSearchEnabled 
+                      ? (settings?.theme === 'dark' ? 'rgba(145, 85, 170, 0.8)' : 'rgba(160, 100, 190, 0.6)')
+                      : (settings?.theme === 'dark' ? 'rgba(145, 85, 170, 0.3)' : 'rgba(160, 100, 190, 0.2)')}`,
+                    height: '32px',
+                    position: 'relative',
+                    zIndex: '1',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <div style={{ position: 'relative', zIndex: '2', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    {/* Search icon */}
+                    <svg
+                      width="12"
+                      height="12"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke={settings?.theme === 'dark' ? '#c39ddb' : '#6e3b89'}
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <circle cx="11" cy="11" r="8"></circle>
+                      <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    {dataSourceType === 'web' && 'Web'}
+                    {dataSourceType === 'sports' && 'Sports'}
+                    {dataSourceType === 'news' && 'News'}
+                    {dataSourceType === 'general' && 'Data'}
+                    {webSearchEnabled ? ' On' : ' Off'}
+                  </div>
+                </div>
+                
+                {/* Data source dropdown toggle */}
+                <div 
+                  onClick={() => setShowDataSourceDropdown(!showDataSourceDropdown)}
+                  style={{
+                    fontSize: '11px',
+                    padding: '0 6px',
+                    borderRadius: '6px',
+                    backgroundColor: settings?.theme === 'dark' ? 'rgba(145, 85, 170, 0.25)' : 'rgba(160, 100, 190, 0.15)',
+                    color: settings?.theme === 'dark' ? '#c39ddb' : '#6e3b89',
+                    fontWeight: '500',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: settings?.theme === 'dark' ? '0 1px 2px rgba(0,0,0,0.2)' : '0 1px 2px rgba(0,0,0,0.1)',
+                    border: `1px solid ${settings?.theme === 'dark' ? 'rgba(145, 85, 170, 0.3)' : 'rgba(160, 100, 190, 0.2)'}`,
+                    height: '32px',
+                    position: 'relative',
+                    zIndex: '1',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <svg 
+                    width="12" 
+                    height="12" 
+                    viewBox="0 0 24 24" 
+                    fill="none" 
                     stroke={settings?.theme === 'dark' ? '#c39ddb' : '#6e3b89'}
-                    strokeWidth="2"
-                    strokeLinecap="round"
+                    strokeWidth="2" 
+                    strokeLinecap="round" 
                     strokeLinejoin="round"
                   >
-                    <circle cx="11" cy="11" r="8"></circle>
-                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    <polyline points="6 9 12 15 18 9"></polyline>
                   </svg>
-                  Web
                 </div>
-              </button>
+              </div>
 
               {/* Model badges - with animation */}
               {currentModel && (isDeepThinkModel(currentModel) || isVisionModel(currentModel)) && (
@@ -1267,6 +1285,106 @@ const CommandInput: React.FC = () => {
           </div>
         </div>
       </div>
+      
+      {/* Data source dropdown */}
+      {showDataSourceDropdown && (
+        <div 
+          ref={dataSourceDropdownRef}
+          style={{
+            position: 'absolute',
+            bottom: '42px',
+            left: '215px',
+            backgroundColor: settings?.theme === 'dark' ? '#1A1A1A' : '#ffffff',
+            border: `1px solid ${settings?.theme === 'dark' ? '#333' : '#ddd'}`,
+            borderRadius: '4px',
+            marginBottom: '4px',
+            zIndex: 10000,
+            boxShadow: settings?.theme === 'dark' ? '0 -4px 8px rgba(0,0,0,0.3)' : '0 -4px 8px rgba(0,0,0,0.1)',
+            minWidth: '150px',
+          }}
+        >
+          <div className="data-source-option-label" style={{
+            padding: '6px 10px',
+            fontSize: '11px',
+            color: settings?.theme === 'dark' ? 'rgba(180, 180, 180, 0.7)' : 'rgba(100, 100, 100, 0.7)',
+            borderBottom: `1px solid ${settings?.theme === 'dark' ? '#333' : '#ddd'}`,
+            fontStyle: 'italic',
+          }}>
+            Select data source type
+          </div>
+          {[
+            {id: 'web', name: 'Web Search', icon: 'globe'},
+            {id: 'sports', name: 'Sports Data', icon: 'basketball'},
+            {id: 'news', name: 'News Updates', icon: 'newspaper'},
+            {id: 'general', name: 'General Data', icon: 'database'}
+          ].map(source => (
+            <div 
+              key={source.id}
+              onClick={() => {
+                setDataSourceType(source.id as any);
+                setShowDataSourceDropdown(false);
+                setWebSearchEnabled(true); // Auto-enable when changing source
+              }}
+              style={{
+                padding: '8px 12px',
+                cursor: 'pointer',
+                backgroundColor: source.id === dataSourceType
+                  ? (settings?.theme === 'dark' ? '#333' : '#e0e0e0')
+                  : 'transparent',
+                transition: 'all 0.1s ease',
+                fontSize: '13px',
+                fontWeight: source.id === dataSourceType ? 'bold' : 'normal',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.backgroundColor = settings?.theme === 'dark' ? '#333' : '#e0e0e0';
+              }}
+              onMouseOut={(e) => {
+                if (source.id !== dataSourceType) {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }
+              }}
+            >
+              {/* Icon for the data source */}
+              {source.icon === 'globe' && (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="2" y1="12" x2="22" y2="12"></line>
+                  <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                </svg>
+              )}
+              {source.icon === 'basketball' && (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <path d="M4.93 4.93l4.24 4.24"></path>
+                  <path d="M14.83 9.17l4.24-4.24"></path>
+                  <path d="M14.83 14.83l4.24 4.24"></path>
+                  <path d="M9.17 14.83l-4.24 4.24"></path>
+                  <circle cx="12" cy="12" r="4"></circle>
+                </svg>
+              )}
+              {source.icon === 'newspaper' && (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"></path>
+                  <path d="M18 14h-8"></path>
+                  <path d="M15 18h-5"></path>
+                  <path d="M10 6h8v4h-8V6Z"></path>
+                </svg>
+              )}
+              {source.icon === 'database' && (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
+                  <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path>
+                  <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>
+                </svg>
+              )}
+              {source.name}
+            </div>
+          ))}
+        </div>
+      )}
       
       <style>
         {`
