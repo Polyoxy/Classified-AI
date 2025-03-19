@@ -608,6 +608,32 @@ body.has-open-panel .app-container {
   margin-right: 50%;
 }
 
+/* Update command input and response container styles to transition properly */
+.response-container,
+.command-input-container-wrapper {
+  width: 762px;
+  min-width: 762px;
+  max-width: 80%;
+  margin: 0 auto;
+  transition: width 0.3s ease-in-out, transform 0.3s ease-in-out, margin 0.3s ease-in-out;
+}
+
+/* When code panel is open, adjust command input and response containers */
+body.has-open-panel .response-container,
+body.has-open-panel .command-input-container-wrapper {
+  width: 90%;
+  min-width: 90%;
+  margin: 0 auto;
+  transform: translateX(-5%);
+}
+
+/* Command input position adjustments when code panel is open */
+body.has-open-panel .command-input {
+  width: 90% !important;
+  left: 5% !important;
+  transform: translateX(0) !important;
+}
+
 .code-panel {
   position: fixed;
   top: 0;
@@ -700,6 +726,13 @@ body.has-open-panel {
     width: 0%;
     margin-right: 100%;
     overflow: hidden;
+  }
+  
+  /* Hide chat interface completely on mobile when panel is open */
+  body.has-open-panel .response-container,
+  body.has-open-panel .command-input-container-wrapper {
+    opacity: 0;
+    visibility: hidden;
   }
   
   .code-panel-content {

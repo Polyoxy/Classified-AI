@@ -281,20 +281,32 @@ const CommandInput: React.FC = () => {
     setInput(e.target.value);
     if (inputRef.current) {
       // Reset height temporarily to get the correct scrollHeight
-      inputRef.current.style.height = '0px';
+      inputRef.current.style.height = '24px';
       
-      // Set to scrollHeight to adjust to content
+      // Get the scroll height (content height)
       const scrollHeight = inputRef.current.scrollHeight;
-      const newHeight = Math.min(scrollHeight, 200);
+      
+      // Set a maximum height for the textarea
+      const maxHeight = 150;
+      
+      // Set to scrollHeight to adjust to content, but cap at maxHeight
+      const newHeight = Math.min(scrollHeight, maxHeight);
       inputRef.current.style.height = `${newHeight}px`;
       
       // Enable scrolling if content exceeds max height
-      inputRef.current.style.overflowY = scrollHeight > 200 ? 'auto' : 'hidden';
+      inputRef.current.style.overflowY = scrollHeight > maxHeight ? 'auto' : 'hidden';
       
-      // Adjust container height if needed
+      // Calculate total height for container (textarea + selector row)
+      const selectorRowHeight = 30; // Height of the selector row
+      const paddingSpace = 24; // Top and bottom padding combined
+      const containerHeight = newHeight + selectorRowHeight + paddingSpace;
+      
+      // Update the container height
       const container = inputRef.current.closest('.command-input-container') as HTMLElement;
       if (container) {
-        container.style.height = newHeight > 45 ? 'auto' : '45px';
+        // Set minimum container height to 118px, but allow it to grow with content
+        const minContainerHeight = 118;
+        container.style.height = `${Math.max(minContainerHeight, containerHeight)}px`;
       }
     }
   };
@@ -303,20 +315,32 @@ const CommandInput: React.FC = () => {
   useEffect(() => {
     if (inputRef.current && input) {
       // Reset height temporarily to get the correct scrollHeight
-      inputRef.current.style.height = '0px';
+      inputRef.current.style.height = '24px';
       
-      // Set to scrollHeight to adjust to content
+      // Get the scroll height (content height)
       const scrollHeight = inputRef.current.scrollHeight;
-      const newHeight = Math.min(scrollHeight, 200);
+      
+      // Set a maximum height for the textarea
+      const maxHeight = 150;
+      
+      // Set to scrollHeight to adjust to content, but cap at maxHeight
+      const newHeight = Math.min(scrollHeight, maxHeight);
       inputRef.current.style.height = `${newHeight}px`;
       
       // Enable scrolling if content exceeds max height
-      inputRef.current.style.overflowY = scrollHeight > 200 ? 'auto' : 'hidden';
+      inputRef.current.style.overflowY = scrollHeight > maxHeight ? 'auto' : 'hidden';
       
-      // Adjust container height if needed
+      // Calculate total height for container (textarea + selector row)
+      const selectorRowHeight = 30; // Height of the selector row
+      const paddingSpace = 24; // Top and bottom padding combined
+      const containerHeight = newHeight + selectorRowHeight + paddingSpace;
+      
+      // Update the container height
       const container = inputRef.current.closest('.command-input-container') as HTMLElement;
       if (container) {
-        container.style.height = newHeight > 45 ? 'auto' : '45px';
+        // Set minimum container height to 118px, but allow it to grow with content
+        const minContainerHeight = 118;
+        container.style.height = `${Math.max(minContainerHeight, containerHeight)}px`;
       }
     }
   }, [input]);
@@ -408,10 +432,10 @@ const CommandInput: React.FC = () => {
         inputRef.current.style.height = '24px';
         inputRef.current.style.overflowY = 'hidden';
         
-        // Reset container height
+        // Reset container height to minimum
         const container = inputRef.current.closest('.command-input-container') as HTMLElement;
         if (container) {
-          container.style.height = '45px';
+          container.style.height = '118px'; // Reset to minimum height
         }
       }
     }
@@ -480,11 +504,12 @@ const CommandInput: React.FC = () => {
       zIndex: 100,
       backgroundColor: settings?.theme === 'dark' ? '#121212' : '#f8f9fa',
       padding: '1rem',
-      transition: 'right 0.3s ease',
+      transition: 'right 0.3s ease, left 0.3s ease, transform 0.3s ease',
     }}>
       <div className="command-input-container-wrapper" style={{
         margin: '0 auto',
         position: 'relative',
+        transition: 'width 0.3s ease, transform 0.3s ease',
       }}>
         <div className="command-input-container" style={{
           display: 'flex',
@@ -492,11 +517,11 @@ const CommandInput: React.FC = () => {
           backgroundColor: 'transparent',
           borderRadius: '8px',
           padding: '0.75rem',
-          height: '118px',
+          height: 'auto',
           minHeight: '118px',
-          maxHeight: '118px',
+          maxHeight: '300px',
           position: 'relative',
-          transition: 'height 0.2s ease',
+          transition: 'height 0.3s ease, width 0.3s ease, transform 0.3s ease',
           justifyContent: 'space-between',
         }}>
           <style>
@@ -547,7 +572,7 @@ const CommandInput: React.FC = () => {
                 font-size: 12px;
                 cursor: pointer;
                 display: flex;
-                align-items: center;
+                alignItems: center;
                 gap: 5px;
                 height: 26px;
                 transition: background 0.2s;
@@ -559,9 +584,20 @@ const CommandInput: React.FC = () => {
               }
               
               @media (max-width: 767px) {
-                .command-input-container {
+                .command-input-container-wrapper {
                   width: 100% !important;
                   min-width: 100% !important;
+                  max-width: 100% !important;
+                }
+                
+                .command-input-container {
+                  width: 100% !important;
+                  padding: 0.5rem !important;
+                }
+                
+                .selector-button {
+                  font-size: 11px !important;
+                  padding: 3px 6px !important;
                 }
               }
             `}
@@ -570,11 +606,11 @@ const CommandInput: React.FC = () => {
           {/* Top section: Input and send button */}
           <div style={{ 
             display: 'flex',
-            alignItems: 'center',
+            alignItems: 'flex-start', // Changed from center to flex-start to handle multi-line input
             gap: '0.75rem',
-            marginBottom: '12px',
+            marginBottom: '8px',
             flexGrow: 1,
-            height: '50px',
+            minHeight: '50px',
           }}>
             <div 
               onClick={handleInputClick}
@@ -585,7 +621,7 @@ const CommandInput: React.FC = () => {
                 minHeight: '20px',
                 position: 'relative',
                 display: 'flex',
-                alignItems: 'center',
+                alignItems: 'flex-start', // Changed from center to flex-start
               }}
             >
               <textarea
@@ -602,7 +638,7 @@ const CommandInput: React.FC = () => {
                   fontFamily: 'var(--font-mono, "JetBrains Mono", monospace)',
                   fontSize: '14px',
                   resize: 'none',
-                  height: '24px', // Start with a minimum height
+                  height: 'auto', // Changed from fixed to auto
                   minHeight: '24px',
                   maxHeight: '200px', // Maximum height
                   width: '100%',
@@ -618,7 +654,10 @@ const CommandInput: React.FC = () => {
                   letterSpacing: '0.01em',
                 }}
                 rows={1}
-                autoFocus={false}
+                autoComplete="off"
+                autoCorrect="off"
+                spellCheck="false"
+                autoCapitalize="off"
                 className="no-focus-visible"
               />
             </div>
@@ -639,6 +678,7 @@ const CommandInput: React.FC = () => {
                 opacity: input.trim() && !isProcessing ? 0.6 : 0.3,
                 transition: 'opacity 0.2s ease',
                 flexShrink: 0,
+                marginTop: '2px', // Added to align with text
               }}
               title="Send message"
             >
@@ -673,6 +713,7 @@ const CommandInput: React.FC = () => {
                   opacity: 0.6,
                   transition: 'opacity 0.2s ease',
                   flexShrink: 0,
+                  marginTop: '2px', // Added to align with text
                 }}
                 title="Stop generating"
               >
@@ -697,8 +738,8 @@ const CommandInput: React.FC = () => {
             display: 'flex',
             gap: '8px',
             alignSelf: 'flex-start',
-            marginTop: 'auto', 
-            paddingTop: '4px',
+            marginTop: '0', 
+            paddingTop: '0',
             height: '30px',
           }}>
             {/* Model selector (left side) */}
@@ -741,58 +782,58 @@ const CommandInput: React.FC = () => {
               >
                 <polyline points="6 9 12 15 18 9"></polyline>
               </svg>
-              
-              {/* Model dropdown (opens upward) */}
-              {showModelDropdown && (
-                <div 
-                  ref={modelDropdownRef}
-                  style={{
-                    position: 'absolute',
-                    bottom: '30px', // Position above the selector
-                    left: '0',
-                    backgroundColor: settings?.theme === 'dark' ? '#1A1A1A' : '#ffffff',
-                    border: `1px solid ${settings?.theme === 'dark' ? '#333' : '#ddd'}`,
-                    borderRadius: '4px',
-                    marginBottom: '4px',
-                    zIndex: 10000,
-                    maxHeight: '200px',
-                    overflowY: 'auto',
-                    boxShadow: settings?.theme === 'dark' ? '0 -4px 8px rgba(0,0,0,0.3)' : '0 -4px 8px rgba(0,0,0,0.1)',
-                    fontFamily: 'Inter, sans-serif',
-                    minWidth: '120px',
-                  }}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {availableModels.map((model) => (
-                    <div 
-                      key={model}
-                      className="model-option"
-                      onClick={() => handleModelChange(model)}
-                      style={{
-                        padding: '6px 10px',
-                        cursor: 'pointer',
-                        backgroundColor: model === currentModel
-                          ? (settings?.theme === 'dark' ? '#333' : '#e0e0e0') 
-                          : 'transparent',
-                        transition: 'all 0.1s ease',
-                        fontSize: '12px',
-                        fontWeight: model === currentModel ? 'bold' : 'normal',
-                      }}
-                      onMouseOver={(e) => {
-                        e.currentTarget.style.backgroundColor = settings?.theme === 'dark' ? '#333' : '#e0e0e0';
-                      }}
-                      onMouseOut={(e) => {
-                        if (model !== currentModel) {
-                          e.currentTarget.style.backgroundColor = 'transparent';
-                        }
-                      }}
-                    >
-                      {model}
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
+            
+            {/* Model dropdown (opens upward) */}
+            {showModelDropdown && (
+              <div 
+                ref={modelDropdownRef}
+                style={{
+                  position: 'absolute',
+                  bottom: '30px', // Position above the selector
+                  left: '0',
+                  backgroundColor: settings?.theme === 'dark' ? '#1A1A1A' : '#ffffff',
+                  border: `1px solid ${settings?.theme === 'dark' ? '#333' : '#ddd'}`,
+                  borderRadius: '4px',
+                  marginBottom: '4px',
+                  zIndex: 10000,
+                  maxHeight: '200px',
+                  overflowY: 'auto',
+                  boxShadow: settings?.theme === 'dark' ? '0 -4px 8px rgba(0,0,0,0.3)' : '0 -4px 8px rgba(0,0,0,0.1)',
+                  fontFamily: 'Inter, sans-serif',
+                  minWidth: '120px',
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                {availableModels.map((model) => (
+                  <div 
+                    key={model}
+                    className="model-option"
+                    onClick={() => handleModelChange(model)}
+                    style={{
+                      padding: '6px 10px',
+                      cursor: 'pointer',
+                      backgroundColor: model === currentModel
+                        ? (settings?.theme === 'dark' ? '#333' : '#e0e0e0') 
+                        : 'transparent',
+                      transition: 'all 0.1s ease',
+                      fontSize: '12px',
+                      fontWeight: model === currentModel ? 'bold' : 'normal',
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.backgroundColor = settings?.theme === 'dark' ? '#333' : '#e0e0e0';
+                    }}
+                    onMouseOut={(e) => {
+                      if (model !== currentModel) {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                      }
+                    }}
+                  >
+                    {model}
+                  </div>
+                ))}
+              </div>
+            )}
             
             {/* Response style selector (right of model selector) */}
             <div 
@@ -935,6 +976,20 @@ const CommandInput: React.FC = () => {
           /* For Firefox */
           textarea::-moz-selection {
             background-color: ${settings?.theme === 'dark' ? 'rgba(100, 100, 100, 0.4)' : 'rgba(200, 200, 200, 0.4)'};
+          }
+          
+          /* iOS specific fixes */
+          @supports (-webkit-touch-callout: none) {
+            textarea {
+              font-size: 16px !important; /* Prevents zoom on focus */
+              -webkit-appearance: none; /* Removes iOS styling */
+              border-radius: 0; /* Fix for iOS border issues */
+            }
+            
+            .command-input-container {
+              padding-bottom: env(safe-area-inset-bottom, 0.75rem) !important;
+              z-index: 1001;
+            }
           }
         `}
       </style>

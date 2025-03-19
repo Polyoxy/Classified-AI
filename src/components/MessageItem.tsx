@@ -252,7 +252,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
   return (
     <div className="response-container" style={{
       opacity: isProcessing ? 0.7 : 1,
-      transition: 'opacity 0.2s ease',
+      transition: 'opacity 0.2s ease, width 0.3s ease, transform 0.3s ease',
       position: 'relative',
       marginBottom: role === 'assistant' ? '3rem' : '2.5rem',
     }}>
