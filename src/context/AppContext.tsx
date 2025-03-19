@@ -64,6 +64,10 @@ export const DEFAULT_SETTINGS: AppSettings = {
   codeHighlighting: true,
   showSystemMessages: false,
   showAnalysis: true,
+  searchApiKey: '',
+  codeFontSize: 14,
+  lineHeight: 1.5,
+  codeLineHeight: 1.5,
 };
 
 // Create a new empty conversation

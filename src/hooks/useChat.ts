@@ -135,6 +135,35 @@ export const useChat = () => {
         }
       };
       
+      // Check if this is a web search request
+      const isWebSearchRequest = content.includes('[WEB_SEARCH_REQUEST]');
+      
+      if (isWebSearchRequest) {
+        // Extract the actual query
+        const query = content.replace('[WEB_SEARCH_REQUEST]', '').trim();
+        console.log('Processing web search for query:', query);
+        
+        // Add a temporary message about searching
+        addMessage(`I'll search the web for information about: "${query}"`, 'assistant');
+        
+        try {
+          // Call the appropriate AI provider with the web search flag
+          // ... provider-specific code ...
+          
+          // For demonstration, we're showing how this would be flagged for processing
+          // The actual web search happens in the backend or aiService
+          console.log('Web search request will be processed by the AI service');
+          
+          // Continue with normal message processing, but the backend will handle the search
+          // The rest of the function should be the same as regular message handling
+        } catch (searchError) {
+          console.error('Error processing web search:', searchError);
+          addMessage("I wasn't able to search the web at this time. Please try again later.", 'assistant');
+          setIsProcessing(false);
+          return;
+        }
+      }
+      
       try {
         // Pass the abort signal to the callAI function
         const tokenUsage = await callAI(

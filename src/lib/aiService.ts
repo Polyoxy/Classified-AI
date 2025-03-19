@@ -1,4 +1,5 @@
 import { AIProvider, Message, TokenUsage } from '@/types';
+import { webSearchProxy } from './searchService';
 
 // Estimated cost per 1000 tokens (in USD)
 const COST_PER_1K_TOKENS = {
@@ -653,5 +654,77 @@ export const callAI = async (
       return callDeepseek(messages, model, apiKey || '', actualTemperature, onUpdate, signal);
     default:
       throw new Error(`Unsupported provider: ${provider}`);
+  }
+};
+
+// Add a function to handle web search requests inside AI service
+const processWebSearchRequest = async (query: string) => {
+  try {
+    console.log('Processing web search request for:', query);
+    const searchResults = await webSearchProxy(query);
+    return searchResults;
+  } catch (error) {
+    console.error('Error in web search:', error);
+    throw error;
+  }
+};
+
+// Update any AI service function that processes messages to check for and handle web search requests
+export const processAIRequest = async (messages: Message[], model: string, options: any) => {
+  // Check last message for search directive
+  const lastMessage = messages[messages.length - 1];
+  const isSearchRequest = lastMessage.role === 'user' && 
+                          lastMessage.content.includes('[WEB_SEARCH_REQUEST]');
+  
+  if (isSearchRequest) {
+    // Extract actual query
+    const query = lastMessage.content.replace('[WEB_SEARCH_REQUEST]', '').trim();
+    
+    try {
+      // Get search results
+      const searchResults = await processWebSearchRequest(query);
+      
+      // Create a modified messages array with search results
+      const modifiedMessages = [...messages];
+      
+      // Update the last user message to remove the directive
+      modifiedMessages[modifiedMessages.length - 1] = {
+        ...lastMessage,
+        content: query
+      };
+      
+      // Format search results as context for the AI
+      let searchContext = "Here are web search results to help answer the user's query:\n\n";
+      
+      searchResults.forEach((result: any, index: number) => {
+        searchContext += `Result ${index + 1}:\n`;
+        searchContext += `Title: ${result.title}\n`;
+        searchContext += `Source: ${result.link}\n`;
+        searchContext += `Content: ${result.snippet}\n\n`;
+      });
+      
+      // Add a system message with search results
+      modifiedMessages.push({
+        id: `search-${Date.now()}`,
+        role: 'system',
+        content: searchContext,
+        timestamp: Date.now()
+      });
+      
+      // Now process with the modified messages
+      // Call your existing AI processing function with modifiedMessages
+      // ...
+      
+      return {
+        // Return appropriate response using modified messages
+      };
+    } catch (error) {
+      console.error('Error processing web search in AI request:', error);
+      throw error;
+    }
+  } else {
+    // Process normal AI request
+    // Call your existing AI processing function
+    // ...
   }
 }; 

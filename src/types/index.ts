@@ -47,6 +47,10 @@ export interface AppSettings {
   codeHighlighting?: boolean;
   showSystemMessages?: boolean;
   showAnalysis?: boolean; // Controls whether to show AI's analysis/thinking
+  searchApiKey?: string; // API key for web search functionality
+  codeFontSize?: number; // Font size for code blocks
+  lineHeight?: number; // Line height for regular text
+  codeLineHeight?: number; // Line height for code blocks
 }
 
 // Token Usage
@@ -79,4 +83,12 @@ export interface StreamResponse {
     completionTokens: number;
     totalTokens: number;
   };
+}
+
+// Search Types
+export interface SearchResult {
+  title: string;
+  link: string;
+  snippet: string;
+  source: 'web' | 'knowledge_graph' | 'news' | 'image';
 } 

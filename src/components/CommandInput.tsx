@@ -1,6 +1,7 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useAppContext } from '@/context/AppContext';
 import { useChat } from '@/hooks/useChat';
+import { webSearchProxy } from '@/lib/searchService';
 
 // Add styles for the pulsing animation
 const pulsingLightningStyles = `
@@ -61,6 +62,7 @@ const CommandInput: React.FC = () => {
   
   const { 
     settings,
+    addMessage,
     isProcessing,
     setIsProcessing,
     currentConversation,
@@ -117,75 +119,49 @@ const CommandInput: React.FC = () => {
     name: string;
   }
   
-  // Get available models or fallback to empty array
+  // Get available models for the current provider
   const getAvailableModels = (): string[] => {
-    const provider = currentConversation?.provider || settings?.activeProvider;
-    
-    // Get models from settings
-    const models = settings?.providers?.[provider]?.models || [];
-    
-    // Ensure all Ollama models are included
-    if (provider === 'ollama') {
-      const ollamaModels = [
-        'deepseek-r1:7b',
-        'deepseek-r1:14b',
-        'llama3.2-vision:11b',
-        'deepseek-r1:1.5b',
-        'llama3.2:1b'
-      ];
-      
-      // Add any models that aren't already in the list
-      const combinedModels = [...new Set([...ollamaModels, ...models])];
-      return combinedModels;
+    if (settings && settings.activeProvider) {
+      const providerConfig = settings.providers[settings.activeProvider];
+      if (providerConfig && providerConfig.models) {
+        return providerConfig.models;
+      }
     }
-    
-    return models;
-  };
-  
-  // Make sure we always have a valid model selected to display
-  const getCurrentModel = () => {
-    // If a conversation exists with a model, use that
-    if (currentConversation?.model) {
-      console.log('Using conversation model:', currentConversation.model);
-      return currentConversation.model;
-    }
-    
-    // Default to the provider's default model
-    if (settings?.activeProvider) {
-      const defaultModel = settings.providers[settings.activeProvider].defaultModel || 
-             (settings.activeProvider === 'ollama' ? 'llama3.2:1b' : 'Unknown');
-      console.log('Using provider default model:', defaultModel);
-      return defaultModel;
-    }
-    
-    // Fallback to first available model
-    const models = getAvailableModels();
-    if (models.length > 0) {
-      console.log('Using first available model:', models[0]);
-      return models[0];
-    }
-    
-    console.log('No models available');
-    return 'No models available';
-  };
-  
-  // Enhanced check for model types - more flexible matching
-  const isDeepThinkModel = (model: string | undefined) => {
-    if (!model) return false;
-    return model.toLowerCase().includes('deepseek') || 
-           model.toLowerCase().includes('deepthink') ||
-           model.toLowerCase().includes('deep-');
-  };
-  
-  const isVisionModel = (model: string | undefined) => {
-    if (!model) return false;
-    return model.toLowerCase().includes('vision') || 
-           model.toLowerCase().includes('gpt-4-v') ||
-           model.toLowerCase().includes('llama3.2-vision');
+    return [];
   };
   
   const availableModels = getAvailableModels();
-  const currentModel = getCurrentModel();
+  
+  // Model-related functions
+  const isDeepThinkModel = (model: string | undefined): boolean => {
+    return model ? model.toLowerCase().includes('deepseek') || model.toLowerCase().includes('deepthink') : false;
+  };
+  
+  const isVisionModel = (model: string | undefined): boolean => {
+    return model ? model.toLowerCase().includes('vision') : false;
+  };
+  
+  // Get the current model name from context
+  const getCurrentModel = () => {
+    if (currentConversation?.model) {
+      return currentConversation.model;
+    }
+    
+    // Default to the first model
+    if (settings?.activeProvider) {
+      const provider = settings.providers[settings.activeProvider];
+      return provider.defaultModel;
+    }
+    
+    return 'Unknown Model';
+  };
+  
+  const [currentModel, setCurrentModel] = useState<string>(getCurrentModel());
+  
+  // Update currentModel whenever the conversation changes
+  useEffect(() => {
+    setCurrentModel(getCurrentModel());
+  }, [currentConversation]);
   
   // Add additional styles for the gradient and mobile optimization
   const customStyles = `
@@ -243,7 +219,7 @@ const CommandInput: React.FC = () => {
   `;
   
   // Use our chat hook
-  const { sendMessage, stopResponse } = useChat();
+  const { sendMessage: chatSendMessage, stopResponse } = useChat();
   
   // Add state for message summary
   const [messageSummary, setMessageSummary] = useState<string>('');
@@ -471,7 +447,7 @@ const CommandInput: React.FC = () => {
         }
       }
       
-      sendMessage(messageToSend);
+      chatSendMessage(messageToSend);
       setInput('');
       // Don't reset responseStyle here - preserve the user's selection
       if (inputRef.current) {
@@ -503,7 +479,7 @@ const CommandInput: React.FC = () => {
   // Handle cancel message
   const handleCancelMessage = () => {
     if (isProcessing) {
-      // Call stopResponse which now handles everything
+      // Call stopResponse which handles stopping the ongoing response
       stopResponse();
     }
   };
@@ -511,8 +487,8 @@ const CommandInput: React.FC = () => {
   // Handle model change
   const handleModelChange = (model: string) => {
     if (currentConversation && !isProcessing) {
-      changeModel(model);
-      setShowModelDropdown(false);
+      // Implement model change logic or use context function
+      console.log("Switching to model:", model);
     }
   };
   
@@ -541,6 +517,92 @@ const CommandInput: React.FC = () => {
       localStorage.setItem('preferredResponseStyle', responseStyle);
     }
   }, [responseStyle]);
+
+  const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  
+  // Focus search input when modal opens
+  useEffect(() => {
+    if (isSearchModalOpen && searchInputRef.current) {
+      setTimeout(() => {
+        searchInputRef.current?.focus();
+      }, 100);
+    }
+  }, [isSearchModalOpen]);
+
+  // Handle search form submission
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!searchQuery.trim()) return;
+    
+    setIsSearching(true);
+    setSearchError(null);
+    
+    try {
+      const results = await webSearchProxy(searchQuery);
+      setSearchResults(results);
+    } catch (error) {
+      console.error('Search error:', error);
+      setSearchError(
+        error instanceof Error 
+          ? error.message 
+          : 'An error occurred while searching'
+      );
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  // Add search result to conversation
+  const addSearchResultToConversation = (result: any) => {
+    // Format the search result as a message to send directly
+    const message = `[Search Result] Title: "${result.title}"\nContent: "${result.snippet}"\nSource: ${result.link}`;
+    
+    // Add the message to input so user can edit if needed
+    setInput((prev) => {
+      // If there's already text, append to it
+      if (prev.trim()) {
+        return `${prev}\n\nAdditional information from web search:\n${message}`;
+      }
+      return message;
+    });
+    
+    // Close the search modal
+    setIsSearchModalOpen(false);
+  };
+
+  // Find the handleSearch function and replace it with direct search implementation
+  const handleWebSearch = async () => {
+    if (!input.trim()) {
+      // No input to search with
+      alert("Please enter a query first");
+      return;
+    }
+    
+    setIsProcessing(true);
+    
+    try {
+      // Format message with special search directive
+      const searchMessage = `[WEB_SEARCH_REQUEST] ${input}`;
+      
+      // Add the message to the conversation
+      addMessage(searchMessage, 'user');
+      
+      // Clear the input after sending
+      setInput('');
+      
+      // Send the message to be processed by the AI
+      await chatSendMessage(searchMessage);
+    } catch (error) {
+      console.error('Error triggering web search:', error);
+    }
+  };
 
   return (
     <div style={{
@@ -1062,6 +1124,48 @@ const CommandInput: React.FC = () => {
                 )}
               </div>
               
+              {/* Search Button - always shown */}
+              <button 
+                onClick={handleWebSearch}
+                className="badge-container"
+                style={{
+                  fontSize: '11px',
+                  padding: '0 10px',
+                  borderRadius: '6px',
+                  backgroundColor: settings?.theme === 'dark' ? 'rgba(145, 85, 170, 0.25)' : 'rgba(160, 100, 190, 0.15)',
+                  color: settings?.theme === 'dark' ? '#c39ddb' : '#6e3b89',
+                  fontWeight: '500',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '5px',
+                  boxShadow: settings?.theme === 'dark' ? '0 1px 2px rgba(0,0,0,0.2)' : '0 1px 2px rgba(0,0,0,0.1)',
+                  border: `1px solid ${settings?.theme === 'dark' ? 'rgba(145, 85, 170, 0.3)' : 'rgba(160, 100, 190, 0.2)'}`,
+                  height: '32px',
+                  position: 'relative',
+                  zIndex: '1',
+                  cursor: 'pointer',
+                }}
+              >
+                <div style={{ position: 'relative', zIndex: '2', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  {/* Search icon */}
+                  <svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke={settings?.theme === 'dark' ? '#c39ddb' : '#6e3b89'}
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                  </svg>
+                  Web
+                </div>
+              </button>
+
               {/* Model badges - with animation */}
               {currentModel && (isDeepThinkModel(currentModel) || isVisionModel(currentModel)) && (
                 <div style={{ 
