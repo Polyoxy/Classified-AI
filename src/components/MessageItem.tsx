@@ -332,26 +332,30 @@ const MessageItem: React.FC<MessageItemProps> = ({
               }}
               className={isProcessing ? "thinking-badge-container" : "thinking-badge-container-inactive"}
             >
-              <span style={{ 
-                fontSize: '12px', 
-                fontWeight: 500,
-                color: isDarkTheme ? 
-                  (isProcessing ? 'rgba(208, 208, 208, 0.9)' : 'rgba(180, 180, 180, 0.7)') : 
-                  (isProcessing ? 'rgba(80, 80, 80, 0.9)' : 'rgba(100, 100, 100, 0.7)'),
-                position: 'relative',
-                zIndex: 2,
-              }}>
+              <span 
+                className={isProcessing ? "thinking-text-glow" : ""} 
+                style={{ 
+                  fontSize: '12px', 
+                  fontWeight: 500,
+                  color: isDarkTheme ? 
+                    (isProcessing ? 'rgba(220, 220, 255, 0.95)' : 'rgba(180, 180, 180, 0.7)') : 
+                    (isProcessing ? 'rgba(20, 80, 180, 0.95)' : 'rgba(100, 100, 100, 0.7)'),
+                  position: 'relative',
+                  zIndex: 2,
+                }}
+              >
                 Thinking Process
               </span>
               
               <svg 
+                className={isProcessing ? "thinking-text-glow" : ""}
                 width="12" 
                 height="12" 
                 viewBox="0 0 24 24" 
                 fill="none" 
                 stroke={isDarkTheme ? 
-                  (isProcessing ? 'rgba(208, 208, 208, 0.9)' : 'rgba(180, 180, 180, 0.7)') : 
-                  (isProcessing ? 'rgba(80, 80, 80, 0.9)' : 'rgba(100, 100, 100, 0.7)')}
+                  (isProcessing ? 'rgba(220, 220, 255, 0.95)' : 'rgba(180, 180, 180, 0.7)') : 
+                  (isProcessing ? 'rgba(20, 80, 180, 0.95)' : 'rgba(100, 100, 100, 0.7)')}
                 strokeWidth="2"
                 strokeLinecap="round" 
                 strokeLinejoin="round"
@@ -570,9 +574,9 @@ const MessageItem: React.FC<MessageItemProps> = ({
 
       <style>{`
         @keyframes movingStroke {
-          0% { background-position: 0% 50%; }
-          50% { background-position: 100% 50%; }
-          100% { background-position: 0% 50%; }
+          0% { background-position: 100% 50%; }
+          50% { background-position: 0% 50%; }
+          100% { background-position: 100% 50%; }
         }
         
         @keyframes pulse {
@@ -603,21 +607,24 @@ const MessageItem: React.FC<MessageItemProps> = ({
           position: relative;
           border-radius: 6px;
           overflow: hidden;
+          box-shadow: ${isDarkTheme ? 
+            '0 0 8px rgba(70, 130, 220, 0.3), 0 0 12px rgba(70, 130, 220, 0.1)' : 
+            '0 0 8px rgba(60, 130, 240, 0.2), 0 0 12px rgba(60, 130, 240, 0.1)'};
         }
         
         .thinking-badge-container::before {
           content: '';
           position: absolute;
-          top: -1px;
-          left: -1px;
-          right: -1px;
-          bottom: -1px;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
           background: ${isDarkTheme ? 
-            'linear-gradient(90deg, rgba(45, 90, 160, 0.1), rgba(45, 90, 160, 0.3), rgba(45, 90, 160, 0.1))' : 
-            'linear-gradient(90deg, rgba(60, 110, 220, 0.1), rgba(60, 110, 220, 0.3), rgba(60, 110, 220, 0.1))'
+            'linear-gradient(90deg, rgba(45, 90, 160, 0), rgba(80, 150, 255, 0.5), rgba(45, 90, 160, 0))' : 
+            'linear-gradient(90deg, rgba(60, 110, 220, 0), rgba(100, 170, 255, 0.4), rgba(60, 110, 220, 0))'
           };
           z-index: 0;
-          background-size: 200% 200%;
+          background-size: 200% 100%;
           animation: movingStroke 3s ease-in-out infinite;
           pointer-events: none;
           border-radius: 6px 6px 0 0;
@@ -628,6 +635,49 @@ const MessageItem: React.FC<MessageItemProps> = ({
           border-radius: 6px;
           overflow: hidden;
           opacity: 0.7;
+        }
+
+        @keyframes movingStroke {
+          0% { background-position: 100% 50%; }
+          50% { background-position: 0% 50%; }
+          100% { background-position: 100% 50%; }
+        }
+
+        @keyframes glowPulse {
+          0%, 100% { 
+            box-shadow: ${isDarkTheme ? 
+              '0 0 8px rgba(70, 130, 220, 0.3), 0 0 12px rgba(70, 130, 220, 0.1)' : 
+              '0 0 8px rgba(60, 130, 240, 0.2), 0 0 12px rgba(60, 130, 240, 0.1)'};
+          }
+          50% { 
+            box-shadow: ${isDarkTheme ? 
+              '0 0 12px rgba(70, 130, 220, 0.5), 0 0 20px rgba(70, 130, 220, 0.3)' : 
+              '0 0 12px rgba(60, 130, 240, 0.4), 0 0 20px rgba(60, 130, 240, 0.2)'};
+          }
+        }
+        
+        .thinking-text-glow {
+          text-shadow: ${isDarkTheme ? 
+            '0 0 6px rgba(150, 180, 255, 0.7), 0 0 10px rgba(100, 150, 255, 0.5)' : 
+            '0 0 6px rgba(60, 130, 240, 0.5), 0 0 10px rgba(60, 130, 240, 0.3)'};
+          animation: sideToSideGlow 3s ease-in-out infinite;
+        }
+        
+        @keyframes sideToSideGlow {
+          0% {
+            text-shadow: ${isDarkTheme ? 
+              '-10px 0 10px rgba(150, 180, 255, 0.9), -5px 0 15px rgba(100, 150, 255, 0.7)' : 
+              '-10px 0 10px rgba(60, 130, 240, 0.7), -5px 0 15px rgba(60, 130, 240, 0.5)'};
+          }
+          50% {
+            text-shadow: ${isDarkTheme ? 
+              '10px 0 10px rgba(150, 180, 255, 0.9), 5px 0 15px rgba(100, 150, 255, 0.7)' : 
+              '10px 0 10px rgba(60, 130, 240, 0.7), 5px 0 15px rgba(60, 130, 240, 0.5)'};
+          }
+          100% {
+            text-shadow: ${isDarkTheme ? 
+              '-10px 0 10px rgba(150, 180, 255, 0.9), -5px 0 15px rgba(100, 150, 255, 0.7)' : 
+              '-10px 0 10px rgba(60, 130, 240, 0.7), -5px 0 15px rgba(60, 130, 240, 0.5)'};
         }
       `}</style>
     </div>
