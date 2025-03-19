@@ -574,9 +574,9 @@ const MessageItem: React.FC<MessageItemProps> = ({
 
       <style>{`
         @keyframes movingStroke {
-          0% { background-position: 100% 50%; }
-          50% { background-position: 0% 50%; }
-          100% { background-position: 100% 50%; }
+          0% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
         }
         
         @keyframes pulse {
@@ -615,16 +615,16 @@ const MessageItem: React.FC<MessageItemProps> = ({
         .thinking-badge-container::before {
           content: '';
           position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
+          top: -1px;
+          left: -1px;
+          right: -1px;
+          bottom: -1px;
           background: ${isDarkTheme ? 
-            'linear-gradient(90deg, rgba(45, 90, 160, 0), rgba(80, 150, 255, 0.5), rgba(45, 90, 160, 0))' : 
-            'linear-gradient(90deg, rgba(60, 110, 220, 0), rgba(100, 170, 255, 0.4), rgba(60, 110, 220, 0))'
+            'linear-gradient(90deg, rgba(45, 90, 160, 0.05), rgba(70, 140, 230, 0.5), rgba(45, 90, 160, 0.05))' : 
+            'linear-gradient(90deg, rgba(60, 110, 220, 0.05), rgba(80, 160, 255, 0.45), rgba(60, 110, 220, 0.05))'
           };
           z-index: 0;
-          background-size: 200% 100%;
+          background-size: 200% 200%;
           animation: movingStroke 3s ease-in-out infinite;
           pointer-events: none;
           border-radius: 6px 6px 0 0;
@@ -636,48 +636,48 @@ const MessageItem: React.FC<MessageItemProps> = ({
           overflow: hidden;
           opacity: 0.7;
         }
-
-        @keyframes movingStroke {
-          0% { background-position: 100% 50%; }
-          50% { background-position: 0% 50%; }
-          100% { background-position: 100% 50%; }
-        }
-
-        @keyframes glowPulse {
-          0%, 100% { 
-            box-shadow: ${isDarkTheme ? 
-              '0 0 8px rgba(70, 130, 220, 0.3), 0 0 12px rgba(70, 130, 220, 0.1)' : 
-              '0 0 8px rgba(60, 130, 240, 0.2), 0 0 12px rgba(60, 130, 240, 0.1)'};
-          }
-          50% { 
-            box-shadow: ${isDarkTheme ? 
-              '0 0 12px rgba(70, 130, 220, 0.5), 0 0 20px rgba(70, 130, 220, 0.3)' : 
-              '0 0 12px rgba(60, 130, 240, 0.4), 0 0 20px rgba(60, 130, 240, 0.2)'};
-          }
-        }
         
         .thinking-text-glow {
           text-shadow: ${isDarkTheme ? 
-            '0 0 6px rgba(150, 180, 255, 0.7), 0 0 10px rgba(100, 150, 255, 0.5)' : 
-            '0 0 6px rgba(60, 130, 240, 0.5), 0 0 10px rgba(60, 130, 240, 0.3)'};
-          animation: sideToSideGlow 3s ease-in-out infinite;
+            '0 0 8px rgba(150, 180, 255, 0.7), 0 0 12px rgba(100, 150, 255, 0.5)' : 
+            '0 0 8px rgba(60, 130, 240, 0.5), 0 0 12px rgba(60, 130, 240, 0.3)'};
+          animation: textGlowSideToSide 3s ease-in-out infinite;
         }
         
-        @keyframes sideToSideGlow {
-          0% {
+        @keyframes textGlowSideToSide {
+          0%, 100% {
             text-shadow: ${isDarkTheme ? 
-              '-10px 0 10px rgba(150, 180, 255, 0.9), -5px 0 15px rgba(100, 150, 255, 0.7)' : 
-              '-10px 0 10px rgba(60, 130, 240, 0.7), -5px 0 15px rgba(60, 130, 240, 0.5)'};
+              '-5px 0 8px rgba(150, 180, 255, 0.9), -5px 0 15px rgba(100, 150, 255, 0.7)' : 
+              '-5px 0 8px rgba(60, 130, 240, 0.7), -5px 0 15px rgba(60, 130, 240, 0.5)'};
           }
           50% {
             text-shadow: ${isDarkTheme ? 
-              '10px 0 10px rgba(150, 180, 255, 0.9), 5px 0 15px rgba(100, 150, 255, 0.7)' : 
-              '10px 0 10px rgba(60, 130, 240, 0.7), 5px 0 15px rgba(60, 130, 240, 0.5)'};
+              '5px 0 8px rgba(150, 180, 255, 0.9), 5px 0 15px rgba(100, 150, 255, 0.7)' : 
+              '5px 0 8px rgba(60, 130, 240, 0.7), 5px 0 15px rgba(60, 130, 240, 0.5)'};
           }
-          100% {
-            text-shadow: ${isDarkTheme ? 
-              '-10px 0 10px rgba(150, 180, 255, 0.9), -5px 0 15px rgba(100, 150, 255, 0.7)' : 
-              '-10px 0 10px rgba(60, 130, 240, 0.7), -5px 0 15px rgba(60, 130, 240, 0.5)'};
+        }
+        
+        /* Animation for the thinking content text */
+        .thinking-text-active {
+          position: relative;
+        }
+        
+        .thinking-text-active::after {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: -100%;
+          width: 50%;
+          height: 100%;
+          background: ${isDarkTheme ? 
+            'linear-gradient(90deg, transparent, rgba(70, 140, 230, 0.15), transparent)' : 
+            'linear-gradient(90deg, transparent, rgba(80, 160, 255, 0.12), transparent)'};
+          animation: slidingGlow 3s ease-in-out infinite;
+        }
+        
+        @keyframes slidingGlow {
+          0% { left: -50%; }
+          100% { left: 100%; }
         }
       `}</style>
     </div>
