@@ -145,21 +145,43 @@ const CommandInput: React.FC = () => {
   // Make sure we always have a valid model selected to display
   const getCurrentModel = () => {
     // If a conversation exists with a model, use that
-    if (currentConversation?.model) return currentConversation.model;
+    if (currentConversation?.model) {
+      console.log('Using conversation model:', currentConversation.model);
+      return currentConversation.model;
+    }
     
     // Default to the provider's default model
     if (settings?.activeProvider) {
-      return settings.providers[settings.activeProvider].defaultModel || 
+      const defaultModel = settings.providers[settings.activeProvider].defaultModel || 
              (settings.activeProvider === 'ollama' ? 'llama3.2:1b' : 'Unknown');
+      console.log('Using provider default model:', defaultModel);
+      return defaultModel;
     }
     
     // Fallback to first available model
     const models = getAvailableModels();
     if (models.length > 0) {
+      console.log('Using first available model:', models[0]);
       return models[0];
     }
     
+    console.log('No models available');
     return 'No models available';
+  };
+  
+  // Enhanced check for model types - more flexible matching
+  const isDeepThinkModel = (model: string | undefined) => {
+    if (!model) return false;
+    return model.toLowerCase().includes('deepseek') || 
+           model.toLowerCase().includes('deepthink') ||
+           model.toLowerCase().includes('deep-');
+  };
+  
+  const isVisionModel = (model: string | undefined) => {
+    if (!model) return false;
+    return model.toLowerCase().includes('vision') || 
+           model.toLowerCase().includes('gpt-4-v') ||
+           model.toLowerCase().includes('llama3.2-vision');
   };
   
   const availableModels = getAvailableModels();
@@ -1034,15 +1056,15 @@ const CommandInput: React.FC = () => {
                 )}
               </div>
               
-              {/* Model badges */}
-              {(currentModel.includes('deepseek') || currentModel.includes('vision')) && (
+              {/* Model badges - with animation */}
+              {currentModel && (isDeepThinkModel(currentModel) || isVisionModel(currentModel)) && (
                 <div style={{ 
                   display: 'flex',
-                  gap: 'var(--spacing-1)',
+                  gap: '8px',
                   height: '32px',
                   alignItems: 'center',
                 }}>
-                  {currentModel.includes('deepseek') && (
+                  {isDeepThinkModel(currentModel) && (
                     <span className="badge-container" style={{
                       fontSize: '11px',
                       padding: '0 10px',
@@ -1081,7 +1103,7 @@ const CommandInput: React.FC = () => {
                       </div>
                     </span>
                   )}
-                  {currentModel.includes('vision') && (
+                  {isVisionModel(currentModel) && (
                     <span className="badge-container" style={{
                       fontSize: '11px',
                       padding: '0 10px',
@@ -1130,7 +1152,7 @@ const CommandInput: React.FC = () => {
               alignItems: 'center',
               fontStyle: 'italic',
             }}>
-              AI generated responses may be inaccurate
+              AI responses may be inaccurate
             </div>
           </div>
         </div>
