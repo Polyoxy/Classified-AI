@@ -326,9 +326,12 @@ const MessageItem: React.FC<MessageItemProps> = ({
               <span style={{ 
                 fontSize: '12px', 
                 fontWeight: 500,
-                color: modelColors ? modelColors.color : (isDarkTheme ? '#b0b0b0' : '#505050'),
+                color: modelColors ? 
+                  (isProcessing ? modelColors.color : modelColors.color.replace(/rgba?\((\d+,\s*\d+,\s*\d+)(?:,\s*\d+\.?\d*)?\)/, 'rgba($1, 0.4)')) : 
+                  (isDarkTheme ? (isProcessing ? '#4e9fff' : '#2a5a94') : (isProcessing ? '#3b82f6' : '#1e4b8f')),
                 position: 'relative',
                 zIndex: 2,
+                transition: 'color 0.3s ease',
               }}>
                 Thinking Process
               </span>
@@ -342,12 +345,13 @@ const MessageItem: React.FC<MessageItemProps> = ({
                     right: 0,
                     bottom: 0,
                     background: `linear-gradient(90deg, ${modelColors.bgColor}, ${modelColors.bgColor.replace('0.25', '0.15')}, ${modelColors.bgColor})`,
-                    opacity: 0.5,
+                    opacity: isProcessing ? 0.5 : 0.25,
                     zIndex: 1,
                     backgroundSize: '200% 200%',
-                    animation: 'movingStroke 3s ease-in-out infinite',
+                    animation: isProcessing ? 'movingStroke 3s ease-in-out infinite' : 'none',
                     borderTopLeftRadius: '6px',
                     borderTopRightRadius: '6px',
+                    transition: 'opacity 0.3s ease',
                   }}
                 />
               )}
@@ -357,13 +361,15 @@ const MessageItem: React.FC<MessageItemProps> = ({
                 height="12" 
                 viewBox="0 0 24 24" 
                 fill="none" 
-                stroke={modelColors ? modelColors.color : (isDarkTheme ? '#b0b0b0' : '#505050')} 
+                stroke={modelColors ? 
+                  (isProcessing ? modelColors.color : modelColors.color.replace('1', '0.7')) : 
+                  (isDarkTheme ? (isProcessing ? '#b0b0b0' : '#909090') : (isProcessing ? '#505050' : '#707070'))}
                 strokeWidth="2"
                 strokeLinecap="round" 
                 strokeLinejoin="round"
                 style={{
                   transform: isThinkingCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)',
-                  transition: 'transform 0.2s ease',
+                  transition: 'transform 0.2s ease, stroke 0.3s ease',
                   position: 'relative',
                   zIndex: 2,
                 }}
@@ -378,24 +384,27 @@ const MessageItem: React.FC<MessageItemProps> = ({
                 padding: 'var(--spacing-1) var(--spacing-2)',
                 fontSize: '12px',
                 fontStyle: 'normal',
-                color: isDarkTheme ? 'rgba(208, 208, 208, 0.7)' : 'rgba(80, 80, 80, 0.7)',
+                color: isDarkTheme ? 
+                  (isProcessing ? 'rgba(208, 208, 208, 0.7)' : 'rgba(180, 180, 180, 0.7)') : 
+                  (isProcessing ? 'rgba(80, 80, 80, 0.7)' : 'rgba(120, 120, 120, 0.7)'),
                 backgroundColor: isDarkTheme ? 'rgba(20, 20, 20, 0.95)' : 'rgba(248, 248, 250, 0.8)',
                 borderBottom: `1px solid ${isDarkTheme ? 'rgba(45, 45, 45, 0.5)' : 'rgba(200, 200, 200, 0.3)'}`,
                 margin: 0,
+                opacity: isProcessing ? 1 : 0.7,
+                transition: 'opacity 0.3s ease, color 0.3s ease',
               }}>
                 {(() => {
-                  // Create a true summary of the request instead of showing what the user wrote
+                  // Create a true summary of the AI's thinking process instead of user's input
                   
                   // Extract the core topic or intent from the thinking content
                   const extractTopic = () => {
-                    // Look for explicit topic mentions
+                    // Look for explicit topic mentions in AI's thinking
                     const topicPatterns = [
-                      /(?:about|regarding|concerning|on) ([\w\s-]+)/i,
-                      /topic is ([\w\s-]+)/i,
-                      /([a-z\s]+) poem/i,
-                      /([a-z\s]+) code/i,
-                      /([a-z\s]+) script/i,
-                      /([a-z\s]+) data/i
+                      /analyzing|reviewing|considering ([\w\s-]+)/i,
+                      /focused on ([\w\s-]+)/i,
+                      /looking at ([\w\s-]+)/i,
+                      /examining ([\w\s-]+)/i,
+                      /([a-z\s]+) code|data|analysis|implementation/i
                     ];
                     
                     for (const pattern of topicPatterns) {
@@ -405,14 +414,15 @@ const MessageItem: React.FC<MessageItemProps> = ({
                       }
                     }
                     
-                    // Extract nouns after key verbs
-                    const verbObjectPatterns = [
-                      /(?:make|create|generate|write)(?: a| an)? ([a-z\s]+)/i,
-                      /(?:explain|describe|clarify)(?: the| about)? ([a-z\s]+)/i,
-                      /(?:find|search for|look up)(?: the| some)? ([a-z\s]+)/i
+                    // Extract key concepts from thinking content
+                    const conceptPatterns = [
+                      /need to ([\w\s]+)/i,
+                      /will ([\w\s]+)/i,
+                      /should ([\w\s]+)/i,
+                      /working on ([\w\s]+)/i
                     ];
                     
-                    for (const pattern of verbObjectPatterns) {
+                    for (const pattern of conceptPatterns) {
                       const match = thinkingContent.match(pattern);
                       if (match && match[1] && match[1].length > 2) {
                         return match[1].trim();
@@ -422,25 +432,25 @@ const MessageItem: React.FC<MessageItemProps> = ({
                     return '';
                   };
                   
-                  // Determine the action/intent
+                  // Determine the action/intent from AI's thinking
                   const extractIntent = () => {
-                    if (thinkingContent.match(/(?:create|make|generate|write|compose)/i)) 
-                      return 'Create';
-                    if (thinkingContent.match(/(?:explain|describe|tell|clarify)/i)) 
-                      return 'Explain';
-                    if (thinkingContent.match(/(?:analyze|review|evaluate|assess)/i)) 
-                      return 'Analyze';
-                    if (thinkingContent.match(/(?:find|search|locate)/i)) 
-                      return 'Find';
-                    if (thinkingContent.match(/(?:compare|contrast|differentiate)/i)) 
-                      return 'Compare';
-                    if (thinkingContent.match(/(?:summarize|summarise|recap)/i)) 
-                      return 'Summarize';
-                    if (thinkingContent.match(/(?:help|assist|aid)/i)) 
-                      return 'Help with';
+                    if (thinkingContent.match(/(?:analyze|review|examine|assess)/i)) 
+                      return 'Analyzing';
+                    if (thinkingContent.match(/(?:search|look|find|locate)/i)) 
+                      return 'Searching for';
+                    if (thinkingContent.match(/(?:modify|change|update|edit)/i)) 
+                      return 'Modifying';
+                    if (thinkingContent.match(/(?:fix|resolve|correct)/i)) 
+                      return 'Fixing';
+                    if (thinkingContent.match(/(?:implement|add|create)/i)) 
+                      return 'Implementing';
+                    if (thinkingContent.match(/(?:debug|troubleshoot)/i)) 
+                      return 'Debugging';
+                    if (thinkingContent.match(/(?:plan|design)/i)) 
+                      return 'Planning';
                     
-                    // Default
-                    return 'Request about';
+                    // Default based on AI process
+                    return 'Working on';
                   };
                   
                   // Build the summary
@@ -480,11 +490,15 @@ const MessageItem: React.FC<MessageItemProps> = ({
                   overflow: 'hidden',
                   fontSize: '13px',
                   lineHeight: 1.5,
-                  color: isDarkTheme ? '#d0d0d0' : '#333333',
+                  color: isDarkTheme ? 
+                    (isProcessing ? '#d0d0d0' : '#a0a0a0') : 
+                    (isProcessing ? '#333333' : '#666666'),
                   whiteSpace: 'pre-wrap',
                   fontFamily: 'var(--font-family-mono)',
                   borderBottom: `1px solid ${isDarkTheme ? 'rgba(45, 45, 45, 0.5)' : 'rgba(200, 200, 200, 0.3)'}`,
                   backgroundColor: isDarkTheme ? 'rgba(18, 18, 18, 0.95)' : 'rgba(248, 248, 250, 0.8)',
+                  opacity: isProcessing ? 1 : 0.8,
+                  transition: 'opacity 0.3s ease, color 0.3s ease',
                 }}
               >
                 <div style={{ padding: 'var(--spacing-3)', fontStyle: 'normal' }}>
