@@ -32,12 +32,13 @@ const ChatContainer: React.FC = () => {
         overflowX: 'hidden',
         padding: '16px',
         paddingBottom: '3rem',
-        backgroundColor: isDarkTheme ? '#121212' : '#ffffff',
+        backgroundColor: isDarkTheme ? 'rgba(24, 24, 24, 0.7)' : 'rgba(252, 252, 252, 0.8)',
         transition: 'background-color 0.2s ease',
         scrollbarWidth: 'thin',
         scrollbarColor: isDarkTheme ? '#333 #121212' : '#ccc #ffffff',
         display: 'flex',
         flexDirection: 'column',
+        backdropFilter: 'blur(8px)',
       }}
     >
       <style>
@@ -46,10 +47,10 @@ const ChatContainer: React.FC = () => {
             width: 6px;
           }
           div::-webkit-scrollbar-track {
-            background: ${isDarkTheme ? '#121212' : '#ffffff'};
+            background: ${isDarkTheme ? 'rgba(24, 24, 24, 0.7)' : 'rgba(252, 252, 252, 0.8)'};
           }
           div::-webkit-scrollbar-thumb {
-            background-color: ${isDarkTheme ? '#333' : '#ccc'};
+            background-color: ${isDarkTheme ? 'rgba(80, 80, 80, 0.5)' : 'rgba(200, 200, 200, 0.8)'};
             border-radius: 6px;
           }
         `}

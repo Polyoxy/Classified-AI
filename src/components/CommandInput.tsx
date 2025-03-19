@@ -549,9 +549,10 @@ const CommandInput: React.FC = () => {
       left: '0',
       right: '0',
       zIndex: 100,
-      backgroundColor: settings?.theme === 'dark' ? '#121212' : '#f8f9fa',
+      backgroundColor: settings?.theme === 'dark' ? 'rgba(24, 24, 24, 0.7)' : 'rgba(252, 252, 252, 0.8)',
       padding: '1rem',
       transition: 'right 0.3s ease, left 0.3s ease, transform 0.3s ease',
+      backdropFilter: 'blur(8px)',
     }}>
       <div className="command-input-container-wrapper" style={{
         margin: '0 auto',
@@ -561,7 +562,7 @@ const CommandInput: React.FC = () => {
         <div className="command-input-container" style={{
           display: 'flex',
           flexDirection: 'column',
-          backgroundColor: 'transparent',
+          backgroundColor: settings?.theme === 'dark' ? 'rgba(32, 32, 32, 0.7)' : 'rgba(252, 252, 252, 0.8)',
           borderRadius: 'var(--input-border-radius)',
           padding: '14px 18px',
           height: 'auto',
@@ -570,7 +571,8 @@ const CommandInput: React.FC = () => {
           position: 'relative',
           transition: 'height 0.3s ease, width 0.3s ease, transform 0.3s ease',
           justifyContent: 'space-between',
-          boxShadow: `0px 2px 4px ${settings?.theme === 'dark' ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.1)'}`,
+          boxShadow: `0px 2px 4px ${settings?.theme === 'dark' ? 'rgba(0, 0, 0, 0.2)' : 'rgba(0, 0, 0, 0.08)'}`,
+          backdropFilter: 'blur(8px)',
         }}>
           <style>
             {`
@@ -645,12 +647,12 @@ const CommandInput: React.FC = () => {
                 right: -1px;
                 bottom: -1px;
                 background: ${settings?.theme === 'dark' ? 
-                  'linear-gradient(90deg, rgba(255,255,255,0.01), rgba(255,255,255,0.15), rgba(255,255,255,0.01))' : 
-                  'linear-gradient(90deg, rgba(255,255,255,0.3), rgba(255,255,255,0.9), rgba(255,255,255,0.3))'
+                  'linear-gradient(90deg, rgba(255,255,255,0.01), rgba(255,255,255,0.08), rgba(255,255,255,0.01))' : 
+                  'linear-gradient(90deg, rgba(255,255,255,0.2), rgba(255,255,255,0.6), rgba(255,255,255,0.2))'
                 };
                 z-index: 0;
                 background-size: 200% 200%;
-                animation: movingStroke 2s ease-in-out infinite;
+                animation: movingStroke 3s ease-in-out infinite;
                 pointer-events: none;
                 border-radius: 6px;
               }
@@ -665,6 +667,10 @@ const CommandInput: React.FC = () => {
                 .command-input-container {
                   width: 100% !important;
                   padding: 10px 14px !important;
+                  background: ${settings?.theme === 'dark' ? 
+                    'rgba(32, 32, 32, 0.7)' : 
+                    'rgba(252, 252, 252, 0.8)'
+                  } !important;
                 }
                 
                 .selector-button {

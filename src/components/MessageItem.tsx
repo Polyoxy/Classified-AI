@@ -236,10 +236,11 @@ const MessageItem: React.FC<MessageItemProps> = ({
     }
 
     return {
-      backgroundColor: isDarkTheme ? 'rgba(23, 23, 23, 0.6)' : 'rgba(255, 255, 255, 0.6)',
+      backgroundColor: isDarkTheme ? 'rgba(32, 32, 32, 0.7)' : 'rgba(252, 252, 252, 0.8)',
       color: isDarkTheme ? '#d4d4d4' : '#2d2d2d',
       backdropFilter: 'blur(8px)',
       borderRadius: 'var(--chat-bubble-radius-ai)',
+      border: `1px solid ${isDarkTheme ? 'rgba(80, 80, 80, 0.2)' : 'rgba(200, 200, 200, 0.3)'}`,
     };
   };
 
@@ -291,13 +292,13 @@ const MessageItem: React.FC<MessageItemProps> = ({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                borderBottom: isThinkingCollapsed ? 'none' : `1px solid ${isDarkTheme ? 'rgba(80, 80, 80, 0.3)' : 'rgba(200, 200, 200, 0.5)'}`,
+                borderBottom: isThinkingCollapsed ? 'none' : `1px solid ${isDarkTheme ? 'rgba(45, 45, 45, 0.5)' : 'rgba(200, 200, 200, 0.3)'}`,
                 transition: 'background-color 0.2s ease',
-                backgroundColor: isDarkTheme ? 'rgba(35, 35, 38, 0.4)' : 'rgba(250, 250, 252, 0.8)',
+                backgroundColor: isDarkTheme ? 'rgba(22, 22, 22, 0.95)' : 'rgba(250, 250, 252, 0.8)',
               }}
             >
               <span style={{ 
-                fontSize: '11px', 
+                fontSize: '12px', 
                 fontWeight: 500,
                 color: isDarkTheme ? '#b0b0b0' : '#505050',
               }}>
@@ -326,12 +327,11 @@ const MessageItem: React.FC<MessageItemProps> = ({
             {isThinkingCollapsed && (
               <div style={{
                 padding: 'var(--spacing-1) var(--spacing-2)',
-                fontSize: '11px',
+                fontSize: '12px',
                 fontStyle: 'normal',
                 color: isDarkTheme ? 'rgba(208, 208, 208, 0.7)' : 'rgba(80, 80, 80, 0.7)',
-                backgroundColor: isDarkTheme ? 'rgba(32, 32, 34, 0.3)' : 'rgba(248, 248, 250, 0.5)',
-                borderBottom: `1px solid ${isDarkTheme ? 'rgba(80, 80, 80, 0.2)' : 'rgba(200, 200, 200, 0.4)'}`,
-                borderTop: `1px solid ${isDarkTheme ? 'rgba(80, 80, 80, 0.2)' : 'rgba(200, 200, 200, 0.4)'}`,
+                backgroundColor: isDarkTheme ? 'rgba(20, 20, 20, 0.95)' : 'rgba(248, 248, 250, 0.8)',
+                borderBottom: `1px solid ${isDarkTheme ? 'rgba(45, 45, 45, 0.5)' : 'rgba(200, 200, 200, 0.3)'}`,
                 margin: 0,
               }}>
                 {(() => {
@@ -429,13 +429,13 @@ const MessageItem: React.FC<MessageItemProps> = ({
                 ref={thinkingContentRef}
                 style={{
                   overflow: 'hidden',
-                  fontSize: 'var(--font-size-caption)',
+                  fontSize: '13px',
                   lineHeight: 1.5,
                   color: isDarkTheme ? '#d0d0d0' : '#333333',
                   whiteSpace: 'pre-wrap',
                   fontFamily: 'var(--font-family-mono)',
-                  borderBottom: `1px solid ${isDarkTheme ? 'rgba(80, 80, 80, 0.3)' : 'rgba(200, 200, 200, 0.5)'}`,
-                  backgroundColor: isDarkTheme ? 'rgba(32, 32, 34, 0.5)' : 'rgba(248, 248, 250, 0.7)',
+                  borderBottom: `1px solid ${isDarkTheme ? 'rgba(45, 45, 45, 0.5)' : 'rgba(200, 200, 200, 0.3)'}`,
+                  backgroundColor: isDarkTheme ? 'rgba(18, 18, 18, 0.95)' : 'rgba(248, 248, 250, 0.8)',
                 }}
               >
                 <div style={{ padding: 'var(--spacing-3)', fontStyle: 'normal' }}>
