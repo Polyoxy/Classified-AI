@@ -41,7 +41,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
     ollama: {
       provider: 'ollama',
       baseUrl: 'http://localhost:11434',
-      models: ['deepseek-r1:7b'],
+      models: ['deepseek-r1:7b', 'deepseek-r1:14b', 'llama3.2-vision:11b', 'deepseek-r1:1.5b', 'llama3.2:1b'],
       defaultModel: 'deepseek-r1:7b'
     },
     openai: {

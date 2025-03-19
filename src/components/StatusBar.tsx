@@ -149,9 +149,19 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
     // Get models from settings
     const models = settings.providers[provider]?.models || [];
     
-    // Make sure llama3.2:1b is included for Ollama if not already in the list
-    if (provider === 'ollama' && !models.includes('llama3.2:1b')) {
-      return ['llama3.2:1b', ...models];
+    // Ensure all Ollama models are included
+    if (provider === 'ollama') {
+      const ollamaModels = [
+        'deepseek-r1:7b',
+        'deepseek-r1:14b',
+        'llama3.2-vision:11b',
+        'deepseek-r1:1.5b',
+        'llama3.2:1b'
+      ];
+      
+      // Add any models that aren't already in the list
+      const combinedModels = [...new Set([...ollamaModels, ...models])];
+      return combinedModels;
     }
     
     return models;
