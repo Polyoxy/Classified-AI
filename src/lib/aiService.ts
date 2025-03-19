@@ -1,6 +1,4 @@
 import { AIProvider, Message, TokenUsage } from '@/types';
-import { webSearchProxy } from './searchService';
-import { processRequestWithData } from './aiDataMiddleware';
 
 // Estimated cost per 1000 tokens (in USD)
 const COST_PER_1K_TOKENS = {
@@ -697,53 +695,11 @@ export const callAI = async (
   }
 };
 
-// Update the processWebSearchRequest function
-const processWebSearchRequest = async (query: string) => {
-  try {
-    console.log('Processing web search request for:', query);
-    const searchResults = await webSearchProxy(query);
-    
-    // Format results for better presentation
-    const formattedResults = searchResults.map((result: any, index: number) => ({
-      title: result.title || 'No title',
-      link: result.link || 'No link',
-      snippet: result.snippet || 'No description',
-      position: index + 1,
-      source: result.source || 'web'
-    }));
-    
-    return formattedResults;
-  } catch (error) {
-    console.error('Error in web search:', error);
-    throw error;
-  }
-};
-
-// Update the processAIRequest function
+// Simplified processAIRequest function without middleware
 export const processAIRequest = async (messages: Message[], model: string, options: any) => {
-  try {
-    // Apply the middleware to fetch and inject external data if needed
-    const { messages: enhancedMessages, enhancedWithData, dataSource } = 
-      await processRequestWithData(messages, model, options);
-    
-    if (enhancedWithData) {
-      console.log(`Enhanced request with ${dataSource} data before sending to AI`);
-      
-      // Return the enhanced messages
-      return {
-        messages: enhancedMessages,
-        includesExternalData: true,
-        dataSource
-      };
-    }
-    
-    // No enhancements needed, return original messages
-    return {
-      messages,
-      includesExternalData: false
-    };
-  } catch (error) {
-    console.error('Error processing AI request with external data:', error);
-    throw error;
-  }
+  // Just return the original messages without any enhancement
+  return {
+    messages,
+    includesExternalData: false
+  };
 }; 
