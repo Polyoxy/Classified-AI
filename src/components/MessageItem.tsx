@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAppContext } from '@/context/AppContext';
 import CodeSnippet from './CodeSnippet';
+import Markdown from 'markdown-to-jsx';
 
 interface MessageItemProps {
   role: 'user' | 'assistant' | 'system';
@@ -270,8 +271,195 @@ const MessageItem: React.FC<MessageItemProps> = ({
         }
       }
       
-      // Regular text
-      return <span key={index}>{part}</span>;
+      // Regular text - use markdown-to-jsx to render markdown 
+return (
+  <div key={index} className="markdown-content">
+    <Markdown 
+      options={{
+        overrides: {
+          h1: {
+            component: 'h2',
+            props: {
+              style: {
+                fontSize: '1.6em',
+                fontWeight: 'bold',
+                marginTop: '1.2em',
+                marginBottom: '0.6em',
+                color: isDarkTheme ? '#E0E0E0' : '#222',
+                borderBottom: `1px solid ${isDarkTheme ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.1)'}`,
+                paddingBottom: '0.4em',
+              },
+            },
+          },
+          h2: {
+            props: {
+              style: {
+                fontSize: '1.4em',
+                fontWeight: 'bold',
+                marginTop: '1em',
+                marginBottom: '0.5em',
+                color: isDarkTheme ? '#E0E0E0' : '#222',
+              },
+            },
+          },
+          h3: {
+            props: {
+              style: {
+                fontSize: '1.2em',
+                fontWeight: 'bold',
+                marginTop: '0.8em',
+                marginBottom: '0.4em',
+                color: isDarkTheme ? '#E0E0E0' : '#333',
+              },
+            },
+          },
+          p: {
+            props: {
+              style: {
+                marginTop: '0.7em',
+                marginBottom: '0.7em',
+                lineHeight: '1.6',
+                fontSize: '1.05em',
+                color: isDarkTheme ? '#D0D0D0' : '#111',
+              },
+            },
+          },
+          a: {
+            props: {
+              style: {
+                color: 'var(--accent-color)',
+                textDecoration: 'none',
+                fontWeight: '500',
+              },
+            },
+          },
+          strong: {
+            props: {
+              style: {
+                fontWeight: 'bold',
+                color: isDarkTheme ? '#FFFFFF' : '#000000',
+              },
+            },
+          },
+          em: {
+            props: {
+              style: {
+                fontStyle: 'italic',
+                color: isDarkTheme ? '#D0D0D0' : '#333',
+              },
+            },
+          },
+          ul: {
+            props: {
+              style: {
+                paddingLeft: '1.8em',
+                marginTop: '0.6em',
+                marginBottom: '0.6em',
+              },
+            },
+          },
+          ol: {
+            props: {
+              style: {
+                paddingLeft: '1.8em',
+                marginTop: '0.6em',
+                marginBottom: '0.6em',
+              },
+            },
+          },
+          li: {
+            props: {
+              style: {
+                marginBottom: '0.4em',
+                fontSize: '1.05em',
+              },
+            },
+          },
+          blockquote: {
+            props: {
+              style: {
+                borderLeft: `3px solid ${isDarkTheme ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.2)'}`,
+                paddingLeft: '1em',
+                marginLeft: '0',
+                color: isDarkTheme ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.75)',
+                fontStyle: 'italic',
+                fontSize: '1.1em',
+              },
+            },
+          },
+          hr: {
+            props: {
+              style: {
+                border: 'none',
+                borderBottom: `1px solid ${isDarkTheme ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
+                margin: '1em 0',
+              },
+            },
+          },
+          code: {
+            props: {
+              style: {
+                fontFamily: 'var(--font-family-mono)',
+                backgroundColor: isDarkTheme ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
+                padding: '0.3em 0.5em',
+                borderRadius: '5px',
+                fontSize: '0.95em',
+                color: isDarkTheme ? '#E6E6E6' : '#333',
+              },
+            },
+          },
+          inlineCode: {
+            component: 'code',
+            props: {
+              style: {
+                fontFamily: 'var(--font-family-mono)',
+                backgroundColor: isDarkTheme ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
+                padding: '0.2em 0.4em',
+                borderRadius: '4px',
+                fontSize: '0.95em',
+                color: isDarkTheme ? '#E6E6E6' : '#333',
+              },
+            },
+          },
+          table: {
+            props: {
+              style: {
+                borderCollapse: 'collapse',
+                width: '100%',
+                marginTop: '1em',
+                marginBottom: '1em',
+              },
+            },
+          },
+          th: {
+            props: {
+              style: {
+                border: `1px solid ${isDarkTheme ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
+                padding: '8px',
+                textAlign: 'left',
+                backgroundColor: isDarkTheme ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
+                fontSize: '1em',
+              },
+            },
+          },
+          td: {
+            props: {
+              style: {
+                border: `1px solid ${isDarkTheme ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
+                padding: '8px',
+                textAlign: 'left',
+                fontSize: '1em',
+              },
+            },
+          },
+        },
+      }}
+    >
+      {part}
+    </Markdown>
+  </div>
+);
+
     });
   };
   
