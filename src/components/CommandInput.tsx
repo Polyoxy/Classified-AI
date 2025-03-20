@@ -453,8 +453,10 @@ const CommandInput: React.FC = () => {
   // Handle model change
   const handleModelChange = (model: string) => {
     if (currentConversation && !isProcessing) {
-      // Implement model change logic or use context function
-      console.log("Switching to model:", model);
+      // Use the changeModel function from context to actually change the model
+      changeModel(model);
+      setCurrentModel(model);
+      setShowModelDropdown(false);
     }
   };
   
@@ -524,6 +526,70 @@ const CommandInput: React.FC = () => {
     }
   };
 
+  // Helper function to clean up model names for display
+  const formatModelName = (model: string): string => {
+    if (!model) return 'Unknown';
+    
+    // Remove version numbers and special characters
+    let displayName = model;
+    
+    // Special case handling for common models
+    if (model.includes('deepseek-r1')) {
+      if (model.includes('1.5b')) {
+        return 'DeepSeek 1.5B';
+      } else if (model.includes('7b')) {
+        return 'DeepSeek 7B';
+      } else if (model.includes('14b')) {
+        return 'DeepSeek 14B';
+      }
+      return 'DeepSeek';
+    }
+    
+    if (model.includes('llama3.2')) {
+      if (model.includes('vision')) {
+        return 'Llama3 11B';
+      }
+      
+      if (model.includes('1b')) {
+        return 'Llama3 1B';
+      } else if (model.includes('11b')) {
+        return 'Llama3 11B';
+      }
+      return 'Llama3';
+    }
+    
+    // Remove any special characters and format remaining
+    displayName = displayName
+      .replace(/[-:]/g, ' ')
+      .replace(/\b\w/g, l => l.toUpperCase());
+    
+    return displayName;
+  };
+
+  // New useEffect for positioning the model dropdown correctly
+  useEffect(() => {
+    if (showModelDropdown && modelDropdownRef.current && modelSelectorRef.current) {
+      // Position the dropdown above the model selector
+      const selectorRect = modelSelectorRef.current.getBoundingClientRect();
+      
+      // Apply left offset to move dropdown more to the left
+      modelDropdownRef.current.style.left = `${selectorRect.left - 280}px`;
+      modelDropdownRef.current.style.bottom = `${window.innerHeight - selectorRect.top + -15}px`;
+    }
+  }, [showModelDropdown]);
+
+  // New useEffect for positioning the style dropdown correctly
+  useEffect(() => {
+    if (showStyleDropdown && styleDropdownRef.current && styleSelectorRef.current) {
+      // Position the dropdown above the style selector
+      const selectorRect = styleSelectorRef.current.getBoundingClientRect();
+      
+      // Apply left offset to move dropdown more to the left
+      styleDropdownRef.current.style.left = `${selectorRect.left - 280}px`;
+      styleDropdownRef.current.style.bottom = `${window.innerHeight - selectorRect.top + -15}px`;
+    }
+  }, [showStyleDropdown]);
+
   return (
     <div style={{
       position: 'sticky',
@@ -579,18 +645,6 @@ const CommandInput: React.FC = () => {
                 }
                 100% {
                   filter: brightness(1) blur(1px);
-                }
-              }
-              
-              @keyframes movingStroke {
-                0% {
-                  background-position: 0% 50%;
-                }
-                50% {
-                  background-position: 100% 50%;
-                }
-                100% {
-                  background-position: 0% 50%;
                 }
               }
               
@@ -803,7 +857,7 @@ const CommandInput: React.FC = () => {
             gap: 'var(--spacing-2)',
             alignSelf: 'flex-start',
             justifyContent: 'space-between',
-            marginTop: '4px', 
+            marginTop: '8px', 
             paddingTop: '0',
             height: '38px',
             width: '100%',
@@ -811,6 +865,8 @@ const CommandInput: React.FC = () => {
             <div style={{
               display: 'flex',
               gap: 'var(--spacing-2)',
+              alignItems: 'center',
+              height: '32px',
             }}>
               {/* Model selector (left side) */}
               <div 
@@ -828,30 +884,53 @@ const CommandInput: React.FC = () => {
                   justifyContent: 'space-between',
                   gap: 'var(--spacing-1)',
                   height: '32px',
-                  background: settings?.theme === 'dark' ? 'rgba(58, 58, 58, 0.2)' : 'rgba(240, 240, 240, 0.5)',
+                  background: isVisionModel(currentModel) 
+                    ? `${settings?.theme === 'dark' ? 'rgba(255, 80, 80, 0.15)' : 'rgba(255, 60, 60, 0.07)'}`
+                    : isDeepThinkModel(currentModel)
+                    ? `${settings?.theme === 'dark' ? 'rgba(0, 102, 204, 0.15)' : 'rgba(0, 102, 204, 0.07)'}`
+                    : settings?.theme === 'dark' ? 'rgba(58, 58, 58, 0.4)' : 'rgba(240, 240, 240, 0.7)',
                   borderRadius: '6px',
                   padding: '0 12px',
+                  cursor: isProcessing ? 'default' : 'pointer',
+                  transition: 'background 0.2s ease, opacity 0.2s ease',
                 }}
               >
-                <span style={{ 
-                  fontWeight: 400,
-                  fontSize: '13px',
-                  maxWidth: '110px',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                  lineHeight: '32px',
-                }}>
-                  {currentModel}
-                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  {isVisionModel(currentModel) && (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"></path>
+                      <circle cx="12" cy="12" r="2"></circle>
+                    </svg>
+                  )}
+                  {isDeepThinkModel(currentModel) && (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 3.5c5.5 0 8.5 3.5 8.5 7.5 0 2.25-.5 3.5-2 5-1.5 1.5-3.5 2.5-6.5 2.5s-5-1-6.5-2.5c-1.5-1.5-2-2.75-2-5 0-4 3-7.5 8.5-7.5z" />
+                      <path d="M9 17.5v2.5" />
+                      <path d="M15 17.5v2.5" />
+                      <path d="M6 10a1 1 0 100-2 1 1 0 000 2z" />
+                      <path d="M18 10a1 1 0 100-2 1 1 0 000 2z" />
+                    </svg>
+                  )}
+                  <span style={{ 
+                    fontWeight: 500,
+                    fontSize: '13px',
+                    maxWidth: isVisionModel(currentModel) || isDeepThinkModel(currentModel) ? '84px' : '110px',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    lineHeight: '32px',
+                  }}>
+                    {formatModelName(currentModel)}
+                  </span>
+                </div>
                 
                 <svg 
-                  width="12" 
-                  height="12" 
+                  width="14" 
+                  height="14" 
                   viewBox="0 0 24 24" 
                   fill="none" 
-                  stroke="currentColor" 
-                  strokeWidth="2" 
+                  stroke="white" 
+                  strokeWidth="2.5" 
                   strokeLinecap="round" 
                   strokeLinejoin="round"
                   style={{
@@ -859,7 +938,7 @@ const CommandInput: React.FC = () => {
                     transition: 'transform 0.2s ease',
                   }}
                 >
-                  <polyline points="6 9 12 15 18 9"></polyline>
+                  <polyline points="7 10 12 15 17 10"></polyline>
                 </svg>
               </div>
               
@@ -868,19 +947,20 @@ const CommandInput: React.FC = () => {
                 <div 
                   ref={modelDropdownRef}
                   style={{
-                    position: 'absolute',
-                    bottom: '38px', // Position above the selector
+                    position: 'fixed',
+                    bottom: '48px', // Increase distance from button
                     left: '0',
                     backgroundColor: settings?.theme === 'dark' ? '#1A1A1A' : '#ffffff',
                     border: `1px solid ${settings?.theme === 'dark' ? '#333' : '#ddd'}`,
-                    borderRadius: '4px',
-                    marginBottom: '4px',
+                    borderRadius: '6px',
+                    marginBottom: '8px',
                     zIndex: 10000,
-                    maxHeight: '200px',
+                    maxHeight: '240px',
                     overflowY: 'auto',
                     boxShadow: settings?.theme === 'dark' ? '0 -4px 8px rgba(0,0,0,0.3)' : '0 -4px 8px rgba(0,0,0,0.1)',
                     fontFamily: 'Söhne, sans-serif',
-                    minWidth: '130px',
+                    minWidth: '180px',
+                    backdropFilter: 'blur(8px)',
                   }}
                   onClick={(e) => e.stopPropagation()}
                 >
@@ -897,9 +977,10 @@ const CommandInput: React.FC = () => {
                           : 'transparent',
                         transition: 'all 0.1s ease',
                         fontSize: '13px',
-                        fontWeight: model === currentModel ? 'bold' : 'normal',
+                        fontWeight: model === currentModel ? '500' : 'normal',
                         display: 'flex',
                         alignItems: 'center',
+                        justifyContent: 'space-between',
                         gap: 'var(--spacing-1)',
                       }}
                       onMouseOver={(e) => {
@@ -911,47 +992,87 @@ const CommandInput: React.FC = () => {
                         }
                       }}
                     >
-                      <span>{model}</span>
+                      <span>{formatModelName(model)}</span>
+                      
+                      {/* Model type indicator - icon only */}
+                      {(isVisionModel(model) || isDeepThinkModel(model)) && (
+                        <span style={{ 
+                          fontSize: '10px',
+                          padding: '5px',
+                          borderRadius: '4px',
+                          background: isVisionModel(model)
+                            ? `${settings?.theme === 'dark' ? 'rgba(255, 80, 80, 0.4)' : 'rgba(255, 60, 60, 0.3)'}`
+                            : `${settings?.theme === 'dark' ? 'rgba(0, 102, 204, 0.2)' : 'rgba(0, 102, 204, 0.1)'}`,
+                          color: isVisionModel(model)
+                            ? `${settings?.theme === 'dark' ? '#ffffff' : '#ffffff'}`
+                            : `${settings?.theme === 'dark' ? '#ffffff' : '#ffffff'}`,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}>
+                          {isVisionModel(model) ? (
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"></path>
+                              <circle cx="12" cy="12" r="2"></circle>
+                            </svg>
+                          ) : (
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M12 3.5c5.5 0 8.5 3.5 8.5 7.5 0 2.25-.5 3.5-2 5-1.5 1.5-3.5 2.5-6.5 2.5s-5-1-6.5-2.5c-1.5-1.5-2-2.75-2-5 0-4 3-7.5 8.5-7.5z" />
+                              <path d="M9 17.5v2.5" />
+                              <path d="M15 17.5v2.5" />
+                              <path d="M6 10a1 1 0 100-2 1 1 0 000 2z" />
+                              <path d="M18 10a1 1 0 100-2 1 1 0 000 2z" />
+                            </svg>
+                          )}
+                        </span>
+                      )}
                     </div>
                   ))}
                 </div>
               )}
               
-              {/* Response style selector */}
+              {/* Style selector (right side) */}
               <div 
                 ref={styleSelectorRef}
                 onClick={() => !isProcessing && setShowStyleDropdown(!showStyleDropdown)}
                 className="selector-button"
                 style={{
                   opacity: isProcessing ? 0.6 : 1,
+                  width: 'auto',
+                  minWidth: '130px',
                   whiteSpace: 'nowrap',
                   position: 'relative',
-                  width: 'auto',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
                   gap: 'var(--spacing-1)',
-                  background: settings?.theme === 'dark' ? 'rgba(58, 58, 58, 0.2)' : 'rgba(240, 240, 240, 0.5)',
+                  height: '32px',
+                  background: settings?.theme === 'dark' ? 'rgba(58, 58, 58, 0.4)' : 'rgba(240, 240, 240, 0.7)',
                   borderRadius: '6px',
                   padding: '0 12px',
-                  height: '32px',
+                  cursor: isProcessing ? 'default' : 'pointer',
+                  transition: 'background 0.2s ease, opacity 0.2s ease',
                 }}
               >
                 <span style={{ 
                   fontWeight: 500,
                   fontSize: '13px',
+                  maxWidth: '110px',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
                   lineHeight: '32px',
                 }}>
                   {responseStyle.charAt(0).toUpperCase() + responseStyle.slice(1)}
                 </span>
+                
                 <svg 
-                  width="12" 
-                  height="12" 
+                  width="14" 
+                  height="14" 
                   viewBox="0 0 24 24" 
                   fill="none" 
-                  stroke="currentColor" 
-                  strokeWidth="2" 
+                  stroke="white" 
+                  strokeWidth="2.5" 
                   strokeLinecap="round" 
                   strokeLinejoin="round"
                   style={{
@@ -959,99 +1080,104 @@ const CommandInput: React.FC = () => {
                     transition: 'transform 0.2s ease',
                   }}
                 >
-                  <polyline points="6 9 12 15 18 9"></polyline>
+                  <polyline points="7 10 12 15 17 10"></polyline>
                 </svg>
-                
-                {/* Style dropdown (opens upward) */}
-                {showStyleDropdown && (
-                  <div 
-                    ref={styleDropdownRef}
-                    style={{
-                      position: 'absolute',
-                      bottom: '38px', // Position above the selector
-                      left: '0',
-                      backgroundColor: settings?.theme === 'dark' ? '#1A1A1A' : '#ffffff',
-                      border: `1px solid ${settings?.theme === 'dark' ? '#333' : '#ddd'}`,
-                      borderRadius: '4px',
-                      marginBottom: '4px',
-                      zIndex: 10000,
-                      maxHeight: '200px',
-                      overflowY: 'auto',
-                      boxShadow: settings?.theme === 'dark' ? '0 -4px 8px rgba(0,0,0,0.3)' : '0 -4px 8px rgba(0,0,0,0.1)',
-                      fontFamily: 'Söhne, sans-serif',
-                      minWidth: '160px',
-                    }}
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <div className="style-option-label" style={{
-                      padding: '6px 10px',
-                      fontSize: '11px',
-                      color: settings?.theme === 'dark' ? 'rgba(180, 180, 180, 0.7)' : 'rgba(100, 100, 100, 0.7)',
-                      borderBottom: `1px solid ${settings?.theme === 'dark' ? '#333' : '#ddd'}`,
-                      fontStyle: 'italic',
-                    }}>
-                      How should AI write responses?
-                    </div>
-                    {['normal', 'concise', 'explanatory', 'formal'].map((style) => (
-                      <div 
-                        key={style}
-                        onClick={() => {
-                          setResponseStyle(style);
-                          setShowStyleDropdown(false);
-                          
-                          // Provide feedback to user about style change
-                          if (style !== 'normal') {
-                            const description = styleDescriptions[style as keyof typeof styleDescriptions];
-                            console.log(`Response style set to ${style}: ${description}`);
-                          }
-                        }}
-                        style={{
-                          padding: '8px 12px',
-                          cursor: 'pointer',
-                          backgroundColor: style === responseStyle
-                            ? (settings?.theme === 'dark' ? '#333' : '#e0e0e0') 
-                            : 'transparent',
-                          transition: 'all 0.1s ease',
-                          fontSize: '13px',
-                          fontWeight: style === responseStyle ? 'bold' : 'normal',
-                        }}
-                        onMouseOver={(e) => {
-                          e.currentTarget.style.backgroundColor = settings?.theme === 'dark' ? '#333' : '#e0e0e0';
-                        }}
-                        onMouseOut={(e) => {
-                          if (style !== responseStyle) {
-                            e.currentTarget.style.backgroundColor = 'transparent';
-                          }
-                        }}
-                      >
-                        <div>
-                          {style.charAt(0).toUpperCase() + style.slice(1)}
-                          <div style={{
-                            fontSize: '10px',
-                            opacity: 0.7,
-                            fontWeight: 'normal',
-                            marginTop: '2px',
-                            display: style === 'normal' ? 'none' : 'block'
-                          }}>
-                            {style === 'concise' && 'Brief and to the point'}
-                            {style === 'explanatory' && 'Detailed with examples'}
-                            {style === 'formal' && 'Professional and structured'}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
               </div>
+              
+              {/* Style dropdown (opens upward) */}
+              {showStyleDropdown && (
+                <div 
+                  ref={styleDropdownRef}
+                  style={{
+                    position: 'fixed',
+                    bottom: '48px',
+                    left: '0',
+                    backgroundColor: settings?.theme === 'dark' ? '#1A1A1A' : '#ffffff',
+                    border: `1px solid ${settings?.theme === 'dark' ? '#333' : '#ddd'}`,
+                    borderRadius: '6px',
+                    marginBottom: '8px',
+                    zIndex: 10000,
+                    maxHeight: '240px',
+                    overflowY: 'auto',
+                    boxShadow: settings?.theme === 'dark' ? '0 -4px 8px rgba(0,0,0,0.3)' : '0 -4px 8px rgba(0,0,0,0.1)',
+                    fontFamily: 'Söhne, sans-serif',
+                    minWidth: '180px',
+                    backdropFilter: 'blur(8px)',
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="style-option-label" style={{
+                    padding: '6px 10px',
+                    fontSize: '11px',
+                    color: settings?.theme === 'dark' ? 'rgba(180, 180, 180, 0.7)' : 'rgba(100, 100, 100, 0.7)',
+                    borderBottom: `1px solid ${settings?.theme === 'dark' ? '#333' : '#ddd'}`,
+                    fontStyle: 'italic',
+                  }}>
+                    How should AI write responses?
+                  </div>
+                  {['normal', 'concise', 'explanatory', 'formal'].map((style) => (
+                    <div 
+                      key={style}
+                      onClick={() => {
+                        setResponseStyle(style);
+                        setShowStyleDropdown(false);
+                        
+                        // Provide feedback to user about style change
+                        if (style !== 'normal') {
+                          const description = styleDescriptions[style as keyof typeof styleDescriptions];
+                          console.log(`Response style set to ${style}: ${description}`);
+                        }
+                      }}
+                      style={{
+                        padding: '8px 12px',
+                        cursor: 'pointer',
+                        backgroundColor: style === responseStyle
+                          ? (settings?.theme === 'dark' ? '#333' : '#e0e0e0') 
+                          : 'transparent',
+                        transition: 'all 0.1s ease',
+                        fontSize: '13px',
+                        fontWeight: style === responseStyle ? '500' : 'normal',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                      }}
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.backgroundColor = settings?.theme === 'dark' ? '#333' : '#e0e0e0';
+                      }}
+                      onMouseOut={(e) => {
+                        if (style !== responseStyle) {
+                          e.currentTarget.style.backgroundColor = 'transparent';
+                        }
+                      }}
+                    >
+                      <span>{style.charAt(0).toUpperCase() + style.slice(1)}</span>
+                      
+                      {style !== 'normal' && (
+                        <span style={{ 
+                          fontSize: '10px',
+                          padding: '2px 5px',
+                          borderRadius: '4px',
+                          background: settings?.theme === 'dark' ? 'rgba(80, 80, 80, 0.2)' : 'rgba(200, 200, 200, 0.3)',
+                          color: settings?.theme === 'dark' ? '#d0d0d0' : '#505050',
+                        }}>
+                          {style === 'concise' ? 'Brief' : style === 'explanatory' ? 'Detailed' : 'Professional'}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
             
             {/* Disclaimer text on the right */}
             <div style={{
               fontSize: '11px',
-              color: settings?.theme === 'dark' ? 'rgba(180, 180, 180, 0.4)' : 'rgba(120, 120, 120, 0.4)',
+              color: settings?.theme === 'dark' ? 'rgba(180, 180, 180, 0.5)' : 'rgba(120, 120, 120, 0.5)',
               display: 'flex',
               alignItems: 'center',
+              height: '32px',
               fontStyle: 'italic',
+              padding: '0 5px',
             }}>
               AI responses may be inaccurate
             </div>

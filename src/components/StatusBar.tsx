@@ -8,6 +8,9 @@ interface StatusBarProps {
   onOpenSettings: () => void;
 }
 
+// Define available metrics types
+type MetricType = 'tokensPerSecond' | 'totalTokens' | 'promptTokens' | 'completionTokens';
+
 const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
   const { 
     connectionStatus, 
@@ -26,15 +29,32 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
   const initialRenderRef = useRef(true);
   const [windowWidth, setWindowWidth] = useState(1024); // Default to desktop
   
-  // Close dropdown when clicking outside
+  // New state for metrics management
+  const [activeMetrics, setActiveMetrics] = useState<MetricType[]>(['tokensPerSecond', 'totalTokens']);
+  const [isMetricsDropdownOpen, setIsMetricsDropdownOpen] = useState(false);
+  const metricsDropdownRef = useRef<HTMLDivElement>(null);
+  
+  // Helper functions for model types
+  const isDeepThinkModel = (model: string | undefined): boolean => {
+    return model ? model.toLowerCase().includes('deepseek') || model.toLowerCase().includes('deepthink') : false;
+  };
+  
+  const isVisionModel = (model: string | undefined): boolean => {
+    return model ? model.toLowerCase().includes('vision') : false;
+  };
+
+  // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsModelDropdownOpen(false);
       }
+      if (metricsDropdownRef.current && !metricsDropdownRef.current.contains(event.target as Node)) {
+        setIsMetricsDropdownOpen(false);
+      }
     };
     
-    if (isModelDropdownOpen) {
+    if (isModelDropdownOpen || isMetricsDropdownOpen) {
       document.addEventListener('mousedown', handleClickOutside);
     } else {
       document.removeEventListener('mousedown', handleClickOutside);
@@ -43,7 +63,7 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [isModelDropdownOpen]);
+  }, [isModelDropdownOpen, isMetricsDropdownOpen]);
 
   // Set the initial selected model when component mounts or conversation changes
   useEffect(() => {
@@ -91,6 +111,20 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
       };
     }
   }, []);
+
+  // Add useEffect for dropdown positioning
+  useEffect(() => {
+    // Position the dropdown if it's open
+    if (isModelDropdownOpen && dropdownRef.current) {
+      const dropdownElement = dropdownRef.current.querySelector('.model-dropdown') as HTMLElement;
+      if (dropdownElement) {
+        const rect = dropdownRef.current.getBoundingClientRect();
+        // Apply a left offset to move dropdown more to the left
+        dropdownElement.style.left = '-30px';
+        dropdownElement.style.top = `${rect.height + 8}px`;
+      }
+    }
+  }, [isModelDropdownOpen]);
 
   const handleModelChange = (model: string) => {
     if (model === selectedModel) return;
@@ -192,6 +226,92 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
     return 'No models available';
   };
 
+  // Helper function to clean up model names for display
+  const formatModelName = (model: string): string => {
+    if (!model) return 'Unknown';
+    
+    // Remove version numbers and special characters
+    let displayName = model;
+    
+    // Special case handling for common models
+    if (model.includes('deepseek-r1')) {
+      if (model.includes('1.5b')) {
+        return 'DeepSeek 1.5B';
+      } else if (model.includes('7b')) {
+        return 'DeepSeek 7B';
+      } else if (model.includes('14b')) {
+        return 'DeepSeek 14B';
+      }
+      return 'DeepSeek';
+    }
+    
+    if (model.includes('llama3.2')) {
+      if (model.includes('vision')) {
+        return 'Llama3 Vision 11B';
+      }
+      
+      if (model.includes('1b')) {
+        return 'Llama3 1B';
+      } else if (model.includes('11b')) {
+        return 'Llama3 11B';
+      }
+      return 'Llama3';
+    }
+    
+    // Remove any special characters and format remaining
+    displayName = displayName
+      .replace(/[-:]/g, ' ')
+      .replace(/\b\w/g, l => l.toUpperCase());
+    
+    return displayName;
+  };
+
+  // Handle adding a metric to the display
+  const handleAddMetric = (metricType: MetricType) => {
+    if (!activeMetrics.includes(metricType)) {
+      setActiveMetrics([...activeMetrics, metricType]);
+    }
+    setIsMetricsDropdownOpen(false);
+  };
+
+  // Handle removing a metric from the display
+  const handleRemoveMetric = (metricType: MetricType) => {
+    setActiveMetrics(activeMetrics.filter(metric => metric !== metricType));
+  };
+
+  // Toggle metrics dropdown
+  const toggleMetricsDropdown = () => {
+    setIsMetricsDropdownOpen(!isMetricsDropdownOpen);
+  };
+
+  // Get available metrics that are not already displayed
+  const getAvailableMetrics = (): MetricType[] => {
+    const allMetrics: MetricType[] = ['tokensPerSecond', 'totalTokens', 'promptTokens', 'completionTokens'];
+    return allMetrics.filter(metric => !activeMetrics.includes(metric));
+  };
+
+  // Get friendly name for a metric type
+  const getMetricName = (metricType: MetricType): string => {
+    switch (metricType) {
+      case 'tokensPerSecond': return 'Tokens/sec';
+      case 'totalTokens': return 'Total Tokens';
+      case 'promptTokens': return 'Prompt Tokens';
+      case 'completionTokens': return 'Completion Tokens';
+      default: return 'Unknown Metric';
+    }
+  };
+
+  // Get the value for a specific metric
+  const getMetricValue = (metricType: MetricType): string => {
+    switch (metricType) {
+      case 'tokensPerSecond': return `${formatNumber(Math.round(tokenUsage.tokensPerSecond || 0))} t/s`;
+      case 'totalTokens': return `${formatNumber(tokenUsage.totalTokens || 0)}`;
+      case 'promptTokens': return `${formatNumber(tokenUsage.promptTokens || 0)}`;
+      case 'completionTokens': return `${formatNumber(tokenUsage.completionTokens || 0)}`;
+      default: return '0';
+    }
+  };
+
   // Settings icon SVG
   const SettingsIcon = () => (
     <svg 
@@ -200,17 +320,53 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
       viewBox="0 0 24 24" 
       fill="none" 
       stroke="currentColor" 
-      strokeWidth="1.5" 
+      strokeWidth="2.5" 
       strokeLinecap="round" 
       strokeLinejoin="round"
       style={{ pointerEvents: 'none' }}
     >
-      <circle cx="12" cy="12" r="3"></circle>
+      <circle cx="12" cy="12" r="2.5"></circle>
       <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
     </svg>
   );
 
-  // Update customStatusBarStyles to ensure model selector displays properly
+  // Add Metric icon SVG
+  const AddMetricIcon = () => (
+    <svg 
+      width="20" 
+      height="20" 
+      viewBox="0 0 24 24" 
+      fill="none" 
+      stroke="currentColor" 
+      strokeWidth="2.5" 
+      strokeLinecap="round" 
+      strokeLinejoin="round"
+      style={{ pointerEvents: 'none' }}
+    >
+      <line x1="12" y1="5" x2="12" y2="19"></line>
+      <line x1="5" y1="12" x2="19" y2="12"></line>
+    </svg>
+  );
+
+  // Close/Remove icon SVG
+  const RemoveIcon = () => (
+    <svg 
+      width="16" 
+      height="16" 
+      viewBox="0 0 24 24" 
+      fill="none" 
+      stroke="currentColor" 
+      strokeWidth="2.5" 
+      strokeLinecap="round" 
+      strokeLinejoin="round"
+      style={{ pointerEvents: 'none' }}
+    >
+      <line x1="18" y1="6" x2="6" y2="18"></line>
+      <line x1="6" y1="6" x2="18" y2="18"></line>
+    </svg>
+  );
+
+  // Add style definitions for model type glows
   const customStatusBarStyles = `
     .status-bar {
       height: var(--status-bar-height);
@@ -247,12 +403,146 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
     .model-dropdown {
       position: absolute;
       top: 100% !important;
-      left: 0;
-      width: 100%;
-      margin-top: 4px !important;
-      max-height: 200px;
+      left: -30px !important;
+      margin-top: 8px !important;
+      max-height: 240px;
       z-index: 10000 !important;
       box-shadow: 0 4px 12px rgba(0, 0, 0, ${settings?.theme === 'dark' ? '0.4' : '0.2'}) !important;
+      min-width: 180px;
+    }
+    
+    .metrics-dropdown {
+      position: absolute;
+      top: 100% !important;
+      right: 0 !important;
+      margin-top: 8px !important;
+      max-height: 240px;
+      z-index: 10000 !important;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, ${settings?.theme === 'dark' ? '0.4' : '0.2'}) !important;
+      min-width: 180px;
+      background: ${settings?.theme === 'dark' ? '#222' : '#fff'};
+      border-radius: var(--border-radius);
+      border: 1px solid ${settings?.theme === 'dark' ? '#333' : '#e0e0e0'};
+      overflow: hidden;
+    }
+    
+    .metrics-dropdown-item {
+      padding: 8px 12px;
+      cursor: pointer;
+      transition: background 0.2s ease;
+      color: ${settings?.theme === 'dark' ? '#d0d0d0' : '#505050'};
+    }
+    
+    .metrics-dropdown-item:hover {
+      background: ${settings?.theme === 'dark' ? '#333' : '#f0f0f0'};
+    }
+    
+    .metric-container {
+      position: relative;
+      transition: all 0.2s ease;
+    }
+    
+    .metric-container:hover .metric-remove-btn {
+      opacity: 1;
+      transform: translateX(0);
+    }
+    
+    .metric-remove-btn {
+      position: absolute;
+      top: 3px;
+      right: 3px;
+      width: 16px;
+      height: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: ${settings?.theme === 'dark' ? 'rgba(80, 80, 80, 0.7)' : 'rgba(200, 200, 200, 0.7)'};
+      border-radius: 50%;
+      cursor: pointer;
+      opacity: 0;
+      transform: translateX(4px);
+      transition: all 0.2s ease;
+    }
+    
+    .metric-remove-btn:hover {
+      background: ${settings?.theme === 'dark' ? 'rgba(120, 120, 120, 0.9)' : 'rgba(160, 160, 160, 0.9)'};
+    }
+    
+    @keyframes movingStroke {
+      0% {
+        background-position: -100% 50%;
+      }
+      100% {
+        background-position: 200% 50%;
+      }
+    }
+    
+    .vision-model-glow {
+      position: relative;
+      overflow: hidden;
+      border-radius: var(--border-radius);
+    }
+    
+    .vision-model-glow::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      left: 0;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        transparent 20%,
+        ${settings?.theme === 'dark' ? 'rgba(255, 80, 80, 0.08)' : 'rgba(255, 60, 60, 0.04)'} 35%,
+        ${settings?.theme === 'dark' ? 'rgba(255, 80, 80, 0.15)' : 'rgba(255, 60, 60, 0.08)'} 50%,
+        ${settings?.theme === 'dark' ? 'rgba(255, 80, 80, 0.08)' : 'rgba(255, 60, 60, 0.04)'} 65%,
+        transparent 80%,
+        transparent 100%
+      );
+      background-size: 200% 200%;
+      animation: movingStroke 4s infinite cubic-bezier(0.4, 0.0, 0.2, 1);
+      border-radius: inherit;
+      pointer-events: none;
+    }
+    
+    .thinking-model-glow {
+      position: relative;
+      overflow: hidden;
+      border-radius: var(--border-radius);
+    }
+    
+    .thinking-model-glow::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      left: 0;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        transparent 20%,
+        ${settings?.theme === 'dark' ? 'rgba(0, 102, 204, 0.08)' : 'rgba(0, 102, 204, 0.04)'} 35%,
+        ${settings?.theme === 'dark' ? 'rgba(0, 102, 204, 0.15)' : 'rgba(0, 102, 204, 0.08)'} 50%,
+        ${settings?.theme === 'dark' ? 'rgba(0, 102, 204, 0.08)' : 'rgba(0, 102, 204, 0.04)'} 65%,
+        transparent 80%,
+        transparent 100%
+      );
+      background-size: 200% 200%;
+      animation: movingStroke 4.5s infinite cubic-bezier(0.4, 0.0, 0.2, 1);
+      border-radius: inherit;
+      pointer-events: none;
+    }
+    
+    .vision-model-indicator {
+      background: ${settings?.theme === 'dark' ? 'rgba(255, 80, 80, 0.15)' : 'rgba(255, 60, 60, 0.07)'};
+      border-radius: var(--border-radius);
+    }
+    
+    .thinking-model-indicator {
+      background: ${settings?.theme === 'dark' ? 'rgba(0, 102, 204, 0.15)' : 'rgba(0, 102, 204, 0.07)'};
+      border-radius: var(--border-radius);
     }
     
     @media (max-width: 767px) {
@@ -280,6 +570,18 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
       
       .connection-status span {
         font-size: 14px !important;
+      }
+      
+      .metrics-container {
+        position: absolute !important;
+        bottom: -24px !important;
+        left: 0 !important;
+        background: ${settings?.theme === 'dark' ? 'rgba(18, 18, 18, 0.92)' : 'rgba(245, 245, 245, 0.92)'} !important;
+        padding: 2px 10px !important;
+        border-radius: 0 0 4px 0 !important;
+        border-right: 1px solid ${settings?.theme === 'dark' ? 'var(--status-bar-border-dark)' : 'var(--status-bar-border-color)'} !important;
+        border-bottom: 1px solid ${settings?.theme === 'dark' ? 'var(--status-bar-border-dark)' : 'var(--status-bar-border-color)'} !important;
+        z-index: 69 !important;
       }
     }
   `;
@@ -311,111 +613,61 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
           lineHeight: 'var(--status-bar-line-height)',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', padding: '0', gap: 'var(--status-bar-element-gap)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', padding: '0', gap: 'calc(var(--status-bar-element-gap) * 1.6)' }}>
+          {/* App title - static, not a dropdown */}
           <div 
-            className="model-selector" 
-            ref={dropdownRef}
+            className="app-title-container"
             style={{ 
-              position: 'relative'
+              position: 'relative',
+              display: 'flex',
+              alignItems: 'center'
             }}
           >
             <div
-              className="selected-model"
-              onClick={() => setIsModelDropdownOpen(!isModelDropdownOpen)}
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 padding: '0.2rem 0.4rem',
-                cursor: 'pointer',
                 fontFamily: 'var(--font-family-general, "Söhne", sans-serif)',
                 fontSize: 'var(--status-bar-font-size)',
                 textAlign: 'center',
+                borderRadius: 'var(--border-radius)',
+                background: settings?.theme === 'dark' ? 'rgba(50, 50, 50, 0.4)' : 'rgba(240, 240, 240, 0.7)',
               }}
             >
               <span 
-                className="selected-model-text"
+                className="app-title"
                 style={{ 
-                  marginRight: '6px',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
                   textAlign: 'center',
+                  fontWeight: '600',
+                  fontSize: '14px',
+                  letterSpacing: '0.2px',
                 }}
               >
-                {getCurrentModel()}
+                Classified.AI
               </span>
-              <svg 
-                width="var(--status-bar-icon-size)" 
-                height="var(--status-bar-icon-size)" 
-                viewBox="0 0 24 24" 
-                fill="none" 
-                stroke="currentColor" 
-                strokeWidth="1.5" 
-                strokeLinecap="round" 
-                strokeLinejoin="round"
-                style={{ opacity: 0.8 }}
-              >
-                <polyline points="6 9 12 15 18 9"></polyline>
-              </svg>
             </div>
-            
-            {isModelDropdownOpen && (
-              <div 
-                className="model-dropdown"
-                style={{
-                  position: 'absolute',
-                  top: '100%',
-                  left: '0',
-                  width: '100%',
-                  backgroundColor: settings?.theme === 'dark' ? 'rgba(26, 26, 26, 0.95)' : 'rgba(245, 245, 245, 0.95)',
-                  border: `1px solid ${settings?.theme === 'dark' ? 'rgba(60, 60, 60, 0.7)' : 'rgba(200, 200, 200, 0.7)'}`,
-                  borderRadius: 'var(--border-radius)',
-                  marginTop: '4px',
-                  zIndex: 10000,
-                  maxHeight: '200px',
-                  overflowY: 'auto',
-                  boxShadow: settings?.theme === 'dark' 
-                    ? '0 4px 8px rgba(0,0,0,0.3)' 
-                    : '0 4px 8px rgba(0,0,0,0.1)',
-                  fontFamily: 'var(--font-family-general, "Söhne", sans-serif)',
-                  backdropFilter: 'blur(6px)',
-                }}
-              >
-                {getModelsForProvider().map((model) => (
-                  <div 
-                    key={model}
-                    className="model-option"
-                    onClick={() => handleModelChange(model)}
-                    style={{
-                      padding: '6px 10px',
-                      cursor: 'pointer',
-                      backgroundColor: (model === selectedModel || model === currentConversation?.model)
-                        ? (settings?.theme === 'dark' ? '#333' : '#e0e0e0') 
-                        : 'transparent',
-                      transition: 'all 0.2s ease',
-                      fontSize: 'var(--status-bar-font-size)',
-                      letterSpacing: '0.2px',
-                      fontWeight: (model === selectedModel || model === currentConversation?.model) ? '500' : 'normal',
-                      lineHeight: 'var(--status-bar-line-height)',
-                      textAlign: 'left',
-                    }}
-                    onMouseOver={(e) => {
-                      e.currentTarget.style.backgroundColor = settings?.theme === 'dark' ? '#333' : '#e0e0e0';
-                    }}
-                    onMouseOut={(e) => {
-                      if (model !== selectedModel && model !== currentConversation?.model) {
-                        e.currentTarget.style.backgroundColor = 'transparent';
-                      }
-                    }}
-                  >
-                    {model}
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
           
-          <div className="connection-status" style={{ display: 'flex', alignItems: 'center' }}>
+          {/* Connection status indicator */}
+          <div 
+            className="connection-status" 
+            style={{ 
+              position: 'relative',
+              marginLeft: '15px',
+              display: 'flex',
+              alignItems: 'center',
+              padding: '0.2rem 0.6rem',
+              fontFamily: 'var(--font-family-general, "Söhne", sans-serif)',
+              fontSize: 'var(--status-bar-font-size)',
+              textAlign: 'center',
+              borderRadius: 'var(--border-radius)',
+              background: settings?.theme === 'dark' ? 'rgba(50, 50, 50, 0.4)' : 'rgba(240, 240, 240, 0.7)',
+            }}
+          >
             <div style={{
               width: '6px',
               height: '6px',
@@ -425,34 +677,114 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
               opacity: 0.8,
             }}></div>
             <span style={{ 
-              fontFamily: 'var(--font-family-general, "Söhne", sans-serif)',
-              fontSize: 'var(--status-bar-font-size)', 
-              letterSpacing: '0.2px',
-              opacity: 0.9,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
               textAlign: 'center',
+              fontWeight: '500',
             }}>
               {connectionStatus === 'connected' ? 'Connected' : 
                connectionStatus === 'disconnected' ? 'Disconnected' : 
                connectionStatus === 'error' ? 'Error' : 'Unknown'}
             </span>
           </div>
-          
-          {tokenUsage.totalTokens > 0 && (
-            <>
-              <span className="token-display" style={{ 
-                fontFamily: 'var(--font-family-general, "Söhne", sans-serif)',
-                fontSize: 'var(--status-bar-font-size)',
-                letterSpacing: '0.2px',
-                opacity: 0.8,
-                textAlign: 'center',
-              }}>
-                {formatNumber(tokenUsage.totalTokens)} tokens
-              </span>
-            </>
-          )}
         </div>
         
-        <div className="status-buttons" style={{ display: 'flex', alignItems: 'center', gap: 'var(--status-bar-element-gap)', padding: '0' }}>
+        {/* Metrics Container */}
+        <div className="metrics-container" style={{ display: 'flex', alignItems: 'center', gap: 'calc(var(--status-bar-element-gap) * 1.3)', marginRight: 'auto', marginLeft: '20px' }}>
+          {activeMetrics.map((metricType) => (
+            <div
+              key={metricType}
+              className="metric-container"
+              style={{ 
+                position: 'relative',
+                display: 'flex',
+                alignItems: 'center',
+                padding: '0.2rem 0.4rem',
+                fontFamily: 'var(--font-family-general, "Söhne", sans-serif)',
+                fontSize: 'var(--status-bar-font-size)',
+                textAlign: 'center',
+                borderRadius: 'var(--border-radius)',
+                background: settings?.theme === 'dark' ? 'rgba(50, 50, 50, 0.4)' : 'rgba(240, 240, 240, 0.7)',
+                cursor: metricType === 'totalTokens' ? 'pointer' : 'default',
+              }}
+              onClick={metricType === 'totalTokens' ? toggleMetricsDropdown : undefined}
+              title={metricType === 'totalTokens' ? 'Click to manage metrics' : getMetricName(metricType)}
+            >
+              <span 
+                style={{ 
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  textAlign: 'center',
+                  fontWeight: '500',
+                }}
+              >
+                {getMetricName(metricType)}: {getMetricValue(metricType)}
+              </span>
+              
+              {/* Remove button that appears on hover */}
+              <div 
+                className="metric-remove-btn"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleRemoveMetric(metricType);
+                }}
+                title={`Remove ${getMetricName(metricType)} metric`}
+              >
+                <RemoveIcon />
+              </div>
+            </div>
+          ))}
+          
+          {/* Add Metric Button */}
+          <div ref={metricsDropdownRef} style={{ position: 'relative', marginLeft: '2px' }}>
+            <button
+              onClick={toggleMetricsDropdown}
+              style={{
+                backgroundColor: settings?.theme === 'dark' ? 'rgba(50, 50, 50, 0.4)' : 'rgba(240, 240, 240, 0.7)',
+                border: 'none',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '3px 5px',
+                borderRadius: 'var(--border-radius)',
+                color: settings?.theme === 'dark' ? 'rgba(180, 180, 180, 0.8)' : 'rgba(100, 100, 100, 0.8)',
+                opacity: 0.9,
+                transition: 'opacity 0.2s ease',
+                fontFamily: 'var(--font-family-general, "Söhne", sans-serif)',
+              }}
+              title="Add metric"
+              onMouseOver={(e) => e.currentTarget.style.opacity = '1'}
+              onMouseOut={(e) => e.currentTarget.style.opacity = '0.9'}
+            >
+              <AddMetricIcon />
+            </button>
+            
+            {isMetricsDropdownOpen && (
+              <div className="metrics-dropdown">
+                {getAvailableMetrics().length > 0 ? (
+                  getAvailableMetrics().map((metricType) => (
+                    <div 
+                      key={metricType}
+                      className="metrics-dropdown-item"
+                      onClick={() => handleAddMetric(metricType)}
+                    >
+                      {getMetricName(metricType)}
+                    </div>
+                  ))
+                ) : (
+                  <div className="metrics-dropdown-item" style={{ cursor: 'default' }}>
+                    No more metrics available
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+        
+        <div className="status-buttons" style={{ display: 'flex', alignItems: 'center', gap: 'calc(var(--status-bar-element-gap) * 1.3)', padding: '0', marginLeft: '12px' }}>
           <button
             onClick={() => {
               const isElectron = typeof window !== 'undefined' && window.electron;
@@ -486,14 +818,11 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
               viewBox="0 0 24 24" 
               fill="none" 
               stroke="currentColor" 
-              strokeWidth="1.5" 
+              strokeWidth="2.5" 
               strokeLinecap="round" 
               strokeLinejoin="round"
             >
-              <path d="M23 4v6h-6"></path>
-              <path d="M1 20v-6h6"></path>
-              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"></path>
-              <path d="M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+              <path d="M21.5 2v6h-6M2.5 22v-6h6M4 11.5a8 8 0 0 1 14-3l3.5 3.5M20 12.5a8 8 0 0 1-14 3L2.5 12"></path>
             </svg>
           </button>
           

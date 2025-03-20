@@ -59,6 +59,9 @@ export interface TokenUsage {
   completionTokens: number;
   totalTokens: number;
   estimatedCost: number;
+  tokensPerSecond?: number;
+  _responseStartTime?: number; // Internal: timestamp when response started
+  _lastTokenCount?: number;    // Internal: previous token count
 }
 
 // Electron Window API

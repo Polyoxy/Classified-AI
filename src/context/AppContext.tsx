@@ -203,7 +203,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const loadSettings = async () => {
       try {
         // Check if we're in Electron environment
-        const isElectron = typeof window !== 'undefined' && window.electron;
+        const isElectron = typeof window !== 'undefined' && 'electron' in window;
         
         if (user && !isElectron) {
           // Listen to Realtime Database for settings
@@ -218,15 +218,23 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           return () => {
             rtdbUnsubscribe();
           };
-        } else if (isElectron) {
+        } else if (isElectron && window.electron?.store?.get) {
           // Use electron-store in Electron environment
-          const storedSettings = await window.electron.store.get('settings');
-          if (storedSettings) {
-            setSettings(prev => ({ ...prev, ...storedSettings }));
-          }
+          window.electron.store.get('settings')
+            .then(storedSettings => {
+              if (storedSettings) {
+                setSettings(storedSettings);
+                setIsLoading(false);
+              }
+            })
+            .catch(error => {
+              console.error('Error loading settings from electron store:', error);
+              setIsLoading(false);
+            });
         }
       } catch (error) {
         console.error('Error loading settings:', error);
+        setIsLoading(false);
       }
     };
 
@@ -547,7 +555,38 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   // Update token usage
   const updateTokenUsage = (usage: Partial<TokenUsage>) => {
-    setTokenUsage(prev => ({ ...prev, ...usage }));
+    setTokenUsage(prev => {
+      // Calculate tokens per second if we have completion tokens
+      let tokensPerSecond = prev.tokensPerSecond;
+      
+      if (usage.completionTokens && usage.completionTokens > 0) {
+        // Get current time in milliseconds
+        const now = Date.now();
+        
+        // If we don't have a start time, set it now
+        if (!prev._responseStartTime) {
+          prev._responseStartTime = now;
+          prev._lastTokenCount = 0;
+        }
+        
+        // Calculate elapsed time in seconds
+        const elapsedTimeSeconds = (now - prev._responseStartTime) / 1000;
+        
+        if (elapsedTimeSeconds > 0) {
+          // Calculate tokens per second
+          tokensPerSecond = usage.completionTokens / elapsedTimeSeconds;
+        }
+      }
+      
+      return { 
+        ...prev, 
+        ...usage,
+        tokensPerSecond: tokensPerSecond || prev.tokensPerSecond || 0,
+        // Store internal tracking variables
+        _responseStartTime: prev._responseStartTime,
+        _lastTokenCount: usage.completionTokens || prev._lastTokenCount
+      };
+    });
   };
 
   // Update settings
