@@ -18,11 +18,11 @@
   --spacing-6: 24px;
 
   /* Border radius */
-  --border-radius: 10px;
+  --border-radius: 20px;
   --chat-bubble-radius-user: 16px 16px 4px 16px;
   --chat-bubble-radius-ai: 16px 16px 16px 16px;
-  --input-border-radius: 12px;
-  --modal-border-radius: 20px;
+  --input-border-radius: 20px;
+  --modal-border-radius: 24px;
   
   /* Typography */
   --font-size-heading-1: 28px;

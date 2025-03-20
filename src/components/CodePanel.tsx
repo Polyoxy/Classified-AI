@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAppContext } from '@/context/AppContext';
 import ReactDOM from 'react-dom';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { vscDarkPlus, vs } from 'react-syntax-highlighter/dist/cjs/styles/prism';
 
 interface CodePanelProps {
   code: string;
@@ -66,43 +68,6 @@ const CodePanel: React.FC<CodePanelProps> = ({
     return () => window.removeEventListener('keydown', handleEscKey);
   }, [isOpen, onClose]);
   
-  // Helper to determine code colors for syntax highlighting
-  const getLineColor = (line: string, isDark: boolean): string => {
-    // Keywords
-    if (/\b(function|return|if|for|while|var|let|const|import|export|class|interface|extends|implements|new|this)\b/.test(line)) {
-      return isDark ? '#C586C0' : '#AF00DB';
-    }
-    
-    // Comment detection
-    if (line.trim().startsWith('//') || line.trim().startsWith('/*') || line.trim().startsWith('*')) {
-      return isDark ? '#6A9955' : '#008000';
-    }
-    
-    // Strings
-    if (/'([^'\\]|\\.)*'|"([^"\\]|\\.)*"/.test(line)) {
-      return isDark ? '#CE9178' : '#A31515';
-    }
-    
-    // Functions/methods
-    if (/\w+\s*\(/.test(line)) {
-      return isDark ? '#DCDCAA' : '#795E26';
-    }
-    
-    // Types/interfaces
-    if (/\b([A-Z]\w*)\b/.test(line)) {
-      return isDark ? '#4EC9B0' : '#267F99';
-    }
-    
-    // Default text color
-    return isDark ? '#D4D4D4' : '#333333';
-  };
-  
-  // Helper to maintain indentation
-  const getIndentation = (line: string): string => {
-    const indent = line.match(/^(\s*)/)?.[1] || '';
-    return indent.replace(/ /g, '\u00A0').replace(/\t/g, '\u00A0\u00A0');
-  };
-  
   // Create portal content
   const panelContent = (
     <div 
@@ -147,16 +112,21 @@ const CodePanel: React.FC<CodePanelProps> = ({
       </div>
       
       <div className="code-panel-content">
-        {code.split('\n').map((line, lineIndex) => (
-          <div key={lineIndex} style={{
-            display: 'block',
-            color: getLineColor(line, isDarkTheme),
-            paddingLeft: getIndentation(line),
-            whiteSpace: 'pre',
-          }}>
-            {line}
-          </div>
-        ))}
+        <SyntaxHighlighter
+          language={language || 'text'}
+          style={isDarkTheme ? vscDarkPlus : vs}
+          customStyle={{
+            margin: 0,
+            padding: '16px',
+            background: 'transparent',
+            fontSize: '14px',
+            lineHeight: 1.5,
+            height: '100%',
+            overflow: 'auto',
+          }}
+        >
+          {code}
+        </SyntaxHighlighter>
       </div>
       
       {/* Mobile back button */}
@@ -229,10 +199,6 @@ const CodePanel: React.FC<CodePanelProps> = ({
         .code-panel-content {
           flex: 1;
           overflow: auto;
-          padding: var(--spacing-4);
-          font-family: var(--font-family-mono);
-          font-size: var(--font-size-caption);
-          line-height: 1.5;
           background-color: ${isDarkTheme ? 'var(--code-panel-bg-dark)' : 'var(--code-panel-bg-light)'};
         }
         
@@ -250,35 +216,24 @@ const CodePanel: React.FC<CodePanelProps> = ({
             display: flex;
             align-items: center;
             justify-content: center;
-            background-color: var(--accent-color);
-            color: white;
-            position: fixed;
-            bottom: env(safe-area-inset-bottom, 24px);
-            left: 50%;
-            transform: translateX(-50%);
-            width: auto;
-            padding: 8px 16px;
-            border-radius: var(--border-radius);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-            z-index: 1001;
-            font-size: 14px;
-            font-weight: 500;
+            padding: var(--spacing-3);
+            background-color: ${isDarkTheme ? 'rgba(40, 40, 40, 0.8)' : 'rgba(240, 240, 240, 0.8)'};
+            color: ${isDarkTheme ? '#d0d0d0' : '#333'};
+            border-top: 1px solid ${isDarkTheme ? 'rgba(80, 80, 80, 0.3)' : 'rgba(200, 200, 200, 0.5)'};
+            font-size: var(--font-size-body);
             cursor: pointer;
+          }
+          
+          .mobile-back-button:hover {
+            background-color: ${isDarkTheme ? 'rgba(60, 60, 60, 0.8)' : 'rgba(220, 220, 220, 0.8)'};
           }
         }
       `}</style>
     </div>
   );
   
-  // Use portal to render at document root
-  if (!mounted || typeof document === 'undefined') {
-    return null;
-  }
-  
-  return ReactDOM.createPortal(
-    panelContent,
-    document.body
-  );
+  // Use portal to render outside of normal flow
+  return mounted ? ReactDOM.createPortal(panelContent, document.body) : null;
 };
 
 export default CodePanel; 

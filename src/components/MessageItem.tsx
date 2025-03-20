@@ -124,41 +124,107 @@ const MessageItem: React.FC<MessageItemProps> = ({
             if (titleMatch) {
               title = titleMatch[1];
             } else {
-              // Try to guess a title from the code
-              if (language === 'javascript' || language === 'typescript') {
-                const functionMatch = code.match(/function\s+(\w+)/);
-                const constMatch = code.match(/const\s+(\w+)/);
-                const classMatch = code.match(/class\s+(\w+)/);
+              // Try to infer title from surrounding content - look for instructions before the code block
+              const contentBeforeCodeBlock = parts[index - 1];
+              if (contentBeforeCodeBlock) {
+                // Look for phrases like "create a file", "modify this code", "here's an example of", etc.
+                const titleHints = [
+                  /create (?:a|the) (?:file|script|component|function) (?:for|called|named) [`'"]*([a-zA-Z0-9_\-.]+)[`'"']*/i,
+                  /modify [`'"]*([a-zA-Z0-9_\-.]+)[`'"']*/i,
+                  /update [`'"]*([a-zA-Z0-9_\-.]+)[`'"']*/i,
+                  /example (?:of|for) [`'"]*([a-zA-Z0-9_\-.]+)[`'"']*/i,
+                  /(?:here is|here's) (?:the|a) ([a-zA-Z0-9_\- ]+) (?:file|code|script|component)/i,
+                  /([a-zA-Z0-9_\-.]+\.(?:js|ts|jsx|tsx|py|java|rb|go|c|cpp|cs|php|html|css|scss))/i,
+                ];
                 
-                if (functionMatch) {
-                  title = `Function: ${functionMatch[1]}`;
-                } else if (classMatch) {
-                  title = `Class: ${classMatch[1]}`;
-                } else if (constMatch) {
-                  title = `${constMatch[1]}`;
+                for (const pattern of titleHints) {
+                  const match = contentBeforeCodeBlock.match(pattern);
+                  if (match && match[1]) {
+                    title = match[1].trim();
+                    break;
+                  }
+                }
+                
+                // If still no title, try to get a title from the text right before the code block
+                if (!title) {
+                  // Get the last sentence before the code block
+                  const sentences = contentBeforeCodeBlock.split(/[.!?]\s+/);
+                  const lastSentence = sentences[sentences.length - 1].trim();
+                  
+                  // If it's relatively short, use it as a title
+                  if (lastSentence.length > 0 && lastSentence.length < 60) {
+                    title = lastSentence;
+                  }
+                }
+              }
+              
+              // If still no title, try to guess from the code itself
+              if (!title) {
+                if (language === 'javascript' || language === 'typescript') {
+                  const functionMatch = code.match(/function\s+(\w+)/);
+                  const constMatch = code.match(/const\s+(\w+)/);
+                  const classMatch = code.match(/class\s+(\w+)/);
+                  
+                  if (functionMatch) {
+                    title = `Function: ${functionMatch[1]}`;
+                  } else if (classMatch) {
+                    title = `Class: ${classMatch[1]}`;
+                  } else if (constMatch) {
+                    title = `${constMatch[1]}`;
+                  } else {
+                    // Look for file name pattern at the beginning of the code
+                    const fileNameMatch = code.match(/^(?:\/\/|#|\/\*)\s*([a-zA-Z0-9_\-.]+\.(?:js|ts|jsx|tsx|py|java|rb|go|c|cpp|cs|php|html|css|scss))/);
+                    if (fileNameMatch) {
+                      title = fileNameMatch[1];
+                    } else {
+                      title = language ? `${language.charAt(0).toUpperCase() + language.slice(1)} code` : 'Code snippet';
+                    }
+                  }
+                } else if (language === 'html') {
+                  // Look for title tag content
+                  const titleTagMatch = code.match(/<title>(.*?)<\/title>/i);
+                  if (titleTagMatch) {
+                    title = titleTagMatch[1];
+                  } else {
+                    title = 'HTML Template';
+                  }
+                } else if (language === 'css') {
+                  // Look for first selector
+                  const selectorMatch = code.match(/([a-zA-Z0-9_\-.#][a-zA-Z0-9_\-.# ]*?)\s*\{/);
+                  if (selectorMatch) {
+                    title = `CSS for ${selectorMatch[1].trim()}`;
+                  } else {
+                    title = 'CSS Styles';
+                  }
+                } else if (language === 'python') {
+                  const defMatch = code.match(/def\s+(\w+)/);
+                  const classMatch = code.match(/class\s+(\w+)/);
+                  
+                  if (defMatch) {
+                    title = `Function: ${defMatch[1]}`;
+                  } else if (classMatch) {
+                    title = `Class: ${classMatch[1]}`;
+                  } else {
+                    // Look for module docstring
+                    const docstringMatch = code.match(/^(?:\'\'\'|\"\"\")([^]*?)(?:\'\'\'|\"\"\")/);
+                    if (docstringMatch) {
+                      const firstLine = docstringMatch[1].trim().split('\n')[0];
+                      if (firstLine.length < 60) {
+                        title = firstLine;
+                      } else {
+                        title = 'Python code';
+                      }
+                    } else {
+                      title = 'Python code';
+                    }
+                  }
                 } else {
                   title = language ? `${language.charAt(0).toUpperCase() + language.slice(1)} code` : 'Code snippet';
                 }
-              } else if (language === 'html') {
-                title = 'HTML Template';
-              } else if (language === 'css') {
-                title = 'CSS Styles';
-              } else if (language === 'python') {
-                const defMatch = code.match(/def\s+(\w+)/);
-                const classMatch = code.match(/class\s+(\w+)/);
-                
-                if (defMatch) {
-                  title = `Function: ${defMatch[1]}`;
-                } else if (classMatch) {
-                  title = `Class: ${classMatch[1]}`;
-                } else {
-                  title = 'Python code';
-                }
-              } else {
-                title = language ? `${language.charAt(0).toUpperCase() + language.slice(1)} code` : 'Code snippet';
               }
             }
             
+            // Simply pass to CodeSnippet component which now handles the conditional display
             return (
               <CodeSnippet 
                 key={index} 
