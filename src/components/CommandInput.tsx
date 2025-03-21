@@ -470,7 +470,7 @@ const CommandInput: React.FC = () => {
                 display: flex;
                 alignItems: center;
                 gap: 5px;
-                height: 24px;
+                height: 23px;
                 transition: background 0.2s, transform 0.1s;
                 user-select: none;
                 font-family: var(--font-family-general, "Söhne", sans-serif);
@@ -722,7 +722,7 @@ const CommandInput: React.FC = () => {
                   opacity: isProcessing ? 0.6 : 1,
                   width: 'auto',
                   minWidth: '100px',
-                  maxWidth: '110px',
+                  maxWidth: '130px',
                   whiteSpace: 'nowrap',
                   position: 'relative',
                   display: 'flex',
@@ -747,14 +747,14 @@ const CommandInput: React.FC = () => {
                           : 'rgba(160, 95, 180, 0.15)';
                       default:
                         return settings?.theme === 'dark' 
-                          ? 'rgba(58, 58, 58, 0.4)' 
+                          ? 'rgba(50, 50, 50, 0.4)' 
                           : 'rgba(240, 240, 240, 0.7)';
                     }
                   })(),
                   borderRadius: 'var(--border-radius)',
                   padding: '0.15rem 0.5rem',
                   cursor: isProcessing ? 'default' : 'pointer',
-                  transition: 'background 0.2s ease, opacity 0.2s ease',
+                  transition: 'all 0.2s ease',
                   fontSize: '12px',
                   fontWeight: '500',
                   fontFamily: 'var(--font-family-general, "Söhne", sans-serif)',
@@ -778,64 +778,66 @@ const CommandInput: React.FC = () => {
                         return 'none';
                     }
                   })(),
+                  transform: showStyleDropdown ? 'scale(0.97)' : 'scale(1)',
                 }}
               >
                 <span style={{ 
                   fontWeight: 500,
                   fontSize: '12px',
-                  maxWidth: '80px',
+                  maxWidth: '100px',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
-                  lineHeight: '18px',
+                  lineHeight: '16px',
                   fontFamily: 'var(--font-family-general, "Söhne", sans-serif)'
                 }}>
                   {responseStyle.charAt(0).toUpperCase() + responseStyle.slice(1)}
                 </span>
                 
                 <svg 
-                  width="14" 
-                  height="14" 
+                  width="12" 
+                  height="12" 
                   viewBox="0 0 24 24" 
                   fill="none" 
                   stroke="currentColor" 
-                  strokeWidth="2.5" 
+                  strokeWidth="2" 
                   strokeLinecap="round" 
-                  strokeLinejoin="round"
-                  style={{
+                  strokeLinejoin="round" 
+                  style={{ 
+                    marginLeft: '4px', 
+                    opacity: 0.7,
                     transform: showStyleDropdown ? 'rotate(180deg)' : 'rotate(0deg)',
-                    transition: 'transform 0.2s ease',
+                    transition: 'transform 0.2s ease'
                   }}
                 >
-                  <polyline points="7 10 12 15 17 10"></polyline>
+                  <polyline points="6 9 12 15 18 9"></polyline>
                 </svg>
               </div>
               
-              {/* Style dropdown (opens upward) */}
+              {/* Style dropdown */}
               {showStyleDropdown && (
                 <div 
                   ref={styleDropdownRef}
+                  className="style-dropdown"
                   style={{
-                    position: 'fixed',
-                    bottom: '48px',
-                    left: '0',
-                    backgroundColor: settings?.theme === 'dark' ? '#1A1A1A' : '#ffffff',
-                    border: `1px solid ${settings?.theme === 'dark' ? '#333' : '#ddd'}`,
-                    borderRadius: '6px',
+                    position: 'absolute',
+                    bottom: '100%',
+                    left: '23.5%',
+                    transform: 'translateX(-50%)',
                     marginBottom: '8px',
+                    maxHeight: '200px',
                     zIndex: 10000,
-                    maxHeight: '240px',
+                    boxShadow: `0 -4px 12px rgba(0, 0, 0, ${settings?.theme === 'dark' ? '0.4' : '0.2'})`,
+                    minWidth: '180px',
+                    background: settings?.theme === 'dark' ? '#222' : '#fff',
+                    borderRadius: 'var(--border-radius)',
+                    border: `1px solid ${settings?.theme === 'dark' ? '#333' : '#e0e0e0'}`,
+                    overflow: 'hidden',
                     overflowY: 'auto',
-                    boxShadow: settings?.theme === 'dark' ? '0 -4px 8px rgba(0,0,0,0.3)' : '0 -4px 8px rgba(0,0,0,0.1)',
-                    fontFamily: 'Söhne, sans-serif',
-                    minWidth: '140px',
-                    maxWidth: '160px',
-                    backdropFilter: 'blur(8px)',
                   }}
-                  onClick={(e) => e.stopPropagation()}
                 >
                   <div className="style-option-label" style={{
-                    padding: '6px 10px',
+                    padding: '8px 12px',
                     fontSize: '11px',
                     color: settings?.theme === 'dark' ? 'rgba(180, 180, 180, 0.7)' : 'rgba(100, 100, 100, 0.7)',
                     borderBottom: `1px solid ${settings?.theme === 'dark' ? '#333' : '#ddd'}`,
@@ -859,18 +861,15 @@ const CommandInput: React.FC = () => {
                       style={{
                         padding: '8px 12px',
                         cursor: 'pointer',
-                        backgroundColor: style === responseStyle
-                          ? (settings?.theme === 'dark' ? '#333' : '#e0e0e0') 
+                        transition: 'all 0.2s ease',
+                        backgroundColor: style === responseStyle 
+                          ? (settings?.theme === 'dark' ? '#333' : '#f0f0f0') 
                           : 'transparent',
-                        transition: 'all 0.1s ease',
-                        fontSize: '13px',
-                        fontWeight: style === responseStyle ? '500' : 'normal',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
+                        color: settings?.theme === 'dark' ? '#d0d0d0' : '#505050',
+                        fontSize: 'var(--status-bar-font-size)',
                       }}
                       onMouseOver={(e) => {
-                        e.currentTarget.style.backgroundColor = settings?.theme === 'dark' ? '#333' : '#e0e0e0';
+                        e.currentTarget.style.backgroundColor = settings?.theme === 'dark' ? '#333' : '#f0f0f0';
                       }}
                       onMouseOut={(e) => {
                         if (style !== responseStyle) {
@@ -878,19 +877,20 @@ const CommandInput: React.FC = () => {
                         }
                       }}
                     >
-                      <span>{style.charAt(0).toUpperCase() + style.slice(1)}</span>
-                      
-                      {style !== 'normal' && (
-                        <span style={{ 
-                          fontSize: '10px',
-                          padding: '2px 5px',
-                          borderRadius: '4px',
-                          background: settings?.theme === 'dark' ? 'rgba(80, 80, 80, 0.2)' : 'rgba(200, 200, 200, 0.3)',
-                          color: settings?.theme === 'dark' ? '#d0d0d0' : '#505050',
-                        }}>
-                          {style === 'concise' ? 'Brief' : style === 'explanatory' ? 'Detailed' : 'Professional'}
-                        </span>
-                      )}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span>{style.charAt(0).toUpperCase() + style.slice(1)}</span>
+                        {style !== 'normal' && (
+                          <span style={{ 
+                            fontSize: '10px',
+                            padding: '2px 5px',
+                            borderRadius: '4px',
+                            background: settings?.theme === 'dark' ? 'rgba(80, 80, 80, 0.2)' : 'rgba(200, 200, 200, 0.3)',
+                            color: settings?.theme === 'dark' ? '#d0d0d0' : '#505050',
+                          }}>
+                            {style === 'concise' ? 'Brief' : style === 'explanatory' ? 'Detailed' : 'Professional'}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -969,7 +969,7 @@ const CommandInput: React.FC = () => {
           
           .command-textarea::-webkit-scrollbar {
             width: 8px;
-            height: 8px;
+            height: 20px;
           }
           
           .command-textarea::-webkit-scrollbar-track {
