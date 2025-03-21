@@ -4,8 +4,16 @@ import MessageItem from './MessageItem';
 
 const ChatContainer: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const { currentConversation, isProcessing, settings } = useAppContext();
+  const { currentConversation, isProcessing, settings, resetConversations, createConversation } = useAppContext();
   const isDarkTheme = settings?.theme === 'dark';
+
+  // Function to handle clearing chat
+  const handleClearChat = () => {
+    if (window.confirm('Are you sure you want to clear all messages?')) {
+      resetConversations();
+      createConversation();
+    }
+  };
 
   // Scroll to bottom when new messages are added or when processing state changes
   useEffect(() => {
@@ -41,6 +49,43 @@ const ChatContainer: React.FC = () => {
         backdropFilter: 'blur(8px)',
       }}
     >
+      {/* Temporary Clear Chat Button */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        marginBottom: '16px',
+        position: 'sticky',
+        top: '10px',
+        zIndex: 10,
+      }}>
+        <button
+          onClick={handleClearChat}
+          style={{
+            backgroundColor: isDarkTheme ? 'rgba(220, 53, 69, 0.8)' : 'rgba(220, 53, 69, 0.7)',
+            color: 'white',
+            border: 'none',
+            borderRadius: '6px',
+            padding: '8px 16px',
+            fontSize: '14px',
+            fontWeight: 'bold',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            opacity: 0.8,
+            boxShadow: '0 2px 5px rgba(0,0,0,0.2)',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.opacity = '1';
+            e.currentTarget.style.transform = 'scale(1.05)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.opacity = '0.8';
+            e.currentTarget.style.transform = 'scale(1)';
+          }}
+        >
+          Clear Chat
+        </button>
+      </div>
+
       <style>
         {`
           div::-webkit-scrollbar {

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useAppContext } from '@/context/AppContext';
 import CodeSnippet from './CodeSnippet';
 import Markdown from 'markdown-to-jsx';
@@ -23,17 +23,68 @@ const MessageItem: React.FC<MessageItemProps> = ({
   const [showCopied, setShowCopied] = useState(false);
   const [isThinkingCollapsed, setIsThinkingCollapsed] = useState(true);
   const [contentHeight, setContentHeight] = useState(0);
+  const [showThinking, setShowThinking] = useState(true);
+  const [reasoningTime, setReasoningTime] = useState(0);
   const thinkingContentRef = useRef<HTMLDivElement>(null);
   const prevProcessingRef = useRef(isProcessing);
+  const reasoningTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Detect if current model is a thinking model
+  const isThinkingModel = useMemo(() => {
+    // Add logic to check if the model supports thinking
+    // This can be customized based on your app's model configuration
+    const thinkingModels = [
+      'deepseek-r1:7b', 
+      'deepseek-r1:14b', 
+      'deepseek-r1:1.5b',
+      'deepseek-chat'
+    ];
+    return thinkingModels.includes(model || '');
+  }, [model]);
 
   // Process content to remove thinking tags from display
   const processContent = (content: string): string => {
-    // Remove thinking tags from display content
-    return content.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+    // Remove thinking tags and their content from display
+    // More aggressive regex that handles incomplete tags as well
+    let processed = content;
+    
+    // First handle any complete think tags
+    processed = processed.replace(/<think>[\s\S]*?<\/think>/g, '');
+    
+    // Then handle any remaining open think tags without closing tags
+    const openTagIndex = processed.lastIndexOf('<think>');
+    if (openTagIndex !== -1) {
+      processed = processed.substring(0, openTagIndex);
+    }
+    
+    return processed.trim();
   };
   
   // Extract thinking content from message
   const extractThinking = (content: string): string => {
+    // Handle incomplete <think> tags during streaming
+    if (isProcessing) {
+      // Check for an open <think> tag without a closing tag
+      const openTagIndex = content.lastIndexOf('<think>');
+      if (openTagIndex !== -1 && content.indexOf('</think>', openTagIndex) === -1) {
+        // Extract all complete thinking blocks
+        const completeThinking = extractCompleteThinking(content.substring(0, openTagIndex));
+        
+        // Extract the partial thinking content (after the last open tag)
+        const partialThinking = content.substring(openTagIndex + '<think>'.length);
+        
+        // Combine complete and partial thinking
+        return completeThinking.length > 0 
+          ? completeThinking + '\n\n' + partialThinking
+          : partialThinking;
+      }
+    }
+    
+    return extractCompleteThinking(content);
+  };
+  
+  // Extract complete thinking blocks
+  const extractCompleteThinking = (content: string): string => {
     const thinkRegex = /<think>([\s\S]*?)<\/think>/g;
     const matches = [];
     let match;
@@ -48,6 +99,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
   const displayContent = processContent(content);
   const thinkingContent = extractThinking(content);
   const hasThinking = thinkingContent.length > 0;
+  const isAssistant = role === 'assistant';
 
   // Extract response style if present in content
   const extractResponseStyle = (content: string): string => {
@@ -86,6 +138,56 @@ const MessageItem: React.FC<MessageItemProps> = ({
     // Update ref for next check
     prevProcessingRef.current = isProcessing;
   }, [isProcessing]);
+
+  // Effect to start and stop reasoning timer
+  useEffect(() => {
+    // Only start timer for thinking models
+    if (isProcessing && role === 'assistant' && isThinkingModel) {
+      // For both scenarios (with or without thinking content), start with a timer
+      const startTime = Date.now() - (reasoningTime * 1000); // Preserve existing time if any
+      reasoningTimerRef.current = setInterval(() => {
+        setReasoningTime(Math.floor((Date.now() - startTime) / 1000));
+      }, 1000);
+
+      // Only show the blue dot if there's no thinking content yet
+      if (!thinkingContent || thinkingContent.length === 0) {
+        setShowThinking(true);
+      } else {
+        // When we have thinking content, show the reasoning box instead of the dot
+        setShowThinking(false);
+        setIsThinkingCollapsed(false);
+      }
+    } else if (!isProcessing && reasoningTimerRef.current) {
+      // Stop timer when AI stops processing
+      clearInterval(reasoningTimerRef.current);
+      reasoningTimerRef.current = null;
+      
+      // Auto-collapse thinking section when processing completes
+      setTimeout(() => {
+        setIsThinkingCollapsed(true);
+      }, 1000); // Small delay before collapsing
+    } else if (isProcessing && role === 'assistant' && !isThinkingModel) {
+      // For non-thinking models, show only the blue dot
+      setShowThinking(true);
+    }
+    
+    // Cleanup
+    return () => {
+      if (reasoningTimerRef.current) {
+        clearInterval(reasoningTimerRef.current);
+        reasoningTimerRef.current = null;
+      }
+    };
+  }, [isProcessing, role, thinkingContent, reasoningTime, isThinkingModel]);
+
+  // Effect to handle thinking content changes
+  useEffect(() => {
+    // When thinking content appears during processing, transition from dot to reasoning
+    if (isProcessing && thinkingContent && thinkingContent.length > 0) {
+      setShowThinking(false); // Hide the dot
+      setIsThinkingCollapsed(false); // Expand the reasoning box
+    }
+  }, [isProcessing, thinkingContent]);
 
   // Helper to determine color based on content
   const getCodeColor = (line: string, isDark: boolean): string => {
@@ -135,39 +237,11 @@ const MessageItem: React.FC<MessageItemProps> = ({
       return <div style={{ minHeight: '20px' }}></div>;
     }
     
-    // Check if we have partial code blocks in streaming content
-    let parts: string[] = [];
-    
-    // Special handling for code blocks during streaming - look for unmatched triple backticks
-    if (isProcessing) {
-      // Check for partial code blocks (code block started but not completed)
-      const hasPartialCodeBlock = content.includes('```') && 
-        (content.match(/```/g)?.length || 0) % 2 !== 0;
-      
-      if (hasPartialCodeBlock) {
-        // Find the last occurrence of triple backticks
-        const lastCodeBlockStart = content.lastIndexOf('```');
-        
-        // Split content into before the partial code block and the partial code block itself
-        const beforePartialBlock = content.substring(0, lastCodeBlockStart);
-        const partialCodeBlock = content.substring(lastCodeBlockStart);
-        
-        // Process the completed parts normally
-        const completedParts = beforePartialBlock.split(/(```[\s\S]*?```)/g);
-        
-        // Add the partial code block as the last part
-        parts = [...completedParts.filter(p => p), partialCodeBlock];
-      } else {
-        // No partial blocks, process normally
-        parts = content.split(/(```[\s\S]*?```)/g);
-      }
-    } else {
-      // Not processing, split normally
-      parts = content.split(/(```[\s\S]*?```)/g);
-    }
+    // Split content by code blocks
+    const parts = content.split(/(```[\s\S]*?```)/g);
     
     return parts.map((part, index) => {
-      // Check if this part is a code block or a partial code block during processing
+      // Check if this part is a code block
       if (part.startsWith('```')) {
         // For completed code blocks
         if (part.endsWith('```') && part.length > 6) { // At least ```a``` (language identifier + content)
@@ -196,102 +270,9 @@ const MessageItem: React.FC<MessageItemProps> = ({
             );
           }
         } 
-        // For partial/in-progress code blocks during streaming
+        // For partial code blocks, just display as text during streaming
         else if (isProcessing) {
-          // Extract language and code from partial block
-          // Format: ```language\ncode (incomplete)
-          const match = part.match(/```(?:([a-zA-Z0-9]+))?\n?([\s\S]*)/);
-          
-          if (match) {
-            const [, language, code] = match;
-            
-            // Even if we just started typing the code block, show it in a code block UI
-            return (
-              <div key={index} className="code-block-container" style={{
-                backgroundColor: 'transparent',
-                margin: 'var(--spacing-2) 0',
-                overflow: 'hidden',
-                fontFamily: '"Söhne", "Söhne Buch", "Söhne Halbfett", "Söhne Dreiviertelfett", "Söhne Breit", "Söhne Mono", system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
-                fontSize: 'var(--font-size-caption)',
-                lineHeight: 1.5,
-                boxShadow: isDarkTheme ? '0 2px 6px rgba(0, 0, 0, 0.15)' : '0 2px 6px rgba(0, 0, 0, 0.07)',
-                border: `1px solid ${isDarkTheme ? '#3a85e9' : '#3a85e9'}`,
-                borderRadius: '6px',
-                position: 'relative',
-              }}>
-                {/* Show a temporary title with progress indicator */}
-                <div className="partial-code-title" style={{
-                  backgroundColor: isDarkTheme ? '#2d2d2d' : '#2d2d2d',
-                  color: '#f8f8f2',
-                  padding: '8px 12px',
-                  fontFamily: '"Söhne", "Söhne Buch", "Söhne Halbfett", "Söhne Dreiviertelfett", "Söhne Breit", "Söhne Mono", system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
-                  fontSize: '14px',
-                  fontWeight: 500,
-                  borderTopLeftRadius: 6,
-                  borderTopRightRadius: 6,
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  position: 'relative',
-                  overflow: 'hidden',
-                }}>
-                  <span>
-                    {language ? language.charAt(0).toUpperCase() + language.slice(1) : 'Code'} (in progress)
-                  </span>
-                  <div className="in-progress-indicator-pulse" style={{
-                    width: '10px',
-                    height: '10px',
-                    borderRadius: '50%',
-                    backgroundColor: '#64D2FF',
-                    marginLeft: '8px',
-                  }}/>
-                </div>
-                <div style={{
-                  backgroundColor: '#121212',
-                  fontFamily: '"Source Code Pro", monospace',
-                  borderBottomLeftRadius: 6,
-                  borderBottomRightRadius: 6,
-                  padding: '12px 0',
-                  overflow: 'auto',
-                  maxHeight: '400px',
-                }}>
-                  {code.split('\n').map((line, lineIndex) => (
-                    <div key={lineIndex} style={{
-                      display: 'flex',
-                      width: '100%',
-                    }}>
-                      <div style={{
-                        width: '30px',
-                        minWidth: '30px',
-                        color: '#555',
-                        textAlign: 'right',
-                        padding: '0 8px 0 0',
-                        userSelect: 'none',
-                        borderRight: '1px solid #333',
-                        marginRight: '10px',
-                        fontFamily: '"Source Code Pro", monospace',
-                        fontSize: '14px',
-                      }}>
-                        {lineIndex + 1}
-                      </div>
-                      <div style={{
-                        color: getCodeColor(line, true),
-                        lineHeight: '1.5',
-                        fontFamily: '"Source Code Pro", monospace',
-                        fontSize: '14px',
-                        whiteSpace: 'pre-wrap',
-                        wordBreak: 'break-word',
-                        width: '100%',
-                        paddingRight: '12px',
-                      }}>
-                        {line}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            );
-          }
+          return <div key={index}>{part}</div>;
         }
       }
       
@@ -534,10 +515,13 @@ const MessageItem: React.FC<MessageItemProps> = ({
 
     if (role === 'user') {
       return {
-        backgroundColor: isDarkTheme ? 'rgba(58, 134, 255, 0.08)' : 'rgba(58, 134, 255, 0.03)',
-        color: isDarkTheme ? '#d4d4d4' : '#2d2d2d',
-        border: `1px solid ${isDarkTheme ? 'rgba(58, 134, 255, 0.2)' : 'rgba(58, 134, 255, 0.1)'}`,
-        borderRadius: 'var(--chat-bubble-radius-user)',
+        backgroundColor: isDarkTheme ? 'rgba(52, 53, 65, 1)' : 'rgba(247, 247, 248, 1)',
+        color: isDarkTheme ? '#ececf1' : '#343541',
+        padding: '16px',
+        borderRadius: '0',
+        width: '100%',
+        border: 'none',
+        boxSizing: 'border-box' as const,
       };
     }
 
@@ -627,8 +611,11 @@ const MessageItem: React.FC<MessageItemProps> = ({
       opacity: isProcessing ? 0.7 : 1,
       transition: 'opacity 0.2s ease, width 0.3s ease, transform 0.3s ease',
       position: 'relative',
-      marginBottom: role === 'assistant' ? '3rem' : '2.5rem',
+      marginBottom: role === 'assistant' ? '3rem' : '0',
+      width: '100%',
+      backgroundColor: role === 'user' ? (isDarkTheme ? '#343541' : '#f7f7f8') : 'transparent',
     }}>
+      {role === 'system' && (
       <div style={{
         display: 'flex',
         alignItems: 'center',
@@ -637,10 +624,9 @@ const MessageItem: React.FC<MessageItemProps> = ({
         fontSize: 'var(--font-size-caption)',
         color: isDarkTheme ? '#888' : '#666',
       }}>
-        <span style={{ fontWeight: 'bold' }}>
-          {role === 'user' ? 'You' : role === 'system' ? 'System' : ''}
-        </span>
+          <span style={{ fontWeight: 'bold' }}>System</span>
       </div>
+      )}
 
       <div style={{
         overflow: 'hidden',
@@ -648,195 +634,153 @@ const MessageItem: React.FC<MessageItemProps> = ({
         boxShadow: 'none',
         ...getMessageStyle(),
       }}>
-        {/* Thinking Section */}
-        {(hasThinking || isProcessing) && role === 'assistant' && (
+        {/* Processing indicator (blue dot) - always shown when processing */}
+        {isProcessing && role === 'assistant' && showThinking && (
+          <div className="processing-indicator" style={{
+            display: 'inline-block',
+            width: '6px',
+            height: '6px',
+            borderRadius: '50%',
+            backgroundColor: isDarkTheme ? 'rgba(120, 160, 255, 0.7)' : 'rgba(70, 110, 220, 0.6)',
+            margin: '0 8px 0 0',
+            animation: 'pulse 1.5s infinite ease-in-out',
+            verticalAlign: 'middle',
+            opacity: 0.8,
+          }}/>
+        )}
+
+        {/* Reasoning section (shown when thinking content exists or when actively thinking) - only for thinking models */}
+        {isThinkingModel && (hasThinking || (isProcessing && role === 'assistant') || (!isProcessing && reasoningTime > 0)) && (
           <>
             <div 
               onClick={() => setIsThinkingCollapsed(!isThinkingCollapsed)}
               style={{
                 padding: 'var(--spacing-1) var(--spacing-2)',
+                fontSize: '14px',
+                color: isDarkTheme ? 'rgba(180, 180, 180, 0.8)' : 'rgba(60, 60, 60, 0.8)',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                borderBottom: isThinkingCollapsed ? 'none' : `1px solid ${isDarkTheme ? 'rgba(45, 45, 45, 0.5)' : 'rgba(200, 200, 200, 0.3)'}`,
-                transition: 'background-color 0.2s ease',
-                backgroundColor: isDarkTheme ? 
-                  (isProcessing ? 'rgba(45, 90, 160, 0.25)' : 'rgba(35, 65, 120, 0.2)') : 
-                  (isProcessing ? 'rgba(60, 110, 220, 0.15)' : 'rgba(50, 90, 180, 0.1)'),
-                position: 'relative',
-                overflow: 'hidden',
-                boxShadow: isDarkTheme ? '0 1px 2px rgba(0,0,0,0.2)' : '0 1px 2px rgba(0,0,0,0.1)',
-                border: `1px solid ${isDarkTheme ? 
-                  (isProcessing ? 'rgba(45, 90, 160, 0.3)' : 'rgba(35, 65, 120, 0.25)') : 
-                  (isProcessing ? 'rgba(60, 110, 220, 0.2)' : 'rgba(50, 90, 180, 0.15)')}`,
-                borderRadius: '6px 6px 0 0',
+                borderBottom: isThinkingCollapsed ? 'none' : `1px solid ${isDarkTheme ? 'rgba(45, 45, 45, 0.2)' : 'rgba(200, 200, 200, 0.1)'}`,
+                transition: 'color 0.2s ease',
+                borderRadius: '0',
+                backgroundColor: 'transparent',
+                border: 'none',
+                boxShadow: 'none',
               }}
-              className={isProcessing ? "thinking-badge-container" : "thinking-badge-container-inactive"}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = isDarkTheme ? 
+                  'rgba(210, 210, 210, 0.9)' : 'rgba(100, 100, 100, 0.9)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = isDarkTheme ? 
+                  'rgba(180, 180, 180, 0.8)' : 'rgba(60, 60, 60, 0.8)';
+              }}
             >
               <span 
-                className={isProcessing ? "thinking-text-glow" : ""} 
                 style={{ 
-                  fontSize: '12px', 
-                  fontWeight: 500,
-                  color: isDarkTheme ? 
-                    (isProcessing ? 'rgba(220, 220, 255, 0.95)' : 'rgba(180, 180, 180, 0.7)') : 
-                    (isProcessing ? 'rgba(20, 80, 180, 0.95)' : 'rgba(100, 100, 100, 0.7)'),
-                  position: 'relative',
-                  zIndex: 2,
+                  fontWeight: 400,
+                  display: 'flex',
+                  alignItems: 'center',
+                  color: isProcessing ? 
+                    (isDarkTheme ? 'rgba(210, 210, 235, 0.9)' : 'rgba(50, 70, 110, 0.9)') : 
+                    (isDarkTheme ? 'rgba(180, 180, 180, 0.8)' : 'rgba(60, 60, 60, 0.8)'),
                 }}
+                className={isProcessing ? "reasoning-active" : ""}
               >
-                Thinking Process
+                {isProcessing && (
+                  <div className="reasoning-indicator" style={{
+                    width: '8px',
+                    height: '8px',
+                    borderRadius: '50%',
+                    backgroundColor: isDarkTheme ? 'rgba(120, 160, 255, 0.6)' : 'rgba(70, 110, 220, 0.5)',
+                    marginRight: '8px',
+                    animation: 'pulse 1.5s infinite ease-in-out',
+                    boxShadow: 'none',
+                  }}/>
+                )}
+                {(() => {
+                  // Extract the reasoning topic
+                  const extractTopic = () => {
+                    // If we have thinking content, use it to extract topic
+                    if (thinkingContent && thinkingContent.length > 0) {
+                      const topicPatterns = [
+                        /(?:about|on) ([\w\s\-]+)/i,
+                        /analyzing ([\w\s\-]+)/i,
+                        /considering ([\w\s\-]+)/i,
+                      ];
+                      
+                      for (const pattern of topicPatterns) {
+                        const match = thinkingContent.match(pattern);
+                        if (match && match[1] && match[1].length > 2) {
+                          const topic = match[1].trim();
+                          // Capitalize first letter
+                          return topic.charAt(0).toUpperCase() + topic.slice(1);
+                        }
+                      }
+                    }
+                    
+                    // Show generic text during active processing if we don't have thinking content yet
+                    if (isProcessing) {
+                      return 'request';
+                    }
+                    
+                    return 'response generation';
+                  };
+                  
+                  // Display thinking topic and time
+                  const topic = extractTopic();
+                  if (isProcessing) {
+                    return `Thinking about ${topic} for ${reasoningTime} seconds`;
+                  } else {
+                    return `Thought about ${topic} for ${reasoningTime} seconds`;
+                  }
+                })()}
               </span>
               
               <svg 
-                className={isProcessing ? "thinking-text-glow" : ""}
                 width="12" 
                 height="12" 
                 viewBox="0 0 24 24" 
                 fill="none" 
-                stroke={isDarkTheme ? 
-                  (isProcessing ? 'rgba(220, 220, 255, 0.95)' : 'rgba(180, 180, 180, 0.7)') : 
-                  (isProcessing ? 'rgba(20, 80, 180, 0.95)' : 'rgba(100, 100, 100, 0.7)')}
+                stroke="currentColor"
                 strokeWidth="2"
                 strokeLinecap="round" 
                 strokeLinejoin="round"
                 style={{
-                  transform: isThinkingCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)',
+                  transform: isThinkingCollapsed ? 'rotate(0deg)' : 'rotate(90deg)',
                   transition: 'transform 0.2s ease',
-                  position: 'relative',
-                  zIndex: 2,
+                  opacity: isProcessing ? 0.9 : 0.7,
                 }}
               >
-                <polyline points="6 9 12 15 18 9"></polyline>
+                <polyline points="9 18 15 12 9 6"></polyline>
               </svg>
             </div>
             
-            {/* True summary - only shown when collapsed */}
-            {isThinkingCollapsed && (
-              <div style={{
-                padding: 'var(--spacing-1) var(--spacing-2)',
-                fontSize: '12px',
-                fontStyle: 'normal',
-                color: isDarkTheme ? 
-                  (isProcessing ? 'rgba(208, 208, 208, 0.7)' : 'rgba(180, 180, 180, 0.7)') : 
-                  (isProcessing ? 'rgba(80, 80, 80, 0.7)' : 'rgba(120, 120, 120, 0.7)'),
-                backgroundColor: isDarkTheme ? 'rgba(20, 20, 20, 0.95)' : 'rgba(248, 248, 250, 0.8)',
-                borderBottom: `1px solid ${isDarkTheme ? 'rgba(45, 45, 45, 0.5)' : 'rgba(200, 200, 200, 0.3)'}`,
-                margin: 0,
-                opacity: isProcessing ? 1 : 0.7,
-                transition: 'opacity 0.3s ease, color 0.3s ease',
-              }}>
-                {(() => {
-                  // Create a true summary of the AI's thinking process instead of user's input
-                  
-                  // Extract the core topic or intent from the thinking content
-                  const extractTopic = () => {
-                    // Look for explicit topic mentions in AI's thinking
-                    const topicPatterns = [
-                      /analyzing|reviewing|considering ([\w\s-]+)/i,
-                      /focused on ([\w\s-]+)/i,
-                      /looking at ([\w\s-]+)/i,
-                      /examining ([\w\s-]+)/i,
-                      /([a-z\s]+) code|data|analysis|implementation/i
-                    ];
-                    
-                    for (const pattern of topicPatterns) {
-                      const match = thinkingContent.match(pattern);
-                      if (match && match[1] && match[1].length > 2) {
-                        return match[1].trim();
-                      }
-                    }
-                    
-                    // Extract key concepts from thinking content
-                    const conceptPatterns = [
-                      /need to ([\w\s]+)/i,
-                      /will ([\w\s]+)/i,
-                      /should ([\w\s]+)/i,
-                      /working on ([\w\s]+)/i
-                    ];
-                    
-                    for (const pattern of conceptPatterns) {
-                      const match = thinkingContent.match(pattern);
-                      if (match && match[1] && match[1].length > 2) {
-                        return match[1].trim();
-                      }
-                    }
-                    
-                    return '';
-                  };
-                  
-                  // Determine the action/intent from AI's thinking
-                  const extractIntent = () => {
-                    if (thinkingContent.match(/(?:analyze|review|examine|assess)/i)) 
-                      return 'Analyzing';
-                    if (thinkingContent.match(/(?:search|look|find|locate)/i)) 
-                      return 'Searching for';
-                    if (thinkingContent.match(/(?:modify|change|update|edit)/i)) 
-                      return 'Modifying';
-                    if (thinkingContent.match(/(?:fix|resolve|correct)/i)) 
-                      return 'Fixing';
-                    if (thinkingContent.match(/(?:implement|add|create)/i)) 
-                      return 'Implementing';
-                    if (thinkingContent.match(/(?:debug|troubleshoot)/i)) 
-                      return 'Debugging';
-                    if (thinkingContent.match(/(?:plan|design)/i)) 
-                      return 'Planning';
-                    
-                    // Default based on AI process
-                    return 'Working on';
-                  };
-                  
-                  // Build the summary
-                  const topic = extractTopic();
-                  const intent = extractIntent();
-                  
-                  if (topic) {
-                    let summary = `${intent} ${topic}`;
-                    
-                    // Clean up and format the summary
-                    summary = summary
-                      .replace(/\s+/g, ' ')
-                      .trim();
-                      
-                    // Capitalize first letter
-                    summary = summary.charAt(0).toUpperCase() + summary.slice(1);
-                    
-                    // Limit length
-                    if (summary.length > 60) {
-                      summary = summary.substring(0, 57) + '...';
-                    }
-                    
-                    return summary;
-                  }
-                  
-                  // If we can't extract a good summary, fall back to a general one
-                  return 'Request summary';
-                })()}
-              </div>
-            )}
-            
-            {/* Only render thinking content when not collapsed */}
+            {/* Only render expanded thinking content when not collapsed */}
             {!isThinkingCollapsed && (
               <div 
                 ref={thinkingContentRef}
                 style={{
-                  overflow: 'hidden',
-                  fontSize: '13px',
-                  lineHeight: 1.5,
-                  color: isDarkTheme ? 
-                    (isProcessing ? '#d0d0d0' : '#a0a0a0') : 
-                    (isProcessing ? '#333333' : '#666666'),
-                  whiteSpace: 'pre-wrap',
-                  fontFamily: '"Söhne", "Söhne Buch", "Söhne Halbfett", "Söhne Dreiviertelfett", "Söhne Breit", "Söhne Mono", system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
-                  borderBottom: `1px solid ${isDarkTheme ? 'rgba(45, 45, 45, 0.5)' : 'rgba(200, 200, 200, 0.3)'}`,
-                  backgroundColor: isDarkTheme ? 'rgba(18, 18, 18, 0.95)' : 'rgba(248, 248, 250, 0.8)',
-                  opacity: isProcessing ? 1 : 0.8,
-                  transition: 'opacity 0.3s ease, color 0.3s ease',
+                  backgroundColor: 'transparent',
+                  padding: '12px 16px',
+                  borderBottom: 'none',
+                  maxHeight: '300px',
+                  overflow: 'auto',
+                  borderRadius: '0',
+                  border: 'none',
+                  borderTop: 'none',
                 }}
               >
-                <div style={{ padding: 'var(--spacing-3)', fontStyle: 'normal' }}>
-                  {thinkingContent || (isProcessing ? 'Thinking...' : '')}
+                <div style={{
+                  fontSize: '14px',
+                  lineHeight: 1.6,
+                  color: isDarkTheme ? '#ECECF1' : '#2d2d2d',
+                  whiteSpace: 'pre-wrap',
+                  fontFamily: '"Söhne", "Söhne Buch", "Söhne Halbfett", "Söhne Dreiviertelfett", "Söhne Breit", "Söhne Mono", system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
+                }}>
+                  {thinkingContent || (isProcessing && !thinkingContent ? "Analyzing request..." : "")}
                 </div>
               </div>
             )}
@@ -922,8 +866,8 @@ const MessageItem: React.FC<MessageItemProps> = ({
         }
         
         @keyframes pulse {
-          0%, 100% { opacity: 0.3; transform: scale(0.8); }
-          50% { opacity: 1; transform: scale(1.2); }
+          0%, 100% { opacity: 0.4; transform: scale(0.85); }
+          50% { opacity: 1; transform: scale(1.15); }
         }
         
         .code-block-container:hover .code-copy-button {
@@ -932,46 +876,6 @@ const MessageItem: React.FC<MessageItemProps> = ({
         
         .code-copy-button:hover {
           opacity: 1 !important;
-        }
-        
-        /* Animation for the code block in-progress indicator */
-        .code-progress-indicator {
-          width: 8px;
-          height: 8px;
-          border-radius: 50%;
-          background-color: #64D2FF;
-          margin-left: 8px;
-          animation: codePulse 1.5s infinite ease-in-out;
-        }
-        
-        /* Animation for in-progress code blocks */
-        .in-progress-indicator-pulse {
-          animation: pulse 1.5s infinite ease-in-out;
-        }
-        
-        /* Add a subtle pulsing border to in-progress code blocks */
-        .code-block-container {
-          position: relative;
-        }
-        
-        .code-block-container::before {
-          content: '';
-          position: absolute;
-          top: -1px;
-          left: -1px;
-          right: -1px;
-          bottom: -1px;
-          border-radius: 6px;
-          border: 1px solid #3a85e9;
-          opacity: 0.7;
-          animation: borderPulse 1.5s infinite ease-in-out;
-          pointer-events: none;
-          z-index: 0;
-        }
-        
-        @keyframes borderPulse {
-          0%, 100% { opacity: 0.3; }
-          50% { opacity: 0.7; }
         }
         
         /* Styling for lists in messages */
@@ -983,40 +887,6 @@ const MessageItem: React.FC<MessageItemProps> = ({
         
         .response-container li {
           margin-bottom: var(--spacing-1);
-        }
-        
-        .thinking-badge-container {
-          position: relative;
-          border-radius: 6px;
-          overflow: hidden;
-          box-shadow: ${isDarkTheme ? 
-            '0 0 8px rgba(70, 130, 220, 0.3), 0 0 12px rgba(70, 130, 220, 0.1)' : 
-            '0 0 8px rgba(60, 130, 240, 0.2), 0 0 12px rgba(60, 130, 240, 0.1)'};
-        }
-        
-        .thinking-badge-container::before {
-          content: '';
-          position: absolute;
-          top: -1px;
-          left: -1px;
-          right: -1px;
-          bottom: -1px;
-          background: ${isDarkTheme ? 
-            'linear-gradient(90deg, rgba(45, 90, 160, 0.05), rgba(70, 140, 230, 0.5), rgba(45, 90, 160, 0.05))' : 
-            'linear-gradient(90deg, rgba(60, 110, 220, 0.05), rgba(80, 160, 255, 0.45), rgba(60, 110, 220, 0.05))'
-          };
-          z-index: 0;
-          background-size: 200% 200%;
-          animation: movingStroke 3s ease-in-out infinite;
-          pointer-events: none;
-          border-radius: 6px 6px 0 0;
-        }
-        
-        .thinking-badge-container-inactive {
-          position: relative;
-          border-radius: 6px;
-          overflow: hidden;
-          opacity: 0.7;
         }
         
         .thinking-text-glow {
@@ -1060,6 +930,14 @@ const MessageItem: React.FC<MessageItemProps> = ({
         @keyframes slidingGlow {
           0% { left: -50%; }
           100% { left: 100%; }
+        }
+        
+        .reasoning-active {
+          transition: color 0.3s ease;
+        }
+        
+        .reasoning-indicator {
+          box-shadow: none;
         }
       `}</style>
     </div>
