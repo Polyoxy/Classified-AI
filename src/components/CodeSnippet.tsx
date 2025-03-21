@@ -19,11 +19,68 @@ const CodeSnippet: React.FC<CodeSnippetProps> = ({
   const isDarkTheme = settings?.theme === 'dark';
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   
+  // Detect language if not provided
+  const detectLanguage = (code: string, providedLanguage: string): string => {
+    if (providedLanguage && providedLanguage !== 'text') return providedLanguage;
+    
+    // Check for JavaScript/JSX
+    if (code.includes('import React') || code.includes('const') || code.includes('function') || 
+        code.includes('=>') || code.includes('render()') || code.includes('useState') ||
+        code.includes('export default')) {
+      return 'javascript';
+    }
+    
+    // Check for HTML
+    if (code.includes('<div') || code.includes('<span') || code.includes('<h1') || 
+        code.includes('<html') || code.includes('<body') || code.includes('</') ||
+        code.match(/<[a-z][\s\S]*>/)) {
+      return 'html';
+    }
+    
+    // Check for CSS
+    if (code.includes('{') && code.includes('}') && 
+        (code.includes('color:') || code.includes('margin:') || code.includes('padding:') ||
+         code.includes('font-size:') || code.includes('.class'))) {
+      return 'css';
+    }
+    
+    // Check for Python
+    if (code.includes('def ') || code.includes('import ') || code.includes('class ') || 
+        code.includes('print(') || code.includes('for ') && code.includes(':')) {
+      return 'python';
+    }
+    
+    // Check for JSON
+    if ((code.startsWith('{') && code.endsWith('}')) || 
+        (code.startsWith('[') && code.endsWith(']'))) {
+      try {
+        JSON.parse(code);
+        return 'json';
+      } catch (e) {
+        // Not valid JSON
+      }
+    }
+    
+    // Check for Bash/Shell
+    if (code.includes('cd ') || code.includes('ls ') || code.includes('mkdir ') || 
+        code.includes('echo ') || code.includes('sudo ') || code.includes('apt ') ||
+        code.includes('npm ') || code.includes('git ')) {
+      return 'bash';
+    }
+    
+    // Default to text if no matches
+    return 'text';
+  };
+  
+  // Use detected language if none provided
+  const effectiveLanguage = detectLanguage(code, language);
+  
   // Check if code is large enough to warrant a panel view
   // This threshold can be adjusted based on preference
   const isLargeCode = () => {
     const lines = code.split('\n');
-    return lines.length > 15 || code.length > 500;
+    // 50 lines or 500 characters as threshold
+    return lines.length > 50 || code.length > 500;
   };
   
   // Get a preview of the code (first few lines)
@@ -49,7 +106,11 @@ const CodeSnippet: React.FC<CodeSnippetProps> = ({
   
   // Open the code panel
   const openPanel = (e: React.MouseEvent) => {
-    if (!isLargeCode()) return; // Don't open panel for small code
+    if (!isLargeCode()) {
+      e.preventDefault();
+      e.stopPropagation();
+      return; // Don't open panel for small code
+    }
     
     e.stopPropagation(); // Prevent event bubbling
     setIsPanelOpen(true);
@@ -69,15 +130,21 @@ const CodeSnippet: React.FC<CodeSnippetProps> = ({
     let enhancedTitle = '';
     
     // Check language first
-    if (language) {
-      switch(language.toLowerCase()) {
+    if (effectiveLanguage) {
+      switch(effectiveLanguage.toLowerCase()) {
         case 'javascript':
         case 'js':
           enhancedTitle = 'JavaScript';
           break;
+        case 'jsx':
+          enhancedTitle = 'React JSX';
+          break;
         case 'typescript':
         case 'ts':
           enhancedTitle = 'TypeScript';
+          break;
+        case 'tsx':
+          enhancedTitle = 'React TSX';
           break;
         case 'python':
         case 'py':
@@ -92,14 +159,23 @@ const CodeSnippet: React.FC<CodeSnippetProps> = ({
         case 'json':
           enhancedTitle = 'JSON';
           break;
-        case 'jsx':
-          enhancedTitle = 'React JSX';
+        case 'bash':
+        case 'sh':
+          enhancedTitle = 'Shell Command';
           break;
-        case 'tsx':
-          enhancedTitle = 'React TSX';
+        case 'yaml':
+        case 'yml':
+          enhancedTitle = 'YAML Configuration';
+          break;
+        case 'toml':
+          enhancedTitle = 'TOML Configuration';
+          break;
+        case 'markdown':
+        case 'md':
+          enhancedTitle = 'Markdown';
           break;
         default:
-          enhancedTitle = language.charAt(0).toUpperCase() + language.slice(1);
+          enhancedTitle = effectiveLanguage.charAt(0).toUpperCase() + effectiveLanguage.slice(1);
       }
     } else {
       enhancedTitle = 'Code';
@@ -121,28 +197,31 @@ const CodeSnippet: React.FC<CodeSnippetProps> = ({
         className="code-snippet is-small-code"
         style={{
           backgroundColor: 'transparent',
-          borderRadius: 'var(--border-radius)',
+          borderRadius: 0,
           margin: 'var(--spacing-2) 0',
           overflow: 'hidden',
-          fontFamily: 'var(--font-family-mono)',
+          fontFamily: '"Source Code Pro", monospace',
           fontSize: 'var(--font-size-caption)',
           lineHeight: 1.5,
-          boxShadow: `0px 2px 4px ${isDarkTheme ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.1)'}`,
+          boxShadow: 'none',
         }}
       >
         <div className="code-snippet-title" style={{
-          backgroundColor: isDarkTheme ? '#2a2a2a' : '#e6e6e6',
+          backgroundColor: '#2d2d2d',
           padding: 'var(--spacing-2) var(--spacing-3)',
-          borderBottom: `1px solid ${isDarkTheme ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'}`,
-          borderTopLeftRadius: 'var(--border-radius)',
-          borderTopRightRadius: 'var(--border-radius)',
+          borderBottom: 'none',
+          borderRadius: 0,
+          borderTopLeftRadius: 6,
+          borderTopRightRadius: 6,
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
+          marginBottom: 0,
         }}>
           <span style={{ 
-            color: isDarkTheme ? '#e0e0e0' : '#333',
-            fontSize: 'var(--font-size-caption)',
+            color: '#f8f8f2',
+            fontSize: '16px',
+            fontFamily: '"Söhne", "Söhne Buch", "Söhne Halbfett", "Söhne Dreiviertelfett", "Söhne Breit", "Söhne Mono", system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
             fontWeight: 500,
           }}>
             {getEnhancedTitle()}
@@ -150,17 +229,22 @@ const CodeSnippet: React.FC<CodeSnippetProps> = ({
         </div>
         
         <div className="code-snippet-content" style={{
-          backgroundColor: isDarkTheme ? '#1E1E1E' : '#F5F5F5',
+          backgroundColor: '#121212', // Near black background
+          marginTop: 0,
+          borderBottomLeftRadius: 6,
+          borderBottomRightRadius: 6,
         }}>
           <SyntaxHighlighter
-            language={language || 'text'}
-            style={isDarkTheme ? vscDarkPlus : vs}
+            language={effectiveLanguage || 'text'}
+            style={vscDarkPlus}
+            showLineNumbers={false}
             customStyle={{
               margin: 0,
               padding: 'var(--spacing-3)',
               borderRadius: 0,
               fontSize: 'var(--font-size-caption)',
               background: 'transparent',
+              fontFamily: '"Source Code Pro", monospace',
             }}
           >
             {code}
@@ -178,57 +262,67 @@ const CodeSnippet: React.FC<CodeSnippetProps> = ({
         onClick={openPanel}
         style={{
           backgroundColor: 'transparent',
-          borderRadius: 'var(--border-radius)',
+          borderRadius: 0,
           margin: 'var(--spacing-2) 0',
           overflow: 'hidden',
-          fontFamily: 'var(--font-family-mono)',
+          fontFamily: '"Source Code Pro", monospace',
           fontSize: 'var(--font-size-caption)',
           lineHeight: 1.5,
-          boxShadow: `0px 2px 4px ${isDarkTheme ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.1)'}`,
-          cursor: 'pointer',
+          boxShadow: 'none',
+          cursor: isLargeCode() ? 'pointer' : 'default',
         }}
       >
         <div className="code-snippet-title" style={{
-          backgroundColor: isDarkTheme ? '#2a2a2a' : '#e6e6e6',
+          backgroundColor: '#2d2d2d',
           padding: 'var(--spacing-2) var(--spacing-3)',
-          borderBottom: `1px solid ${isDarkTheme ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'}`,
-          borderTopLeftRadius: 'var(--border-radius)',
-          borderTopRightRadius: 'var(--border-radius)',
+          borderBottom: 'none',
+          borderRadius: 0,
+          borderTopLeftRadius: 6,
+          borderTopRightRadius: 6,
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
+          marginBottom: 0,
         }}>
           <span style={{ 
-            color: isDarkTheme ? '#e0e0e0' : '#333',
-            fontSize: 'var(--font-size-caption)',
+            color: '#f8f8f2',
+            fontSize: '16px',
+            fontFamily: '"Söhne", "Söhne Buch", "Söhne Halbfett", "Söhne Dreiviertelfett", "Söhne Breit", "Söhne Mono", system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
             fontWeight: 500,
           }}>
             {getEnhancedTitle()}
           </span>
           
-          <span className="expand-button" style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 'var(--spacing-1)',
-            color: isDarkTheme ? '#b0b0b0' : '#555',
-            fontSize: 'var(--font-size-caption)',
-          }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="15 3 21 3 21 9"></polyline>
-              <polyline points="9 21 3 21 3 15"></polyline>
-              <line x1="21" y1="3" x2="14" y2="10"></line>
-              <line x1="3" y1="21" x2="10" y2="14"></line>
-            </svg>
-            Expand
-          </span>
+          {isLargeCode() && (
+            <span className="expand-button" style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 'var(--spacing-1)',
+              color: '#f8f8f2',
+              fontSize: 'var(--font-size-caption)',
+            }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="15 3 21 3 21 9"></polyline>
+                <polyline points="9 21 3 21 3 15"></polyline>
+                <line x1="21" y1="3" x2="14" y2="10"></line>
+                <line x1="3" y1="21" x2="10" y2="14"></line>
+              </svg>
+              Expand
+            </span>
+          )}
         </div>
         
         <div className="code-snippet-preview" style={{
-          backgroundColor: isDarkTheme ? '#1E1E1E' : '#F5F5F5',
+          backgroundColor: '#121212', // Near black background
+          position: 'relative',
+          marginTop: 0,
+          borderBottomLeftRadius: 6,
+          borderBottomRightRadius: 6,
         }}>
           <SyntaxHighlighter
-            language={language || 'text'}
-            style={isDarkTheme ? vscDarkPlus : vs}
+            language={effectiveLanguage || 'text'}
+            style={vscDarkPlus}
+            showLineNumbers={false}
             customStyle={{
               margin: 0,
               padding: 'var(--spacing-3)',
@@ -237,17 +331,27 @@ const CodeSnippet: React.FC<CodeSnippetProps> = ({
               background: 'transparent',
               maxHeight: '150px',
               overflow: 'hidden',
+              fontFamily: '"Source Code Pro", monospace',
             }}
           >
             {getCodePreview()}
           </SyntaxHighlighter>
+          <div style={{
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: '30px',
+            background: 'linear-gradient(to bottom, transparent, #0a0a0a)',
+            pointerEvents: 'none',
+          }}></div>
         </div>
       </div>
       
       {isPanelOpen && (
         <CodePanel
           code={code}
-          language={language}
+          language={effectiveLanguage}
           title={getEnhancedTitle()}
           isOpen={isPanelOpen}
           onClose={closePanel}

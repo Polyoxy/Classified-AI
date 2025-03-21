@@ -49,6 +49,14 @@ const MessageItem: React.FC<MessageItemProps> = ({
   const thinkingContent = extractThinking(content);
   const hasThinking = thinkingContent.length > 0;
 
+  // Extract response style if present in content
+  const extractResponseStyle = (content: string): string => {
+    const styleMatch = content.match(/^\[Response style: ([a-z]+)\]/i);
+    return styleMatch ? styleMatch[1].toLowerCase() : 'normal';
+  };
+
+  const responseStyle = extractResponseStyle(content);
+
   // Handle copy to clipboard
   const handleCopy = () => {
     navigator.clipboard.writeText(displayContent).then(() => {
@@ -97,6 +105,29 @@ const MessageItem: React.FC<MessageItemProps> = ({
     return isDark ? '#D4D4D4' : '#333333';
   };
 
+  // Special handling for nested code blocks inside markdown text
+  // This helps render markdown code blocks correctly
+  const processMarkdownCodeBlocks = (content: string) => {
+    // Replace markdown code blocks with placeholders to protect them during processing
+    const codeBlockRegex = /```([a-zA-Z0-9]*)\n([\s\S]*?)```/g;
+    let match;
+    const codeBlocks = [];
+    let modifiedContent = content;
+    
+    // Extract all code blocks
+    while ((match = codeBlockRegex.exec(content)) !== null) {
+      const lang = match[1] || 'text';
+      const code = match[2];
+      const placeholder = `__CODE_BLOCK_${codeBlocks.length}__`;
+      
+      codeBlocks.push({ language: lang, code });
+      modifiedContent = modifiedContent.replace(match[0], placeholder);
+    }
+    
+    // Return content with placeholders and extracted code blocks for further processing
+    return { content: modifiedContent, codeBlocks };
+  };
+
   // Format content with code blocks - improved to handle live content
   const formatContent = (content: string) => {
     // If no content yet during processing, show empty space
@@ -104,126 +135,55 @@ const MessageItem: React.FC<MessageItemProps> = ({
       return <div style={{ minHeight: '20px' }}></div>;
     }
     
-    // Split by code blocks (triple backticks)
-    const parts = content.split(/(```[\s\S]*?```)/g);
+    // Check if we have partial code blocks in streaming content
+    let parts: string[] = [];
+    
+    // Special handling for code blocks during streaming - look for unmatched triple backticks
+    if (isProcessing) {
+      // Check for partial code blocks (code block started but not completed)
+      const hasPartialCodeBlock = content.includes('```') && 
+        (content.match(/```/g)?.length || 0) % 2 !== 0;
+      
+      if (hasPartialCodeBlock) {
+        // Find the last occurrence of triple backticks
+        const lastCodeBlockStart = content.lastIndexOf('```');
+        
+        // Split content into before the partial code block and the partial code block itself
+        const beforePartialBlock = content.substring(0, lastCodeBlockStart);
+        const partialCodeBlock = content.substring(lastCodeBlockStart);
+        
+        // Process the completed parts normally
+        const completedParts = beforePartialBlock.split(/(```[\s\S]*?```)/g);
+        
+        // Add the partial code block as the last part
+        parts = [...completedParts.filter(p => p), partialCodeBlock];
+      } else {
+        // No partial blocks, process normally
+        parts = content.split(/(```[\s\S]*?```)/g);
+      }
+    } else {
+      // Not processing, split normally
+      parts = content.split(/(```[\s\S]*?```)/g);
+    }
     
     return parts.map((part, index) => {
       // Check if this part is a code block or a partial code block during processing
       if (part.startsWith('```')) {
         // For completed code blocks
-        if (part.endsWith('```')) {
+        if (part.endsWith('```') && part.length > 6) { // At least ```a``` (language identifier + content)
           const match = part.match(/```(?:([a-zA-Z0-9]+))?\n([\s\S]*?)```/);
           
           if (match) {
             const [, language, code] = match;
             
             // Look for title comment at the beginning of the code
-            let title = '';
             const titleMatch = code.match(/^\/\/\s*(.+?)\s*\n/);
             const cleanedCode = titleMatch ? code.substring(titleMatch[0].length) : code;
             
-            if (titleMatch) {
-              title = titleMatch[1];
-            } else {
-              // Try to infer title from surrounding content - look for instructions before the code block
-              const contentBeforeCodeBlock = parts[index - 1];
-              if (contentBeforeCodeBlock) {
-                // Look for phrases like "create a file", "modify this code", "here's an example of", etc.
-                const titleHints = [
-                  /create (?:a|the) (?:file|script|component|function) (?:for|called|named) [`'"]*([a-zA-Z0-9_\-.]+)[`'"']*/i,
-                  /modify [`'"]*([a-zA-Z0-9_\-.]+)[`'"']*/i,
-                  /update [`'"]*([a-zA-Z0-9_\-.]+)[`'"']*/i,
-                  /example (?:of|for) [`'"]*([a-zA-Z0-9_\-.]+)[`'"']*/i,
-                  /(?:here is|here's) (?:the|a) ([a-zA-Z0-9_\- ]+) (?:file|code|script|component)/i,
-                  /([a-zA-Z0-9_\-.]+\.(?:js|ts|jsx|tsx|py|java|rb|go|c|cpp|cs|php|html|css|scss))/i,
-                ];
-                
-                for (const pattern of titleHints) {
-                  const match = contentBeforeCodeBlock.match(pattern);
-                  if (match && match[1]) {
-                    title = match[1].trim();
-                    break;
-                  }
-                }
-                
-                // If still no title, try to get a title from the text right before the code block
-                if (!title) {
-                  // Get the last sentence before the code block
-                  const sentences = contentBeforeCodeBlock.split(/[.!?]\s+/);
-                  const lastSentence = sentences[sentences.length - 1].trim();
-                  
-                  // If it's relatively short, use it as a title
-                  if (lastSentence.length > 0 && lastSentence.length < 60) {
-                    title = lastSentence;
-                  }
-                }
-              }
-              
-              // If still no title, try to guess from the code itself
-              if (!title) {
-                if (language === 'javascript' || language === 'typescript') {
-                  const functionMatch = code.match(/function\s+(\w+)/);
-                  const constMatch = code.match(/const\s+(\w+)/);
-                  const classMatch = code.match(/class\s+(\w+)/);
-                  
-                  if (functionMatch) {
-                    title = `Function: ${functionMatch[1]}`;
-                  } else if (classMatch) {
-                    title = `Class: ${classMatch[1]}`;
-                  } else if (constMatch) {
-                    title = `${constMatch[1]}`;
-                  } else {
-                    // Look for file name pattern at the beginning of the code
-                    const fileNameMatch = code.match(/^(?:\/\/|#|\/\*)\s*([a-zA-Z0-9_\-.]+\.(?:js|ts|jsx|tsx|py|java|rb|go|c|cpp|cs|php|html|css|scss))/);
-                    if (fileNameMatch) {
-                      title = fileNameMatch[1];
-                    } else {
-                      title = language ? `${language.charAt(0).toUpperCase() + language.slice(1)} code` : 'Code snippet';
-                    }
-                  }
-                } else if (language === 'html') {
-                  // Look for title tag content
-                  const titleTagMatch = code.match(/<title>(.*?)<\/title>/i);
-                  if (titleTagMatch) {
-                    title = titleTagMatch[1];
-                  } else {
-                    title = 'HTML Template';
-                  }
-                } else if (language === 'css') {
-                  // Look for first selector
-                  const selectorMatch = code.match(/([a-zA-Z0-9_\-.#][a-zA-Z0-9_\-.# ]*?)\s*\{/);
-                  if (selectorMatch) {
-                    title = `CSS for ${selectorMatch[1].trim()}`;
-                  } else {
-                    title = 'CSS Styles';
-                  }
-                } else if (language === 'python') {
-                  const defMatch = code.match(/def\s+(\w+)/);
-                  const classMatch = code.match(/class\s+(\w+)/);
-                  
-                  if (defMatch) {
-                    title = `Function: ${defMatch[1]}`;
-                  } else if (classMatch) {
-                    title = `Class: ${classMatch[1]}`;
-                  } else {
-                    // Look for module docstring
-                    const docstringMatch = code.match(/^(?:\'\'\'|\"\"\")([^]*?)(?:\'\'\'|\"\"\")/);
-                    if (docstringMatch) {
-                      const firstLine = docstringMatch[1].trim().split('\n')[0];
-                      if (firstLine.length < 60) {
-                        title = firstLine;
-                      } else {
-                        title = 'Python code';
-                      }
-                    } else {
-                      title = 'Python code';
-                    }
-                  }
-                } else {
-                  title = language ? `${language.charAt(0).toUpperCase() + language.slice(1)} code` : 'Code snippet';
-                }
-              }
-            }
+            // Use ONLY the language name as the title
+            const title = language 
+              ? language.charAt(0).toUpperCase() + language.slice(1) 
+              : 'Code';
             
             // Simply pass to CodeSnippet component which now handles the conditional display
             return (
@@ -231,235 +191,327 @@ const MessageItem: React.FC<MessageItemProps> = ({
                 key={index} 
                 code={cleanedCode}
                 language={language || ''}
-                title={title}
+                title={language ? language.charAt(0).toUpperCase() + language.slice(1) : 'Code'}
               />
             );
           }
         } 
-        // For partial/in-progress code blocks during processing
+        // For partial/in-progress code blocks during streaming
         else if (isProcessing) {
+          // Extract language and code from partial block
+          // Format: ```language\ncode (incomplete)
           const match = part.match(/```(?:([a-zA-Z0-9]+))?\n?([\s\S]*)/);
           
           if (match) {
             const [, language, code] = match;
             
+            // Even if we just started typing the code block, show it in a code block UI
             return (
               <div key={index} className="code-block-container" style={{
-                backgroundColor: isDarkTheme ? '#1E1E1E' : '#F5F5F5',
-                borderRadius: '4px',
-                padding: '0.5rem',
-                margin: '0.5rem 0',
-                overflow: 'auto',
-                fontFamily: 'var(--font-mono)',
-                fontSize: '13px',
+                backgroundColor: 'transparent',
+                margin: 'var(--spacing-2) 0',
+                overflow: 'hidden',
+                fontFamily: '"Söhne", "Söhne Buch", "Söhne Halbfett", "Söhne Dreiviertelfett", "Söhne Breit", "Söhne Mono", system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
+                fontSize: 'var(--font-size-caption)',
                 lineHeight: 1.5,
-                whiteSpace: 'pre',
+                boxShadow: isDarkTheme ? '0 2px 6px rgba(0, 0, 0, 0.15)' : '0 2px 6px rgba(0, 0, 0, 0.07)',
+                border: `1px solid ${isDarkTheme ? '#3a85e9' : '#3a85e9'}`,
+                borderRadius: '6px',
                 position: 'relative',
               }}>
-                {code.split('\n').map((line, lineIndex) => (
-                  <div key={lineIndex} style={{
-                    display: 'block',
-                    color: getCodeColor(line, isDarkTheme),
-                    paddingLeft: getIndentation(line),
-                  }}>
-                    {line}
-                  </div>
-                ))}
+                {/* Show a temporary title with progress indicator */}
+                <div className="partial-code-title" style={{
+                  backgroundColor: isDarkTheme ? '#2d2d2d' : '#2d2d2d',
+                  color: '#f8f8f2',
+                  padding: '8px 12px',
+                  fontFamily: '"Söhne", "Söhne Buch", "Söhne Halbfett", "Söhne Dreiviertelfett", "Söhne Breit", "Söhne Mono", system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  borderTopLeftRadius: 6,
+                  borderTopRightRadius: 6,
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  position: 'relative',
+                  overflow: 'hidden',
+                }}>
+                  <span>
+                    {language ? language.charAt(0).toUpperCase() + language.slice(1) : 'Code'} (in progress)
+                  </span>
+                  <div className="in-progress-indicator-pulse" style={{
+                    width: '10px',
+                    height: '10px',
+                    borderRadius: '50%',
+                    backgroundColor: '#64D2FF',
+                    marginLeft: '8px',
+                  }}/>
+                </div>
+                <div style={{
+                  backgroundColor: '#121212',
+                  fontFamily: '"Source Code Pro", monospace',
+                  borderBottomLeftRadius: 6,
+                  borderBottomRightRadius: 6,
+                  padding: '12px 0',
+                  overflow: 'auto',
+                  maxHeight: '400px',
+                }}>
+                  {code.split('\n').map((line, lineIndex) => (
+                    <div key={lineIndex} style={{
+                      display: 'flex',
+                      width: '100%',
+                    }}>
+                      <div style={{
+                        width: '30px',
+                        minWidth: '30px',
+                        color: '#555',
+                        textAlign: 'right',
+                        padding: '0 8px 0 0',
+                        userSelect: 'none',
+                        borderRight: '1px solid #333',
+                        marginRight: '10px',
+                        fontFamily: '"Source Code Pro", monospace',
+                        fontSize: '14px',
+                      }}>
+                        {lineIndex + 1}
+                      </div>
+                      <div style={{
+                        color: getCodeColor(line, true),
+                        lineHeight: '1.5',
+                        fontFamily: '"Source Code Pro", monospace',
+                        fontSize: '14px',
+                        whiteSpace: 'pre-wrap',
+                        wordBreak: 'break-word',
+                        width: '100%',
+                        paddingRight: '12px',
+                      }}>
+                        {line}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             );
           }
         }
       }
       
-      // Regular text - use markdown-to-jsx to render markdown 
-return (
-  <div key={index} className="markdown-content">
-    <Markdown 
-      options={{
-        overrides: {
-          h1: {
-            component: 'h2',
-            props: {
-              style: {
-                fontSize: '1.6em',
-                fontWeight: 'bold',
-                marginTop: '1.2em',
-                marginBottom: '0.6em',
-                color: isDarkTheme ? '#E0E0E0' : '#222',
-                borderBottom: `1px solid ${isDarkTheme ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.1)'}`,
-                paddingBottom: '0.4em',
+      // Regular text - process for nested markdown code blocks first
+      const { content: processedContent, codeBlocks } = processMarkdownCodeBlocks(part);
+      
+      // Return markdown component that correctly handles nested code
+      return (
+        <div key={index} className="markdown-content">
+          <Markdown 
+            options={{
+              overrides: {
+                h1: {
+                  component: 'h2',
+                  props: {
+                    style: {
+                      fontSize: '1.6em',
+                      fontWeight: 'bold',
+                      marginTop: '1.2em',
+                      marginBottom: '0.6em',
+                      color: isDarkTheme ? '#E0E0E0' : '#222',
+                      borderBottom: `1px solid ${isDarkTheme ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.1)'}`,
+                      paddingBottom: '0.4em',
+                    },
+                  },
+                },
+                h2: {
+                  props: {
+                    style: {
+                      fontSize: '1.4em',
+                      fontWeight: 'bold',
+                      marginTop: '1em',
+                      marginBottom: '0.5em',
+                      color: isDarkTheme ? '#E0E0E0' : '#222',
+                    },
+                  },
+                },
+                h3: {
+                  props: {
+                    style: {
+                      fontSize: '1.2em',
+                      fontWeight: 'bold',
+                      marginTop: '0.8em',
+                      marginBottom: '0.4em',
+                      color: isDarkTheme ? '#E0E0E0' : '#333',
+                    },
+                  },
+                },
+                p: {
+                  component: ({ children, ...props }) => {
+                    // Check if this paragraph contains a code block placeholder
+                    if (typeof children === 'string' && children.includes('__CODE_BLOCK_')) {
+                      const match = children.match(/__CODE_BLOCK_(\d+)__/);
+                      if (match && match[1]) {
+                        const blockIndex = parseInt(match[1]);
+                        const { language, code } = codeBlocks[blockIndex];
+                        
+                        // Return the code snippet component for the nested code block
+                        return (
+                          <CodeSnippet 
+                            code={code}
+                            language={language}
+                            title={language ? language.charAt(0).toUpperCase() + language.slice(1) : 'Code'}
+                          />
+                        );
+                      }
+                    }
+                    
+                    // Otherwise return normal paragraph
+                    return (
+                      <p
+                        {...props}
+                        style={{
+                          marginTop: '0.7em',
+                          marginBottom: '0.7em',
+                          lineHeight: '1.6',
+                          fontSize: '1.05em',
+                          color: isDarkTheme ? '#D0D0D0' : '#111',
+                        }}
+                      >
+                        {children}
+                      </p>
+                    );
+                  }
+                },
+                a: {
+                  props: {
+                    style: {
+                      color: 'var(--accent-color)',
+                      textDecoration: 'none',
+                      fontWeight: '500',
+                    },
+                  },
+                },
+                strong: {
+                  props: {
+                    style: {
+                      fontWeight: 'bold',
+                      color: isDarkTheme ? '#FFFFFF' : '#000000',
+                    },
+                  },
+                },
+                em: {
+                  props: {
+                    style: {
+                      fontStyle: 'italic',
+                      color: isDarkTheme ? '#D0D0D0' : '#333',
+                    },
+                  },
+                },
+                ul: {
+                  props: {
+                    style: {
+                      paddingLeft: '1.8em',
+                      marginTop: '0.6em',
+                      marginBottom: '0.6em',
+                    },
+                  },
+                },
+                ol: {
+                  props: {
+                    style: {
+                      paddingLeft: '1.8em',
+                      marginTop: '0.6em',
+                      marginBottom: '0.6em',
+                    },
+                  },
+                },
+                li: {
+                  props: {
+                    style: {
+                      marginBottom: '0.4em',
+                      fontSize: '1.05em',
+                    },
+                  },
+                },
+                blockquote: {
+                  props: {
+                    style: {
+                      borderLeft: `3px solid ${isDarkTheme ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.2)'}`,
+                      paddingLeft: '1em',
+                      marginLeft: '0',
+                      color: isDarkTheme ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.75)',
+                      fontStyle: 'italic',
+                      fontSize: '1.1em',
+                    },
+                  },
+                },
+                hr: {
+                  props: {
+                    style: {
+                      border: 'none',
+                      borderBottom: `1px solid ${isDarkTheme ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
+                      margin: '1em 0',
+                    },
+                  },
+                },
+                code: {
+                  props: {
+                    style: {
+                      fontFamily: 'var(--font-family-mono)',
+                      backgroundColor: isDarkTheme ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
+                      padding: '0.3em 0.5em',
+                      borderRadius: '5px',
+                      fontSize: '0.95em',
+                      color: isDarkTheme ? '#E6E6E6' : '#333',
+                    },
+                  },
+                },
+                inlineCode: {
+                  component: 'code',
+                  props: {
+                    style: {
+                      fontFamily: 'var(--font-family-mono)',
+                      backgroundColor: isDarkTheme ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
+                      padding: '0.2em 0.4em',
+                      borderRadius: '4px',
+                      fontSize: '0.95em',
+                      color: isDarkTheme ? '#E6E6E6' : '#333',
+                    },
+                  },
+                },
+                table: {
+                  props: {
+                    style: {
+                      borderCollapse: 'collapse',
+                      width: '100%',
+                      marginTop: '1em',
+                      marginBottom: '1em',
+                    },
+                  },
+                },
+                th: {
+                  props: {
+                    style: {
+                      border: `1px solid ${isDarkTheme ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
+                      padding: '8px',
+                      textAlign: 'left',
+                      backgroundColor: isDarkTheme ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
+                      fontSize: '1em',
+                    },
+                  },
+                },
+                td: {
+                  props: {
+                    style: {
+                      border: `1px solid ${isDarkTheme ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
+                      padding: '8px',
+                      textAlign: 'left',
+                      fontSize: '1em',
+                    },
+                  },
+                },
               },
-            },
-          },
-          h2: {
-            props: {
-              style: {
-                fontSize: '1.4em',
-                fontWeight: 'bold',
-                marginTop: '1em',
-                marginBottom: '0.5em',
-                color: isDarkTheme ? '#E0E0E0' : '#222',
-              },
-            },
-          },
-          h3: {
-            props: {
-              style: {
-                fontSize: '1.2em',
-                fontWeight: 'bold',
-                marginTop: '0.8em',
-                marginBottom: '0.4em',
-                color: isDarkTheme ? '#E0E0E0' : '#333',
-              },
-            },
-          },
-          p: {
-            props: {
-              style: {
-                marginTop: '0.7em',
-                marginBottom: '0.7em',
-                lineHeight: '1.6',
-                fontSize: '1.05em',
-                color: isDarkTheme ? '#D0D0D0' : '#111',
-              },
-            },
-          },
-          a: {
-            props: {
-              style: {
-                color: 'var(--accent-color)',
-                textDecoration: 'none',
-                fontWeight: '500',
-              },
-            },
-          },
-          strong: {
-            props: {
-              style: {
-                fontWeight: 'bold',
-                color: isDarkTheme ? '#FFFFFF' : '#000000',
-              },
-            },
-          },
-          em: {
-            props: {
-              style: {
-                fontStyle: 'italic',
-                color: isDarkTheme ? '#D0D0D0' : '#333',
-              },
-            },
-          },
-          ul: {
-            props: {
-              style: {
-                paddingLeft: '1.8em',
-                marginTop: '0.6em',
-                marginBottom: '0.6em',
-              },
-            },
-          },
-          ol: {
-            props: {
-              style: {
-                paddingLeft: '1.8em',
-                marginTop: '0.6em',
-                marginBottom: '0.6em',
-              },
-            },
-          },
-          li: {
-            props: {
-              style: {
-                marginBottom: '0.4em',
-                fontSize: '1.05em',
-              },
-            },
-          },
-          blockquote: {
-            props: {
-              style: {
-                borderLeft: `3px solid ${isDarkTheme ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.2)'}`,
-                paddingLeft: '1em',
-                marginLeft: '0',
-                color: isDarkTheme ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.75)',
-                fontStyle: 'italic',
-                fontSize: '1.1em',
-              },
-            },
-          },
-          hr: {
-            props: {
-              style: {
-                border: 'none',
-                borderBottom: `1px solid ${isDarkTheme ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
-                margin: '1em 0',
-              },
-            },
-          },
-          code: {
-            props: {
-              style: {
-                fontFamily: 'var(--font-family-mono)',
-                backgroundColor: isDarkTheme ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
-                padding: '0.3em 0.5em',
-                borderRadius: '5px',
-                fontSize: '0.95em',
-                color: isDarkTheme ? '#E6E6E6' : '#333',
-              },
-            },
-          },
-          inlineCode: {
-            component: 'code',
-            props: {
-              style: {
-                fontFamily: 'var(--font-family-mono)',
-                backgroundColor: isDarkTheme ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
-                padding: '0.2em 0.4em',
-                borderRadius: '4px',
-                fontSize: '0.95em',
-                color: isDarkTheme ? '#E6E6E6' : '#333',
-              },
-            },
-          },
-          table: {
-            props: {
-              style: {
-                borderCollapse: 'collapse',
-                width: '100%',
-                marginTop: '1em',
-                marginBottom: '1em',
-              },
-            },
-          },
-          th: {
-            props: {
-              style: {
-                border: `1px solid ${isDarkTheme ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
-                padding: '8px',
-                textAlign: 'left',
-                backgroundColor: isDarkTheme ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
-                fontSize: '1em',
-              },
-            },
-          },
-          td: {
-            props: {
-              style: {
-                border: `1px solid ${isDarkTheme ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
-                padding: '8px',
-                textAlign: 'left',
-                fontSize: '1em',
-              },
-            },
-          },
-        },
-      }}
-    >
-      {part}
-    </Markdown>
-  </div>
-);
-
+            }}
+          >
+            {processedContent}
+          </Markdown>
+        </div>
+      );
     });
   };
   
@@ -469,7 +521,7 @@ return (
     return indent.replace(/ /g, '\u00A0').replace(/\t/g, '\u00A0\u00A0');
   };
 
-  // Get message style based on role
+  // Get message style based on role and response style
   const getMessageStyle = () => {
     if (role === 'system') {
       return {
@@ -489,12 +541,48 @@ return (
       };
     }
 
+    // Assistant role with different style colors
+    if (role === 'assistant') {
+      // Apply different subtle background colors based on response style
+      switch (responseStyle) {
+        case 'concise':
+          return {
+            backgroundColor: isDarkTheme ? 'rgba(95, 145, 80, 0.05)' : 'rgba(95, 180, 95, 0.03)',
+            color: isDarkTheme ? '#d4d4d4' : '#2d2d2d',
+            border: `1px solid ${isDarkTheme ? 'rgba(95, 145, 80, 0.1)' : 'rgba(95, 180, 95, 0.1)'}`,
+            borderRadius: 'var(--chat-bubble-radius)',
+          };
+        case 'explanatory':
+          return {
+            backgroundColor: isDarkTheme ? 'rgba(95, 120, 160, 0.05)' : 'rgba(95, 130, 190, 0.03)',
+            color: isDarkTheme ? '#d4d4d4' : '#2d2d2d',
+            border: `1px solid ${isDarkTheme ? 'rgba(95, 120, 160, 0.1)' : 'rgba(95, 130, 190, 0.1)'}`,
+            borderRadius: 'var(--chat-bubble-radius)',
+          };
+        case 'formal':
+          return {
+            backgroundColor: isDarkTheme ? 'rgba(140, 95, 150, 0.05)' : 'rgba(160, 95, 180, 0.03)',
+            color: isDarkTheme ? '#d4d4d4' : '#2d2d2d',
+            border: `1px solid ${isDarkTheme ? 'rgba(140, 95, 150, 0.1)' : 'rgba(160, 95, 180, 0.1)'}`,
+            borderRadius: 'var(--chat-bubble-radius)',
+          };
+        default:
+          return {
+            backgroundColor: 'transparent',
+            color: isDarkTheme ? '#d4d4d4' : '#2d2d2d',
+            backdropFilter: 'none',
+            borderRadius: 0,
+            border: 'none',
+          };
+      }
+    }
+
     return {
-      backgroundColor: isDarkTheme ? 'rgba(32, 32, 32, 0.7)' : 'rgba(252, 252, 252, 0.8)',
+      backgroundColor: 'transparent',
       color: isDarkTheme ? '#d4d4d4' : '#2d2d2d',
-      backdropFilter: 'blur(8px)',
-      borderRadius: 'var(--chat-bubble-radius-ai)',
-      border: `1px solid ${isDarkTheme ? 'rgba(80, 80, 80, 0.2)' : 'rgba(200, 200, 200, 0.3)'}`,
+      backdropFilter: 'none',
+      borderRadius: 0,
+      border: 'none',
     };
   };
 
@@ -557,7 +645,7 @@ return (
       <div style={{
         overflow: 'hidden',
         position: 'relative',
-        boxShadow: role === 'assistant' ? `0px 2px 4px ${isDarkTheme ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.1)'}` : 'none',
+        boxShadow: 'none',
         ...getMessageStyle(),
       }}>
         {/* Thinking Section */}
@@ -740,7 +828,7 @@ return (
                     (isProcessing ? '#d0d0d0' : '#a0a0a0') : 
                     (isProcessing ? '#333333' : '#666666'),
                   whiteSpace: 'pre-wrap',
-                  fontFamily: 'var(--font-family-mono)',
+                  fontFamily: '"Söhne", "Söhne Buch", "Söhne Halbfett", "Söhne Dreiviertelfett", "Söhne Breit", "Söhne Mono", system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
                   borderBottom: `1px solid ${isDarkTheme ? 'rgba(45, 45, 45, 0.5)' : 'rgba(200, 200, 200, 0.3)'}`,
                   backgroundColor: isDarkTheme ? 'rgba(18, 18, 18, 0.95)' : 'rgba(248, 248, 250, 0.8)',
                   opacity: isProcessing ? 1 : 0.8,
@@ -834,8 +922,8 @@ return (
         }
         
         @keyframes pulse {
-          0%, 100% { opacity: 0.3; }
-          50% { opacity: 1; }
+          0%, 100% { opacity: 0.3; transform: scale(0.8); }
+          50% { opacity: 1; transform: scale(1.2); }
         }
         
         .code-block-container:hover .code-copy-button {
@@ -844,6 +932,46 @@ return (
         
         .code-copy-button:hover {
           opacity: 1 !important;
+        }
+        
+        /* Animation for the code block in-progress indicator */
+        .code-progress-indicator {
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          background-color: #64D2FF;
+          margin-left: 8px;
+          animation: codePulse 1.5s infinite ease-in-out;
+        }
+        
+        /* Animation for in-progress code blocks */
+        .in-progress-indicator-pulse {
+          animation: pulse 1.5s infinite ease-in-out;
+        }
+        
+        /* Add a subtle pulsing border to in-progress code blocks */
+        .code-block-container {
+          position: relative;
+        }
+        
+        .code-block-container::before {
+          content: '';
+          position: absolute;
+          top: -1px;
+          left: -1px;
+          right: -1px;
+          bottom: -1px;
+          border-radius: 6px;
+          border: 1px solid #3a85e9;
+          opacity: 0.7;
+          animation: borderPulse 1.5s infinite ease-in-out;
+          pointer-events: none;
+          z-index: 0;
+        }
+        
+        @keyframes borderPulse {
+          0%, 100% { opacity: 0.3; }
+          50% { opacity: 0.7; }
         }
         
         /* Styling for lists in messages */

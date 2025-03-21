@@ -71,13 +71,6 @@ const CommandInput: React.FC = () => {
     changeModel,
   } = useAppContext();
   
-  // Add state for model dropdown
-  const [showModelDropdown, setShowModelDropdown] = useState(false);
-  
-  // Reference for model dropdown
-  const modelDropdownRef = useRef<HTMLDivElement>(null);
-  const modelSelectorRef = useRef<HTMLDivElement>(null);
-  
   // Reference for style dropdown
   const styleDropdownRef = useRef<HTMLDivElement>(null);
   const styleSelectorRef = useRef<HTMLDivElement>(null);
@@ -85,17 +78,6 @@ const CommandInput: React.FC = () => {
   // Handle click outside to close dropdowns
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      // Handle model dropdown
-      if (
-        showModelDropdown && 
-        modelDropdownRef.current && 
-        modelSelectorRef.current && 
-        !modelDropdownRef.current.contains(event.target as Node) &&
-        !modelSelectorRef.current.contains(event.target as Node)
-      ) {
-        setShowModelDropdown(false);
-      }
-      
       // Handle style dropdown
       if (
         showStyleDropdown && 
@@ -112,7 +94,7 @@ const CommandInput: React.FC = () => {
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [showModelDropdown, showStyleDropdown]);
+  }, [showStyleDropdown]);
   
   // Define a model interface
   interface Model {
@@ -452,11 +434,12 @@ const CommandInput: React.FC = () => {
   
   // Handle model change
   const handleModelChange = (model: string) => {
-    if (currentConversation && !isProcessing) {
-      // Use the changeModel function from context to actually change the model
+    if (model === currentModel) return;
+    setCurrentModel(model);
+    
+    // If we have a conversation, change the model
+    if (currentConversation) {
       changeModel(model);
-      setCurrentModel(model);
-      setShowModelDropdown(false);
     }
   };
   
@@ -566,18 +549,6 @@ const CommandInput: React.FC = () => {
     return displayName;
   };
 
-  // New useEffect for positioning the model dropdown correctly
-  useEffect(() => {
-    if (showModelDropdown && modelDropdownRef.current && modelSelectorRef.current) {
-      // Position the dropdown above the model selector
-      const selectorRect = modelSelectorRef.current.getBoundingClientRect();
-      
-      // Apply left offset to move dropdown more to the left
-      modelDropdownRef.current.style.left = `${selectorRect.left - 280}px`;
-      modelDropdownRef.current.style.bottom = `${window.innerHeight - selectorRect.top + -15}px`;
-    }
-  }, [showModelDropdown]);
-
   // New useEffect for positioning the style dropdown correctly
   useEffect(() => {
     if (showStyleDropdown && styleDropdownRef.current && styleSelectorRef.current) {
@@ -652,16 +623,18 @@ const CommandInput: React.FC = () => {
                 background-color: transparent;
                 border: none;
                 border-radius: var(--border-radius);
-                color: ${settings?.theme === 'dark' ? '#d0d0d0' : '#333'};
+                color: ${settings?.theme === 'dark' ? '#d0d0d0' : '#505050'};
                 padding: 4px 8px;
                 font-size: 12px;
                 cursor: pointer;
                 display: flex;
                 alignItems: center;
                 gap: 5px;
-                height: 26px;
+                height: 24px;
                 transition: background 0.2s, transform 0.1s;
                 user-select: none;
+                font-family: var(--font-family-general, "Söhne", sans-serif);
+                font-weight: 500;
               }
               
               .selector-button:hover {
@@ -868,166 +841,38 @@ const CommandInput: React.FC = () => {
               alignItems: 'center',
               height: '32px',
             }}>
-              {/* Model selector (left side) */}
-              <div 
-                ref={modelSelectorRef}
-                onClick={() => !isProcessing && setShowModelDropdown(!showModelDropdown)}
-                className="selector-button"
-                style={{
-                  opacity: isProcessing ? 0.6 : 1,
-                  width: 'auto',
-                  minWidth: '130px',
-                  whiteSpace: 'nowrap',
-                  position: 'relative',
+              {/* Model badges */}
+              {isDeepThinkModel(currentModel) && (
+                <div className="thinking-model-indicator" style={{
+                  padding: '0.15rem 0.5rem',
+                  fontSize: '12px',
+                  fontWeight: '500',
+                  fontFamily: 'var(--font-family-general, "Söhne", sans-serif)',
+                  background: settings?.theme === 'dark' ? 'rgba(0, 102, 204, 0.15)' : 'rgba(0, 102, 204, 0.07)',
+                  borderRadius: 'var(--border-radius)',
+                  color: settings?.theme === 'dark' ? '#d0d0d0' : '#505050',
+                  height: '24px',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: 'var(--spacing-1)',
-                  height: '32px',
-                  background: isVisionModel(currentModel) 
-                    ? `${settings?.theme === 'dark' ? 'rgba(255, 80, 80, 0.15)' : 'rgba(255, 60, 60, 0.07)'}`
-                    : isDeepThinkModel(currentModel)
-                    ? `${settings?.theme === 'dark' ? 'rgba(0, 102, 204, 0.15)' : 'rgba(0, 102, 204, 0.07)'}`
-                    : settings?.theme === 'dark' ? 'rgba(58, 58, 58, 0.4)' : 'rgba(240, 240, 240, 0.7)',
-                  borderRadius: '6px',
-                  padding: '0 12px',
-                  cursor: isProcessing ? 'default' : 'pointer',
-                  transition: 'background 0.2s ease, opacity 0.2s ease',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  {isVisionModel(currentModel) && (
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"></path>
-                      <circle cx="12" cy="12" r="2"></circle>
-                    </svg>
-                  )}
-                  {isDeepThinkModel(currentModel) && (
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M12 3.5c5.5 0 8.5 3.5 8.5 7.5 0 2.25-.5 3.5-2 5-1.5 1.5-3.5 2.5-6.5 2.5s-5-1-6.5-2.5c-1.5-1.5-2-2.75-2-5 0-4 3-7.5 8.5-7.5z" />
-                      <path d="M9 17.5v2.5" />
-                      <path d="M15 17.5v2.5" />
-                      <path d="M6 10a1 1 0 100-2 1 1 0 000 2z" />
-                      <path d="M18 10a1 1 0 100-2 1 1 0 000 2z" />
-                    </svg>
-                  )}
-                  <span style={{ 
-                    fontWeight: 500,
-                    fontSize: '13px',
-                    maxWidth: isVisionModel(currentModel) || isDeepThinkModel(currentModel) ? '84px' : '110px',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                    lineHeight: '32px',
-                  }}>
-                    {formatModelName(currentModel)}
-                  </span>
+                }}>
+                  DeepThink
                 </div>
-                
-                <svg 
-                  width="14" 
-                  height="14" 
-                  viewBox="0 0 24 24" 
-                  fill="none" 
-                  stroke="white" 
-                  strokeWidth="2.5" 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round"
-                  style={{
-                    transform: showModelDropdown ? 'rotate(180deg)' : 'rotate(0deg)',
-                    transition: 'transform 0.2s ease',
-                  }}
-                >
-                  <polyline points="7 10 12 15 17 10"></polyline>
-                </svg>
-              </div>
+              )}
               
-              {/* Model dropdown (opens upward) */}
-              {showModelDropdown && (
-                <div 
-                  ref={modelDropdownRef}
-                  style={{
-                    position: 'fixed',
-                    bottom: '48px', // Increase distance from button
-                    left: '0',
-                    backgroundColor: settings?.theme === 'dark' ? '#1A1A1A' : '#ffffff',
-                    border: `1px solid ${settings?.theme === 'dark' ? '#333' : '#ddd'}`,
-                    borderRadius: '6px',
-                    marginBottom: '8px',
-                    zIndex: 10000,
-                    maxHeight: '240px',
-                    overflowY: 'auto',
-                    boxShadow: settings?.theme === 'dark' ? '0 -4px 8px rgba(0,0,0,0.3)' : '0 -4px 8px rgba(0,0,0,0.1)',
-                    fontFamily: 'Söhne, sans-serif',
-                    minWidth: '180px',
-                    backdropFilter: 'blur(8px)',
-                  }}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {availableModels.map((model) => (
-                    <div 
-                      key={model}
-                      className="model-option"
-                      onClick={() => handleModelChange(model)}
-                      style={{
-                        padding: '8px 12px',
-                        cursor: 'pointer',
-                        backgroundColor: model === currentModel
-                          ? (settings?.theme === 'dark' ? '#333' : '#e0e0e0') 
-                          : 'transparent',
-                        transition: 'all 0.1s ease',
-                        fontSize: '13px',
-                        fontWeight: model === currentModel ? '500' : 'normal',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        gap: 'var(--spacing-1)',
-                      }}
-                      onMouseOver={(e) => {
-                        e.currentTarget.style.backgroundColor = settings?.theme === 'dark' ? '#333' : '#e0e0e0';
-                      }}
-                      onMouseOut={(e) => {
-                        if (model !== currentModel) {
-                          e.currentTarget.style.backgroundColor = 'transparent';
-                        }
-                      }}
-                    >
-                      <span>{formatModelName(model)}</span>
-                      
-                      {/* Model type indicator - icon only */}
-                      {(isVisionModel(model) || isDeepThinkModel(model)) && (
-                        <span style={{ 
-                          fontSize: '10px',
-                          padding: '5px',
-                          borderRadius: '4px',
-                          background: isVisionModel(model)
-                            ? `${settings?.theme === 'dark' ? 'rgba(255, 80, 80, 0.4)' : 'rgba(255, 60, 60, 0.3)'}`
-                            : `${settings?.theme === 'dark' ? 'rgba(0, 102, 204, 0.2)' : 'rgba(0, 102, 204, 0.1)'}`,
-                          color: isVisionModel(model)
-                            ? `${settings?.theme === 'dark' ? '#ffffff' : '#ffffff'}`
-                            : `${settings?.theme === 'dark' ? '#ffffff' : '#ffffff'}`,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}>
-                          {isVisionModel(model) ? (
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"></path>
-                              <circle cx="12" cy="12" r="2"></circle>
-                            </svg>
-                          ) : (
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M12 3.5c5.5 0 8.5 3.5 8.5 7.5 0 2.25-.5 3.5-2 5-1.5 1.5-3.5 2.5-6.5 2.5s-5-1-6.5-2.5c-1.5-1.5-2-2.75-2-5 0-4 3-7.5 8.5-7.5z" />
-                              <path d="M9 17.5v2.5" />
-                              <path d="M15 17.5v2.5" />
-                              <path d="M6 10a1 1 0 100-2 1 1 0 000 2z" />
-                              <path d="M18 10a1 1 0 100-2 1 1 0 000 2z" />
-                            </svg>
-                          )}
-                        </span>
-                      )}
-                    </div>
-                  ))}
+              {isVisionModel(currentModel) && (
+                <div className="vision-model-indicator" style={{
+                  padding: '0.15rem 0.5rem',
+                  fontSize: '12px',
+                  fontWeight: '500',
+                  fontFamily: 'var(--font-family-general, "Söhne", sans-serif)',
+                  background: settings?.theme === 'dark' ? 'rgba(255, 80, 80, 0.15)' : 'rgba(255, 60, 60, 0.07)',
+                  borderRadius: 'var(--border-radius)',
+                  color: settings?.theme === 'dark' ? '#d0d0d0' : '#505050',
+                  height: '24px',
+                  display: 'flex',
+                  alignItems: 'center',
+                }}>
+                  Vision
                 </div>
               )}
               
@@ -1039,29 +884,74 @@ const CommandInput: React.FC = () => {
                 style={{
                   opacity: isProcessing ? 0.6 : 1,
                   width: 'auto',
-                  minWidth: '130px',
+                  minWidth: '100px',
+                  maxWidth: '110px',
                   whiteSpace: 'nowrap',
                   position: 'relative',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
                   gap: 'var(--spacing-1)',
-                  height: '32px',
-                  background: settings?.theme === 'dark' ? 'rgba(58, 58, 58, 0.4)' : 'rgba(240, 240, 240, 0.7)',
-                  borderRadius: '6px',
-                  padding: '0 12px',
+                  height: '24px',
+                  background: (() => {
+                    // Different colors based on response style
+                    switch(responseStyle) {
+                      case 'concise':
+                        return settings?.theme === 'dark' 
+                          ? 'rgba(95, 145, 80, 0.25)' 
+                          : 'rgba(95, 180, 95, 0.15)';
+                      case 'explanatory':
+                        return settings?.theme === 'dark' 
+                          ? 'rgba(95, 120, 160, 0.25)' 
+                          : 'rgba(95, 130, 190, 0.15)';
+                      case 'formal':
+                        return settings?.theme === 'dark' 
+                          ? 'rgba(140, 95, 150, 0.25)' 
+                          : 'rgba(160, 95, 180, 0.15)';
+                      default:
+                        return settings?.theme === 'dark' 
+                          ? 'rgba(58, 58, 58, 0.4)' 
+                          : 'rgba(240, 240, 240, 0.7)';
+                    }
+                  })(),
+                  borderRadius: 'var(--border-radius)',
+                  padding: '0.15rem 0.5rem',
                   cursor: isProcessing ? 'default' : 'pointer',
                   transition: 'background 0.2s ease, opacity 0.2s ease',
+                  fontSize: '12px',
+                  fontWeight: '500',
+                  fontFamily: 'var(--font-family-general, "Söhne", sans-serif)',
+                  color: settings?.theme === 'dark' ? '#d0d0d0' : '#505050',
+                  border: (() => {
+                    // Different border colors based on response style
+                    switch(responseStyle) {
+                      case 'concise':
+                        return `1px solid ${settings?.theme === 'dark' 
+                          ? 'rgba(95, 145, 80, 0.3)' 
+                          : 'rgba(95, 180, 95, 0.25)'}`;
+                      case 'explanatory':
+                        return `1px solid ${settings?.theme === 'dark' 
+                          ? 'rgba(95, 120, 160, 0.3)' 
+                          : 'rgba(95, 130, 190, 0.25)'}`;
+                      case 'formal':
+                        return `1px solid ${settings?.theme === 'dark' 
+                          ? 'rgba(140, 95, 150, 0.3)' 
+                          : 'rgba(160, 95, 180, 0.25)'}`;
+                      default:
+                        return 'none';
+                    }
+                  })(),
                 }}
               >
                 <span style={{ 
                   fontWeight: 500,
-                  fontSize: '13px',
-                  maxWidth: '110px',
+                  fontSize: '12px',
+                  maxWidth: '80px',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
-                  lineHeight: '32px',
+                  lineHeight: '18px',
+                  fontFamily: 'var(--font-family-general, "Söhne", sans-serif)'
                 }}>
                   {responseStyle.charAt(0).toUpperCase() + responseStyle.slice(1)}
                 </span>
@@ -1071,7 +961,7 @@ const CommandInput: React.FC = () => {
                   height="14" 
                   viewBox="0 0 24 24" 
                   fill="none" 
-                  stroke="white" 
+                  stroke="currentColor" 
                   strokeWidth="2.5" 
                   strokeLinecap="round" 
                   strokeLinejoin="round"
@@ -1101,7 +991,8 @@ const CommandInput: React.FC = () => {
                     overflowY: 'auto',
                     boxShadow: settings?.theme === 'dark' ? '0 -4px 8px rgba(0,0,0,0.3)' : '0 -4px 8px rgba(0,0,0,0.1)',
                     fontFamily: 'Söhne, sans-serif',
-                    minWidth: '180px',
+                    minWidth: '140px',
+                    maxWidth: '160px',
                     backdropFilter: 'blur(8px)',
                   }}
                   onClick={(e) => e.stopPropagation()}
@@ -1218,6 +1109,43 @@ const CommandInput: React.FC = () => {
               padding-bottom: env(safe-area-inset-bottom, 0.75rem) !important;
               z-index: 1001;
             }
+          }
+          
+          .command-textarea {
+            flex-grow: 1;
+            min-height: 24px;
+            max-height: 200px;
+            resize: none;
+            border: none;
+            outline: none;
+            background: transparent;
+            color: ${settings?.theme === 'dark' ? 'var(--text-color-dark)' : 'var(--text-color-light)'};
+            font-family: var(--font-family-sans);
+            font-size: 16px;
+            line-height: 1.5;
+            padding: 0;
+            margin: 0;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: ${settings?.theme === 'dark' ? '#333 #121212' : '#ccc #ffffff'};
+          }
+          
+          .command-textarea::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+          }
+          
+          .command-textarea::-webkit-scrollbar-track {
+            background: ${settings?.theme === 'dark' ? '#121212' : '#f1f1f1'};
+          }
+          
+          .command-textarea::-webkit-scrollbar-thumb {
+            background: ${settings?.theme === 'dark' ? '#333' : '#ccc'};
+            border-radius: 4px;
+          }
+          
+          .command-textarea::-webkit-scrollbar-thumb:hover {
+            background: ${settings?.theme === 'dark' ? '#444' : '#999'};
           }
         `}
       </style>

@@ -70,7 +70,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   codeLineHeight: 1.5,
 };
 
-// Create a new empty conversation
+// Create a new conversation with the default system message
 const createNewConversation = (settings: AppSettings): Conversation => {
   const { activeProvider, providers, userRole, customSystemPrompts } = settings;
   const provider = providers[activeProvider];
@@ -296,7 +296,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           return () => unsubscribe();
         } else if (isElectron) {
           // Use electron-store in Electron environment
-          const storedConversations = await window.electron.store.get('conversations');
+          const storedConversations = await window.electron?.store.get('conversations');
           if (storedConversations && Array.isArray(storedConversations)) {
             // Clean any welcome messages from all conversations
             for (const conversation of storedConversations) {
@@ -356,7 +356,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         
         if (isElectron) {
           // Save to electron-store in Electron environment
-          await window.electron.store.set('settings', settings);
+          await window.electron?.store.set('settings', settings);
         }
       } catch (error) {
         console.error('Error saving settings:', error);
@@ -377,7 +377,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         
         if (isElectron) {
           // Save to electron-store in Electron environment
-          await window.electron.store.set('conversations', conversations);
+          await window.electron?.store.set('conversations', conversations);
         }
       } catch (error) {
         console.error('Error saving conversations:', error);
@@ -406,7 +406,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     } else if (isElectron) {
       // Save to electron-store
       try {
-        window.electron.store.set(`conversation_${conversation.id}`, JSON.stringify(conversation))
+        window.electron?.store.set(`conversation_${conversation.id}`, JSON.stringify(conversation))
           .catch(error => console.error('Error saving to electron-store:', error));
       } catch (error) {
         console.error('Error saving to electron-store:', error);
@@ -622,7 +622,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     } else if (isElectron) {
       // Clear conversations in electron-store
       try {
-        await window.electron.store.set('conversations', []);
+        await window.electron?.store.set('conversations', []);
       } catch (error) {
         console.error('Error clearing conversations in electron-store:', error);
       }

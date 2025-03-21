@@ -14,6 +14,18 @@
   }
 }
 
+/* Code indicator pulse animation */
+@keyframes codePulse {
+  0%, 100% {
+    opacity: 0.3;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+}
+
 /* Media query adjustments for consistent breakpoints */
 @media (max-width: 768px) {
   .thinking-content {

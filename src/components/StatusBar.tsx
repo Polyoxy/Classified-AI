@@ -652,6 +652,95 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenSettings }) => {
             </div>
           </div>
           
+          {/* Model Selector - Moved to the left side */}
+          <div 
+            ref={dropdownRef}
+            className={`model-selector ${isModelDropdownOpen ? 'open' : ''}`}
+            style={{ 
+              position: 'relative',
+              cursor: 'pointer',
+              marginLeft: 'calc(var(--status-bar-element-gap) * 1.2)',
+            }}
+          >
+            <div 
+              className={`selected-model ${isDeepThinkModel(getCurrentModel()) ? 'thinking-model-glow' : ''} ${isVisionModel(getCurrentModel()) ? 'vision-model-glow' : ''}`} 
+              onClick={() => setIsModelDropdownOpen(!isModelDropdownOpen)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                padding: '0.2rem 0.6rem',
+                fontFamily: 'var(--font-family-general, "Söhne", sans-serif)',
+                fontSize: 'var(--status-bar-font-size)',
+                textAlign: 'center',
+                borderRadius: 'var(--border-radius)',
+                background: settings?.theme === 'dark' ? 'rgba(50, 50, 50, 0.4)' : 'rgba(240, 240, 240, 0.7)',
+              }}
+            >
+              <span 
+                className="selected-model-text"
+                style={{ 
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  textAlign: 'center',
+                  fontWeight: '500',
+                }}
+              >
+                {formatModelName(getCurrentModel())}
+              </span>
+              
+              <svg 
+                width="12" 
+                height="12" 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="2" 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                style={{ marginLeft: '6px', opacity: 0.7 }}
+              >
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </div>
+            
+            {isModelDropdownOpen && (
+              <div className="model-dropdown" style={{
+                background: settings?.theme === 'dark' ? '#222' : '#fff',
+                borderRadius: 'var(--border-radius)',
+                border: `1px solid ${settings?.theme === 'dark' ? '#333' : '#e0e0e0'}`,
+                overflow: 'hidden',
+                overflowY: 'auto',
+              }}>
+                {getModelsForProvider().map((model) => (
+                  <div 
+                    key={model}
+                    onClick={() => handleModelChange(model)}
+                    style={{
+                      padding: '8px 12px',
+                      cursor: 'pointer',
+                      transition: 'background 0.2s ease',
+                      backgroundColor: model === getCurrentModel() 
+                        ? (settings?.theme === 'dark' ? '#333' : '#f0f0f0') 
+                        : 'transparent',
+                      color: settings?.theme === 'dark' ? '#d0d0d0' : '#505050',
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.backgroundColor = settings?.theme === 'dark' ? '#333' : '#f0f0f0';
+                    }}
+                    onMouseOut={(e) => {
+                      if (model !== getCurrentModel()) {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                      }
+                    }}
+                  >
+                    {formatModelName(model)}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          
           {/* Connection status indicator */}
           <div 
             className="connection-status" 

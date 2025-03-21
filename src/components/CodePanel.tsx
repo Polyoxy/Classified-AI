@@ -68,6 +68,15 @@ const CodePanel: React.FC<CodePanelProps> = ({
     return () => window.removeEventListener('keydown', handleEscKey);
   }, [isOpen, onClose]);
   
+  // Get enhanced title with line count if not already provided
+  const getEnhancedTitle = () => {
+    if (title && !title.includes('lines')) {
+      const lines = code.split('\n').length;
+      return `${title} (${lines} lines)`;
+    }
+    return title || 'Code Panel';
+  };
+  
   // Create portal content
   const panelContent = (
     <div 
@@ -76,14 +85,13 @@ const CodePanel: React.FC<CodePanelProps> = ({
     >
       <div className="code-panel-header">
         <h3 className="code-panel-title">
-          {title || `Code ${language ? `(${language})` : ''}`}
+          {getEnhancedTitle()}
         </h3>
         
         <div className="code-panel-actions">
           <button
             onClick={handleCopy}
             className="code-panel-button"
-            title="Copy code"
           >
             {showCopied ? (
               'Copied!'
@@ -101,7 +109,6 @@ const CodePanel: React.FC<CodePanelProps> = ({
           <button
             onClick={onClose}
             className="code-panel-button"
-            title="Close panel"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -111,19 +118,36 @@ const CodePanel: React.FC<CodePanelProps> = ({
         </div>
       </div>
       
-      <div className="code-panel-content">
+      <div className="code-panel-content" style={{
+        width: '100%',
+        overflow: 'auto',
+        scrollbarWidth: 'thin',
+        scrollbarColor: isDarkTheme ? '#333 #121212' : '#ccc #ffffff',
+      }}>
         <SyntaxHighlighter
           language={language || 'text'}
-          style={isDarkTheme ? vscDarkPlus : vs}
+          style={vscDarkPlus}
+          showLineNumbers={true}
+          lineNumberStyle={{
+            color: isDarkTheme ? 'rgba(180, 180, 180, 0.5)' : 'rgba(80, 80, 80, 0.5)', 
+            paddingRight: '1.2em',
+            marginRight: '0.5em',
+            minWidth: '2.5em',
+            textAlign: 'right',
+          }}
           customStyle={{
             margin: 0,
-            padding: '16px',
-            background: 'transparent',
+            padding: '1rem',
+            borderRadius: 0,
             fontSize: '14px',
-            lineHeight: 1.5,
-            height: '100%',
-            overflow: 'auto',
+            background: 'transparent',
+            maxHeight: 'calc(100vh - 100px)',
+            overflowY: 'auto',
+            fontFamily: '"Source Code Pro", monospace',
+            scrollbarWidth: 'thin',
+            scrollbarColor: isDarkTheme ? '#333 #121212' : '#ccc #ffffff',
           }}
+          wrapLines={true}
         >
           {code}
         </SyntaxHighlighter>
@@ -158,48 +182,61 @@ const CodePanel: React.FC<CodePanelProps> = ({
         }
         
         .code-panel-header {
-          padding: var(--spacing-4);
-          border-bottom: 1px solid ${isDarkTheme ? 'rgba(80, 80, 80, 0.3)' : 'rgba(200, 200, 200, 0.5)'};
+          padding: 0.5rem 1rem;
+          background-color: #2d2d2d;
+          border-bottom: none;
           display: flex;
           justify-content: space-between;
           align-items: center;
+          margin-bottom: 0;
         }
         
         .code-panel-title {
           margin: 0;
           color: ${isDarkTheme ? '#e0e0e0' : '#333'};
-          font-size: var(--font-size-body);
+          font-size: 16px;
+          font-family: '"Söhne", "Söhne Buch", "Söhne Halbfett", "Söhne Dreiviertelfett", "Söhne Breit", "Söhne Mono", system-ui, -apple-system, BlinkMacSystemFont, sans-serif';
           font-weight: 500;
+          margin-bottom: 0;
         }
         
         .code-panel-actions {
           display: flex;
-          gap: var(--spacing-2);
+          gap: 4px;
         }
         
         .code-panel-button {
           background: transparent;
           border: none;
+          color: #888;
           cursor: pointer;
-          display: flex;
-          align-items: center;
-          gap: var(--spacing-1);
-          color: ${isDarkTheme ? '#b0b0b0' : '#555'};
-          font-size: var(--font-size-caption);
-          padding: var(--spacing-1) var(--spacing-2);
-          border-radius: var(--border-radius);
-          transition: background-color 0.2s ease, transform 0.1s ease;
+          padding: 4px;
         }
         
         .code-panel-button:hover {
-          background-color: ${isDarkTheme ? 'rgba(80, 80, 80, 0.3)' : 'rgba(200, 200, 200, 0.5)'};
-          transform: scale(1.05);
+          color: white;
         }
         
         .code-panel-content {
-          flex: 1;
-          overflow: auto;
-          background-color: ${isDarkTheme ? 'var(--code-panel-bg-dark)' : 'var(--code-panel-bg-light)'};
+          flex-grow: 1;
+          height: calc(100% - 40px);
+        }
+        
+        .code-panel-content::-webkit-scrollbar {
+          width: 6px;
+        }
+        
+        .code-panel-content::-webkit-scrollbar-track {
+          background: ${isDarkTheme ? 'rgba(24, 24, 24, 0.7)' : 'rgba(252, 252, 252, 0.8)'};
+        }
+        
+        .code-panel-content::-webkit-scrollbar-thumb {
+          background-color: ${isDarkTheme ? 'rgba(80, 80, 80, 0.5)' : 'rgba(200, 200, 200, 0.8)'};
+          border-radius: 6px;
+        }
+        
+        .code-panel-content::-webkit-scrollbar-thumb:hover {
+          background: ${isDarkTheme ? '#444' : '#999'};
         }
         
         .mobile-back-button {
