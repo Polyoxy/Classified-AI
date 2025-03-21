@@ -282,71 +282,7 @@ const CommandInput: React.FC = () => {
   // Handle input change and auto resize
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInput(e.target.value);
-    if (inputRef.current) {
-      // Reset height temporarily to get the correct scrollHeight
-      inputRef.current.style.height = '24px';
-      
-      // Get the scroll height (content height)
-      const scrollHeight = inputRef.current.scrollHeight;
-      
-      // Set a maximum height for the textarea
-      const maxHeight = 150;
-      
-      // Set to scrollHeight to adjust to content, but cap at maxHeight
-      const newHeight = Math.min(scrollHeight, maxHeight);
-      inputRef.current.style.height = `${newHeight}px`;
-      
-      // Enable scrolling if content exceeds max height
-      inputRef.current.style.overflowY = scrollHeight > maxHeight ? 'auto' : 'hidden';
-      
-      // Calculate total height for container (textarea + selector row)
-      const selectorRowHeight = 34; // Height of the selector row
-      const paddingSpace = 24; // Top and bottom padding combined
-      const containerHeight = newHeight + selectorRowHeight + paddingSpace;
-      
-      // Update the container height
-      const container = inputRef.current.closest('.command-input-container') as HTMLElement;
-      if (container) {
-        // Set minimum container height to 118px, but allow it to grow with content
-        const minContainerHeight = 130;
-        container.style.height = `${Math.max(minContainerHeight, containerHeight)}px`;
-      }
-    }
   };
-  
-  // Auto-resize when component mounts or input changes
-  useEffect(() => {
-    if (inputRef.current && input) {
-      // Reset height temporarily to get the correct scrollHeight
-      inputRef.current.style.height = '24px';
-      
-      // Get the scroll height (content height)
-      const scrollHeight = inputRef.current.scrollHeight;
-      
-      // Set a maximum height for the textarea
-      const maxHeight = 150;
-      
-      // Set to scrollHeight to adjust to content, but cap at maxHeight
-      const newHeight = Math.min(scrollHeight, maxHeight);
-      inputRef.current.style.height = `${newHeight}px`;
-      
-      // Enable scrolling if content exceeds max height
-      inputRef.current.style.overflowY = scrollHeight > maxHeight ? 'auto' : 'hidden';
-      
-      // Calculate total height for container (textarea + selector row)
-      const selectorRowHeight = 34; // Height of the selector row
-      const paddingSpace = 24; // Top and bottom padding combined
-      const containerHeight = newHeight + selectorRowHeight + paddingSpace;
-      
-      // Update the container height
-      const container = inputRef.current.closest('.command-input-container') as HTMLElement;
-      if (container) {
-        // Set minimum container height to 118px, but allow it to grow with content
-        const minContainerHeight = 130;
-        container.style.height = `${Math.max(minContainerHeight, containerHeight)}px`;
-      }
-    }
-  }, [input]);
   
   // Handle key press
   const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -488,16 +424,13 @@ const CommandInput: React.FC = () => {
         <div className="command-input-container" style={{
           display: 'flex',
           flexDirection: 'column',
-          backgroundColor: settings?.theme === 'dark' ? 'rgba(32, 32, 32, 0.7)' : 'rgba(252, 252, 252, 0.8)',
+          backgroundColor: settings?.theme === 'dark' ? 'rgba(38, 38, 38, 0.8)' : 'rgba(255, 255, 255, 0.9)',
           borderRadius: 'var(--input-border-radius)',
           padding: '14px 18px',
-          height: 'auto',
-          minHeight: '60px',
-          maxHeight: '300px',
+          height: '60px',
           position: 'relative',
-          transition: 'height 0.3s ease, width 0.3s ease, transform 0.3s ease',
           justifyContent: 'space-between',
-          boxShadow: `0px 2px 4px ${settings?.theme === 'dark' ? 'rgba(0, 0, 0, 0.2)' : 'rgba(0, 0, 0, 0.08)'}`,
+          boxShadow: `0px 2px 4px ${settings?.theme === 'dark' ? 'rgba(0, 0, 0, 0.25)' : 'rgba(0, 0, 0, 0.1)'}`,
           backdropFilter: 'blur(8px)',
         }}>
           <style>
@@ -636,14 +569,11 @@ const CommandInput: React.FC = () => {
                   fontFamily: 'var(--font-family-mono)',
                   fontSize: '14px',
                   resize: 'none',
-                  height: 'auto', // Changed from fixed to auto
-                  minHeight: '32px',
-                  maxHeight: '200px', // Maximum height
+                  height: '24px',
                   width: '100%',
                   outline: 'none',
                   padding: '0',
-                  paddingTop: '0',
-                  overflow: 'auto', // Allow scrolling
+                  overflow: 'auto',
                   lineHeight: 1.4,
                   verticalAlign: 'middle',
                   caretColor: settings?.theme === 'dark' ? '#d0d0d0' : '#505050',
