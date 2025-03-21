@@ -63,7 +63,7 @@ export const useChat = () => {
       
       // Create temporary response message for streaming
       const tempMessageId = Date.now().toString();
-      addMessage('', 'assistant');
+      addMessage('<think>Processing...</think>', 'assistant');
 
       // Get the appropriate provider settings
       const providerSettings = settings.providers[settings.activeProvider];

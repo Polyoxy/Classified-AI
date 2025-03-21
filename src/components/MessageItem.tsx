@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useAppContext } from '@/context/AppContext';
 import CodeSnippet from './CodeSnippet';
 import Markdown from 'markdown-to-jsx';
+import { Message } from '@/types';
 
 interface MessageItemProps {
   role: 'user' | 'assistant' | 'system';
@@ -18,9 +19,10 @@ const MessageItem: React.FC<MessageItemProps> = ({
   isProcessing,
   model 
 }) => {
-  const { settings } = useAppContext();
+  const { settings, sendMessage, currentConversation } = useAppContext();
   const isDarkTheme = settings?.theme === 'dark';
   const [showCopied, setShowCopied] = useState(false);
+  const [showButtons, setShowButtons] = useState(false);
   const [isThinkingCollapsed, setIsThinkingCollapsed] = useState(true);
   const [contentHeight, setContentHeight] = useState(0);
   const [showThinking, setShowThinking] = useState(true);
@@ -117,6 +119,20 @@ const MessageItem: React.FC<MessageItemProps> = ({
     });
   };
 
+  // Handle redo message
+  const handleRedo = async () => {
+    // Find the previous user message
+    const messages = currentConversation?.messages || [];
+    const currentIndex = messages.findIndex(msg => msg.content === content);
+    if (currentIndex > 0) {
+      const userMessage = messages[currentIndex - 1];
+      if (userMessage.role === 'user') {
+        // Send the same user message again
+        await sendMessage(userMessage.content);
+      }
+    }
+  };
+
   // Measure content height when collapsed state changes
   useEffect(() => {
     if (!isThinkingCollapsed && thinkingContentRef.current) {
@@ -142,14 +158,14 @@ const MessageItem: React.FC<MessageItemProps> = ({
   // Effect to start and stop reasoning timer
   useEffect(() => {
     // Only start timer for thinking models
-    if (isProcessing && role === 'assistant' && isThinkingModel) {
+    if (isProcessing && role === 'assistant') {
       // For both scenarios (with or without thinking content), start with a timer
       const startTime = Date.now() - (reasoningTime * 1000); // Preserve existing time if any
       reasoningTimerRef.current = setInterval(() => {
         setReasoningTime(Math.floor((Date.now() - startTime) / 1000));
       }, 1000);
 
-      // Only show the blue dot if there's no thinking content yet
+      // Show the blue dot if there's no thinking content yet
       if (!thinkingContent || thinkingContent.length === 0) {
         setShowThinking(true);
       } else {
@@ -157,28 +173,20 @@ const MessageItem: React.FC<MessageItemProps> = ({
         setShowThinking(false);
         setIsThinkingCollapsed(false);
       }
-    } else if (!isProcessing && reasoningTimerRef.current) {
-      // Stop timer when AI stops processing
-      clearInterval(reasoningTimerRef.current);
-      reasoningTimerRef.current = null;
-      
-      // Auto-collapse thinking section when processing completes
-      setTimeout(() => {
-        setIsThinkingCollapsed(true);
-      }, 1000); // Small delay before collapsing
-    } else if (isProcessing && role === 'assistant' && !isThinkingModel) {
-      // For non-thinking models, show only the blue dot
-      setShowThinking(true);
-    }
-    
-    // Cleanup
-    return () => {
+    } else {
+      // Clear timer when not processing
       if (reasoningTimerRef.current) {
         clearInterval(reasoningTimerRef.current);
         reasoningTimerRef.current = null;
       }
+    }
+
+    return () => {
+      if (reasoningTimerRef.current) {
+        clearInterval(reasoningTimerRef.current);
+      }
     };
-  }, [isProcessing, role, thinkingContent, reasoningTime, isThinkingModel]);
+  }, [isProcessing, role, thinkingContent]);
 
   // Effect to handle thinking content changes
   useEffect(() => {
@@ -614,7 +622,10 @@ const MessageItem: React.FC<MessageItemProps> = ({
       marginBottom: role === 'assistant' ? '3rem' : '0',
       width: '100%',
       backgroundColor: role === 'user' ? (isDarkTheme ? '#343541' : '#f7f7f8') : 'transparent',
-    }}>
+    }}
+    onMouseEnter={() => setShowButtons(true)}
+    onMouseLeave={() => setShowButtons(false)}
+    >
       {role === 'system' && (
       <div style={{
         display: 'flex',
@@ -634,7 +645,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
         boxShadow: 'none',
         ...getMessageStyle(),
       }}>
-        {/* Processing indicator (blue dot) - always shown when processing */}
+        {/* Processing indicator (blue dot) - shown when processing and no thinking content */}
         {isProcessing && role === 'assistant' && showThinking && (
           <div className="processing-indicator" style={{
             display: 'inline-block',
@@ -815,46 +826,87 @@ const MessageItem: React.FC<MessageItemProps> = ({
         </div>
       </div>
 
-      {/* Copy button for AI responses only */}
+      {/* Action buttons for AI responses only */}
       {role === 'assistant' && !isProcessing && (
         <div 
-          onClick={handleCopy}
-          title={showCopied ? "Copied!" : "Copy to clipboard"}
           style={{
             position: 'absolute',
             bottom: '-22px',
             right: '0',
-            cursor: 'pointer',
-            zIndex: 5,
             display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            transition: 'all 0.2s ease',
-            opacity: showCopied ? 1 : 0.7,
-            color: isDarkTheme ? 'rgba(180, 180, 180, 0.8)' : 'rgba(120, 120, 120, 0.8)',
-            fontSize: 'var(--font-size-caption)',
-            padding: 'var(--spacing-1)',
-            borderRadius: 'var(--border-radius)',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.opacity = '1';
-            e.currentTarget.style.backgroundColor = isDarkTheme ? 'rgba(80, 80, 80, 0.3)' : 'rgba(200, 200, 200, 0.5)';
-            e.currentTarget.style.transform = 'scale(1.05)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.opacity = showCopied ? '1' : '0.7';
-            e.currentTarget.style.backgroundColor = 'transparent';
-            e.currentTarget.style.transform = 'scale(1)';
+            gap: '8px',
+            zIndex: 5,
+            opacity: showButtons ? 1 : 0,
+            transition: 'opacity 0.2s ease',
           }}
         >
-          {showCopied ? (
-            <span style={{ fontSize: 'var(--font-size-caption)', marginRight: 'var(--spacing-1)' }}>Copied</span>
-          ) : (
+          {/* Redo button */}
+          <div 
+            onClick={handleRedo}
+            title="Redo this response"
+            style={{
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.2s ease',
+              color: isDarkTheme ? 'rgba(180, 180, 180, 0.8)' : 'rgba(120, 120, 120, 0.8)',
+              fontSize: 'var(--font-size-caption)',
+              padding: 'var(--spacing-1)',
+              borderRadius: 'var(--border-radius)',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.opacity = '1';
+              e.currentTarget.style.backgroundColor = isDarkTheme ? 'rgba(80, 80, 80, 0.3)' : 'rgba(200, 200, 200, 0.5)';
+              e.currentTarget.style.transform = 'scale(1.05)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.opacity = '0.8';
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.transform = 'scale(1)';
+            }}
+          >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+              <path d="M3 3v5h5"></path>
             </svg>
-          )}
+          </div>
+
+          {/* Copy button */}
+          <div 
+            onClick={handleCopy}
+            title={showCopied ? "Copied!" : "Copy to clipboard"}
+            style={{
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.2s ease',
+              color: isDarkTheme ? 'rgba(180, 180, 180, 0.8)' : 'rgba(120, 120, 120, 0.8)',
+              fontSize: 'var(--font-size-caption)',
+              padding: 'var(--spacing-1)',
+              borderRadius: 'var(--border-radius)',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.opacity = '1';
+              e.currentTarget.style.backgroundColor = isDarkTheme ? 'rgba(80, 80, 80, 0.3)' : 'rgba(200, 200, 200, 0.5)';
+              e.currentTarget.style.transform = 'scale(1.05)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.opacity = '0.8';
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.transform = 'scale(1)';
+            }}
+          >
+            {showCopied ? (
+              <span style={{ fontSize: 'var(--font-size-caption)', marginRight: 'var(--spacing-1)' }}>Copied</span>
+            ) : (
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+            )}
+          </div>
         </div>
       )}
 

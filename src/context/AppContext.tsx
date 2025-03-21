@@ -114,6 +114,7 @@ interface AppContextType {
   changeModel: (model: string) => void;
   resetConversations: () => void;
   isAuthenticated: boolean;
+  sendMessage: (content: string) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -656,6 +657,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     changeModel,
     resetConversations,
     isAuthenticated: !!user,
+    sendMessage: async (content: string) => {
+      // Implementation of sendMessage function
+    },
   };
 
   return <AppContext.Provider value={contextValue}>{children}</AppContext.Provider>;

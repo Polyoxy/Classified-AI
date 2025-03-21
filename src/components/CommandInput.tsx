@@ -581,7 +581,7 @@ const CommandInput: React.FC = () => {
                   width: '100%',
                   outline: 'none',
                   padding: '0',
-                  overflow: isExpanded ? 'auto' : 'hidden',
+                  overflow: 'hidden',
                   lineHeight: 1.4,
                   verticalAlign: 'middle',
                   caretColor: settings?.theme === 'dark' ? '#d0d0d0' : '#505050',
@@ -729,11 +729,7 @@ const CommandInput: React.FC = () => {
                 className="selector-button"
                 style={{
                   opacity: isProcessing ? 0.6 : 1,
-                  width: 'auto',
-                  minWidth: '100px',
-                  maxWidth: '130px',
-                  whiteSpace: 'nowrap',
-                  position: 'relative',
+                  width: 'fit-content',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
@@ -766,58 +762,25 @@ const CommandInput: React.FC = () => {
                   transition: 'all 0.2s ease',
                   fontSize: '12px',
                   fontWeight: '500',
-                  fontFamily: 'var(--font-family-general, "Söhne", sans-serif)',
-                  color: settings?.theme === 'dark' ? '#d0d0d0' : '#505050',
-                  border: (() => {
-                    // Different border colors based on response style
-                    switch(responseStyle) {
-                      case 'concise':
-                        return `1px solid ${settings?.theme === 'dark' 
-                          ? 'rgba(95, 145, 80, 0.3)' 
-                          : 'rgba(95, 180, 95, 0.25)'}`;
-                      case 'explanatory':
-                        return `1px solid ${settings?.theme === 'dark' 
-                          ? 'rgba(95, 120, 160, 0.3)' 
-                          : 'rgba(95, 130, 190, 0.25)'}`;
-                      case 'formal':
-                        return `1px solid ${settings?.theme === 'dark' 
-                          ? 'rgba(140, 95, 150, 0.3)' 
-                          : 'rgba(160, 95, 180, 0.25)'}`;
-                      default:
-                        return 'none';
-                    }
-                  })(),
-                  transform: showStyleDropdown ? 'scale(0.97)' : 'scale(1)',
                 }}
               >
                 <span style={{ 
-                  fontWeight: 500,
-                  fontSize: '12px',
-                  maxWidth: '100px',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
-                  lineHeight: '16px',
-                  fontFamily: 'var(--font-family-general, "Söhne", sans-serif)'
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis'
                 }}>
                   {responseStyle.charAt(0).toUpperCase() + responseStyle.slice(1)}
                 </span>
-                
                 <svg 
-                  width="12" 
-                  height="12" 
+                  width="10" 
+                  height="10" 
                   viewBox="0 0 24 24" 
                   fill="none" 
                   stroke="currentColor" 
                   strokeWidth="2" 
                   strokeLinecap="round" 
                   strokeLinejoin="round" 
-                  style={{ 
-                    marginLeft: '4px', 
-                    opacity: 0.7,
-                    transform: showStyleDropdown ? 'rotate(180deg)' : 'rotate(0deg)',
-                    transition: 'transform 0.2s ease'
-                  }}
+                  style={{ marginLeft: '2px', opacity: 0.7 }}
                 >
                   <polyline points="6 9 12 15 18 9"></polyline>
                 </svg>
@@ -978,8 +941,7 @@ const CommandInput: React.FC = () => {
           }
           
           .command-textarea.expanded {
-            overflow-y: auto !important;
-            overflow-x: hidden;
+            overflow-y: auto;
           }
           
           .command-textarea::-webkit-scrollbar {
