@@ -41,6 +41,7 @@ const CommandInput: React.FC = () => {
   const [placeholder, setPlaceholder] = useState("Enter command...");
   const [targetPlaceholder, setTargetPlaceholder] = useState("Enter command...");
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
+  const [isExpanded, setIsExpanded] = useState(false);
   
   // Add state for response style
   const [responseStyle, setResponseStyle] = useState(() => {
@@ -282,6 +283,9 @@ const CommandInput: React.FC = () => {
   // Handle input change and auto resize
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInput(e.target.value);
+    // Check if content exceeds 4 lines
+    const lineCount = (e.target.value.match(/\n/g) || []).length + 1;
+    setIsExpanded(lineCount > 4);
   };
   
   // Handle key press
@@ -427,11 +431,13 @@ const CommandInput: React.FC = () => {
           backgroundColor: settings?.theme === 'dark' ? 'rgba(38, 38, 38, 0.8)' : 'rgba(255, 255, 255, 0.9)',
           borderRadius: 'var(--input-border-radius)',
           padding: '14px 18px',
-          height: '60px',
+          minHeight: '60px',
+          height: 'auto',
           position: 'relative',
           justifyContent: 'space-between',
           boxShadow: `0px 2px 4px ${settings?.theme === 'dark' ? 'rgba(0, 0, 0, 0.25)' : 'rgba(0, 0, 0, 0.1)'}`,
           backdropFilter: 'blur(8px)',
+          gap: '8px',
         }}>
           <style>
             {`
@@ -539,7 +545,7 @@ const CommandInput: React.FC = () => {
           {/* Top section: Input and send button */}
           <div style={{ 
             display: 'flex',
-            alignItems: 'flex-start', // Changed from center to flex-start to handle multi-line input
+            alignItems: 'flex-start',
             gap: '12px',
             outline: 'none',
             minHeight: '20px',
@@ -555,13 +561,16 @@ const CommandInput: React.FC = () => {
                 position: 'relative',
               }}
             >
-              <textarea
+              <TextareaAutosize
                 ref={inputRef}
                 value={input}
                 onChange={handleInputChange}
                 onKeyDown={handleKeyPress}
                 disabled={isProcessing}
                 placeholder={isProcessing ? "Processing request..." : placeholder}
+                minRows={1}
+                maxRows={4}
+                cacheMeasurements
                 style={{
                   backgroundColor: 'transparent',
                   border: 'none',
@@ -569,24 +578,24 @@ const CommandInput: React.FC = () => {
                   fontFamily: 'var(--font-family-mono)',
                   fontSize: '14px',
                   resize: 'none',
-                  height: '24px',
                   width: '100%',
                   outline: 'none',
                   padding: '0',
-                  overflow: 'auto',
+                  overflow: isExpanded ? 'auto' : 'hidden',
                   lineHeight: 1.4,
                   verticalAlign: 'middle',
                   caretColor: settings?.theme === 'dark' ? '#d0d0d0' : '#505050',
                   position: 'relative',
                   zIndex: 2,
                   letterSpacing: '0.01em',
+                  scrollbarWidth: 'thin',
+                  scrollbarColor: settings?.theme === 'dark' ? '#333 #1a1a1a' : '#ccc #f1f1f1',
                 }}
-                rows={1}
                 autoComplete="off"
                 autoCorrect="off"
                 spellCheck="false"
                 autoCapitalize="off"
-                className="no-focus-visible"
+                className={`no-focus-visible command-textarea ${isExpanded ? 'expanded' : ''}`}
               />
             </div>
             
@@ -951,7 +960,7 @@ const CommandInput: React.FC = () => {
           .command-textarea {
             flex-grow: 1;
             min-height: 24px;
-            max-height: 200px;
+            max-height: 96px; /* 4 lines * 24px line height */
             resize: none;
             border: none;
             outline: none;
@@ -962,23 +971,31 @@ const CommandInput: React.FC = () => {
             line-height: 1.5;
             padding: 0;
             margin: 0;
-            overflow-y: auto;
+            overflow: hidden;
             scrollbar-width: thin;
-            scrollbar-color: ${settings?.theme === 'dark' ? '#333 #121212' : '#ccc #ffffff'};
+            scrollbar-color: ${settings?.theme === 'dark' ? '#333 #1a1a1a' : '#ccc #f1f1f1'};
+            transition: all 0.2s ease;
+          }
+          
+          .command-textarea.expanded {
+            overflow-y: auto !important;
+            overflow-x: hidden;
           }
           
           .command-textarea::-webkit-scrollbar {
             width: 8px;
-            height: 20px;
+            height: 8px;
           }
           
           .command-textarea::-webkit-scrollbar-track {
-            background: ${settings?.theme === 'dark' ? '#121212' : '#f1f1f1'};
+            background: ${settings?.theme === 'dark' ? '#1a1a1a' : '#f1f1f1'};
+            border-radius: 4px;
           }
           
           .command-textarea::-webkit-scrollbar-thumb {
             background: ${settings?.theme === 'dark' ? '#333' : '#ccc'};
             border-radius: 4px;
+            border: 2px solid ${settings?.theme === 'dark' ? '#1a1a1a' : '#f1f1f1'};
           }
           
           .command-textarea::-webkit-scrollbar-thumb:hover {
