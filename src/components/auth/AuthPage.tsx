@@ -10,8 +10,8 @@ import {
   setPersistence
 } from 'firebase/auth';
 import { ref, update } from 'firebase/database';
-import RegisterPage from './RegisterPage';
-import ResetPasswordPage from './ResetPasswordPage';
+import RegisterPage from '../RegisterPage';
+import ResetPasswordPage from '../ResetPasswordPage';
 
 // Define the possible authentication screens
 type AuthScreen = 'login' | 'register' | 'reset-password';

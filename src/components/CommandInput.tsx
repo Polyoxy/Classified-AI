@@ -201,11 +201,8 @@ const CommandInput: React.FC = () => {
     }
   `;
   
-  // Use our chat hook
-  const { sendMessage: chatSendMessage, stopResponse } = useChat();
-  
-  // Add state for message summary
-  const [messageSummary, setMessageSummary] = useState<string>('');
+  // Get the sendMessage function from the useChat hook
+  const { sendMessage, stopResponse } = useChat();
   
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const animationTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -381,34 +378,36 @@ const CommandInput: React.FC = () => {
   };
 
   // Handle send message
-  const handleSendMessage = () => {
-    if (input.trim() && !isProcessing) {
-      // Generate and store a summary of the user's message
-      setMessageSummary(generateMessageSummary(input.trim()));
+  const handleSendMessage = async () => {
+    if (!input.trim() || isProcessing) return;
+    
+    // Clean up any leading/trailing whitespace
+    const message = input.trim();
+    setInput('');
+    
+    // Add the user's message to the conversation
+    addMessage(message, 'user');
+    
+    // Create a summary of the message for conversation title if needed
+    const shouldCreateTitle = currentConversation?.messages.length === 1;
+    
+    setIsProcessing(true);
+    
+    // Process with the AI chatbot
+    try {
+      // Use the sendMessage function from useChat
+      await sendMessage(message);
       
-      // Get the message text with appropriate prefix
-      let messageToSend = input.trim();
-      
-      // Add response style if not normal
-      if (responseStyle !== 'normal') {
-        // Use multiple approaches to ensure the AI understands the style request
-        messageToSend = `[Response style: ${responseStyle}] ${messageToSend}`;
+      // If this is a new conversation, update the title
+      if (shouldCreateTitle && currentConversation) {
+        const title = generateMessageSummary(message);
+        // Update conversation title logic would go here
       }
-      
-      chatSendMessage(messageToSend);
-      setInput('');
-      
-      // Reset textarea height
-      if (inputRef.current) {
-        inputRef.current.style.height = '24px';
-        inputRef.current.style.overflowY = 'hidden';
-        
-        // Reset container height to minimum
-        const container = inputRef.current.closest('.command-input-container') as HTMLElement;
-        if (container) {
-          container.style.height = '130px'; // Reset to minimum height
-        }
-      }
+    } catch (error) {
+      console.error('Error processing message:', error);
+      addMessage('Sorry, there was an error processing your request. Please try again.', 'system');
+    } finally {
+      setIsProcessing(false);
     }
   };
   
@@ -468,98 +467,6 @@ const CommandInput: React.FC = () => {
       localStorage.setItem('preferredResponseStyle', responseStyle);
     }
   }, [responseStyle]);
-
-  const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isSearching, setIsSearching] = useState(false);
-  const [searchResults, setSearchResults] = useState<any[]>([]);
-  const [searchError, setSearchError] = useState<string | null>(null);
-  const searchInputRef = useRef<HTMLInputElement>(null);
-  
-  // Focus search input when modal opens
-  useEffect(() => {
-    if (isSearchModalOpen && searchInputRef.current) {
-      setTimeout(() => {
-        searchInputRef.current?.focus();
-      }, 100);
-    }
-  }, [isSearchModalOpen]);
-
-  // Handle search form submission
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!searchQuery.trim()) return;
-    
-    setIsSearching(true);
-    setSearchError(null);
-    
-    try {
-      setSearchResults([]);
-    } catch (error) {
-      console.error('Search error:', error);
-      setSearchError(
-        error instanceof Error 
-          ? error.message 
-          : 'An error occurred while searching'
-      );
-      setSearchResults([]);
-    } finally {
-      setIsSearching(false);
-    }
-  };
-
-  // Helper function to clean up model names for display
-  const formatModelName = (model: string): string => {
-    if (!model) return 'Unknown';
-    
-    // Remove version numbers and special characters
-    let displayName = model;
-    
-    // Special case handling for common models
-    if (model.includes('deepseek-r1')) {
-      if (model.includes('1.5b')) {
-        return 'DeepSeek 1.5B';
-      } else if (model.includes('7b')) {
-        return 'DeepSeek 7B';
-      } else if (model.includes('14b')) {
-        return 'DeepSeek 14B';
-      }
-      return 'DeepSeek';
-    }
-    
-    if (model.includes('llama3.2')) {
-      if (model.includes('vision')) {
-        return 'Llama3 11B';
-      }
-      
-      if (model.includes('1b')) {
-        return 'Llama3 1B';
-      } else if (model.includes('11b')) {
-        return 'Llama3 11B';
-      }
-      return 'Llama3';
-    }
-    
-    // Remove any special characters and format remaining
-    displayName = displayName
-      .replace(/[-:]/g, ' ')
-      .replace(/\b\w/g, l => l.toUpperCase());
-    
-    return displayName;
-  };
-
-  // New useEffect for positioning the style dropdown correctly
-  useEffect(() => {
-    if (showStyleDropdown && styleDropdownRef.current && styleSelectorRef.current) {
-      // Position the dropdown above the style selector
-      const selectorRect = styleSelectorRef.current.getBoundingClientRect();
-      
-      // Apply left offset to move dropdown more to the left
-      styleDropdownRef.current.style.left = `${selectorRect.left - 280}px`;
-      styleDropdownRef.current.style.bottom = `${window.innerHeight - selectorRect.top + -15}px`;
-    }
-  }, [showStyleDropdown]);
 
   return (
     <div style={{

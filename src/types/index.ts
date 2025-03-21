@@ -47,10 +47,11 @@ export interface AppSettings {
   codeHighlighting?: boolean;
   showSystemMessages?: boolean;
   showAnalysis?: boolean; // Controls whether to show AI's analysis/thinking
-  searchApiKey?: string; // API key for web search functionality
   codeFontSize?: number; // Font size for code blocks
   lineHeight?: number; // Line height for regular text
   codeLineHeight?: number; // Line height for code blocks
+  showTokenCount?: boolean;
+  showThinking?: boolean;
 }
 
 // Token Usage
@@ -88,10 +89,23 @@ export interface StreamResponse {
   };
 }
 
-// Search Types
-export interface SearchResult {
-  title: string;
-  link: string;
-  snippet: string;
-  source: 'web' | 'knowledge_graph' | 'news' | 'image';
+export type TimestampFormat = 'absolute' | 'relative' | 'none';
+
+export interface Settings {
+  theme?: 'light' | 'dark' | 'system';
+  activeProvider?: AIProvider;
+  providers?: {
+    [key: string]: AIProviderConfig;
+  };
+  defaultSystemPrompt?: string;
+  customSystemPrompts?: {
+    [role in UserRole]?: string;
+  };
+  tokenCount?: boolean;
+  timestampFormat?: TimestampFormat;
+  messageCount?: number;
+  showTokenCount?: boolean;
+  showThinking?: boolean; // Whether to show thinking indicator
+  codeAutorun?: boolean; // Whether to auto-run executable code blocks
+  temperature?: number;
 } 

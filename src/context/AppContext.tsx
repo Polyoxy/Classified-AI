@@ -27,15 +27,15 @@ const DEFAULT_SYSTEM_PROMPTS: Record<UserRole, string> = {
 };
 
 // Default settings
-export const DEFAULT_SETTINGS: AppSettings = {
+const DEFAULT_SETTINGS: AppSettings = {
   theme: 'dark',
   fontSize: 14,
   userRole: 'developer',
   temperature: 0.7,
   customSystemPrompts: {
-    developer: 'You are a helpful AI assistant for developers.',
-    casual: 'You are a friendly AI assistant.',
-    'code-helper': 'You are a coding assistant that helps with programming tasks.'
+    developer: DEFAULT_SYSTEM_PROMPTS.developer,
+    casual: DEFAULT_SYSTEM_PROMPTS.casual,
+    'code-helper': DEFAULT_SYSTEM_PROMPTS['code-helper']
   },
   providers: {
     ollama: {
@@ -64,10 +64,9 @@ export const DEFAULT_SETTINGS: AppSettings = {
   codeHighlighting: true,
   showSystemMessages: false,
   showAnalysis: true,
-  searchApiKey: '',
   codeFontSize: 14,
   lineHeight: 1.5,
-  codeLineHeight: 1.5,
+  codeLineHeight: 1.5
 };
 
 // Create a new conversation with the default system message
@@ -419,7 +418,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const id = uuidv4();
     
     // Create an effective system prompt to reduce hallucinations
-    const systemPrompt = `You are a helpful, accurate AI assistant. 
+    const systemPrompt = `You are a helpful, accurate AI assistant.
     
     - NEVER invent or hallucinate information
     - If you don't know something, say "I don't know" rather than guessing

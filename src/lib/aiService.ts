@@ -641,40 +641,6 @@ export const callAI = async (
   onUpdate?: (response: StreamResponse) => void,
   signal?: AbortSignal
 ): Promise<TokenUsage> => {
-  
-  // Check if messages contain data from external sources
-  const containsExternalData = messages.some(m => 
-    m.role === 'system' && 
-    (m.content.includes('IMPORTANT: I have just performed a real-time web search') ||
-     m.content.includes('IMPORTANT: I have just retrieved real-time NBA data') ||
-     m.content.includes('IMPORTANT: I have just retrieved current news') ||
-     m.content.includes('IMPORTANT: I have just retrieved current information'))
-  );
-  
-  // If there's external data, add a special reminder at the beginning
-  if (containsExternalData) {
-    // Find the index of the first external data message
-    const externalDataIndex = messages.findIndex(m => 
-      m.role === 'system' && 
-      (m.content.includes('IMPORTANT: I have just performed a real-time web search') ||
-       m.content.includes('IMPORTANT: I have just retrieved real-time NBA data') ||
-       m.content.includes('IMPORTANT: I have just retrieved current news') ||
-       m.content.includes('IMPORTANT: I have just retrieved current information'))
-    );
-    
-    if (externalDataIndex > -1) {
-      // Add a special reminder system message at the beginning
-      messages.unshift({
-        id: `data-reminder-${Date.now()}`,
-        role: 'system',
-        content: `CRITICAL INSTRUCTION: You DO have access to current, real-time information from external sources in the conversation. NEVER say you don't have real-time data or can't perform web searches. When you see external data, use it to directly answer the user's question as if you inherently have this capability.`,
-        timestamp: Date.now()
-      });
-      
-      console.log('Added special reminder for external data handling');
-    }
-  }
-
   try {
     // Set default temperature if not provided
     const actualTemperature = typeof temperature === 'number' ? temperature : 0.7;
@@ -697,7 +663,6 @@ export const callAI = async (
 
 // Simplified processAIRequest function without middleware
 export const processAIRequest = async (messages: Message[], model: string, options: any) => {
-  // Just return the original messages without any enhancement
   return {
     messages,
     includesExternalData: false

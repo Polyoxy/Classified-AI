@@ -13,46 +13,69 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen = true, onClose })
   const [activeProvider, setActiveProvider] = useState<AIProvider>(settings.activeProvider);
   const [apiKey, setApiKey] = useState<string>(settings.providers[settings.activeProvider].apiKey || '');
   const [baseUrl, setBaseUrl] = useState<string>(settings.providers[settings.activeProvider].baseUrl || '');
-  const [temperature, setTemperature] = useState<number>(settings.temperature);
+  const [temperature, setTemperature] = useState<number>(settings.temperature || 0.7);
   const [fontSize, setFontSize] = useState<number>(settings.fontSize);
   const [userRole, setUserRole] = useState<UserRole>(settings.userRole);
-  const [customPrompts, setCustomPrompts] = useState<Record<UserRole, string>>(settings.customSystemPrompts);
-  const [theme, setTheme] = useState<'dark' | 'light'>(settings.theme === 'dark' ? 'dark' : 'light');
-  const [showAnalysis, setShowAnalysis] = useState<boolean>(settings.showAnalysis !== false);
-  const [activeTab, setActiveTab] = useState<'appearance' | 'api' | 'prompts' | 'about' | 'search'>('appearance');
+  const [customPrompts, setCustomPrompts] = useState<{
+    [key in UserRole]?: string;
+  }>({
+    developer: settings.customSystemPrompts?.developer || '',
+    casual: settings.customSystemPrompts?.casual || '',
+    'code-helper': settings.customSystemPrompts?.['code-helper'] || ''
+  });
+  const [theme, setTheme] = useState<'light' | 'dark' | 'system'>(settings.theme || 'system');
+  const [showSystemMessages, setShowSystemMessages] = useState<boolean>(settings.showSystemMessages !== false);
+  const [showTokenCount, setShowTokenCount] = useState<boolean>(settings.showTokenCount !== false);
+  const [showTimestamps, setShowTimestamps] = useState<boolean>(settings.showTimestamps !== false);
+  const [codeHighlighting, setCodeHighlighting] = useState<boolean>(settings.codeHighlighting !== false);
+  const [showThinking, setShowThinking] = useState<boolean>(settings.showThinking !== false);
+  const [activeTab, setActiveTab] = useState<'appearance' | 'api' | 'prompts' | 'about'>('appearance');
   const [codeFontSize, setCodeFontSize] = useState<number>(settings.codeFontSize || settings.fontSize);
   const [lineHeight, setLineHeight] = useState<number>(settings.lineHeight || 1.5);
   const [codeLineHeight, setCodeLineHeight] = useState<number>(settings.codeLineHeight || 1.5);
-  const [searchApiKey, setSearchApiKey] = useState<string>(settings.searchApiKey || '');
 
   // Update state when settings change
   useEffect(() => {
     setActiveProvider(settings.activeProvider);
     setApiKey(settings.providers[settings.activeProvider].apiKey || '');
     setBaseUrl(settings.providers[settings.activeProvider].baseUrl || '');
-    setTemperature(settings.temperature);
+    setTemperature(settings.temperature || 0.7);
     setFontSize(settings.fontSize);
     setUserRole(settings.userRole);
-    setCustomPrompts(settings.customSystemPrompts);
-    setShowAnalysis(settings.showAnalysis !== false);
+    setCustomPrompts({
+      developer: settings.customSystemPrompts?.developer || '',
+      casual: settings.customSystemPrompts?.casual || '',
+      'code-helper': settings.customSystemPrompts?.['code-helper'] || ''
+    });
+    setShowSystemMessages(settings.showSystemMessages !== false);
+    setShowTokenCount(settings.showTokenCount !== false);
+    setShowTimestamps(settings.showTimestamps !== false);
+    setCodeHighlighting(settings.codeHighlighting !== false);
+    setShowThinking(settings.showThinking !== false);
     setCodeFontSize(settings.codeFontSize || settings.fontSize);
     setLineHeight(settings.lineHeight || 1.5);
     setCodeLineHeight(settings.codeLineHeight || 1.5);
-    setSearchApiKey(settings.searchApiKey || '');
   }, [settings]);
 
   // Save settings and close modal
   const handleSave = () => {
-    // Create a new settings object
     const newSettings = {
       ...settings,
       theme,
+      temperature,
+      showSystemMessages,
+      showTokenCount,
+      showTimestamps,
+      codeHighlighting,
+      showThinking,
+      customSystemPrompts: {
+        developer: customPrompts.developer || DEFAULT_SYSTEM_PROMPTS.developer,
+        casual: customPrompts.casual || DEFAULT_SYSTEM_PROMPTS.casual,
+        'code-helper': customPrompts['code-helper'] || DEFAULT_SYSTEM_PROMPTS['code-helper'],
+      },
       fontSize,
       userRole,
-      temperature,
-      customSystemPrompts: customPrompts,
       activeProvider,
-      showAnalysis,
       providers: {
         ...settings.providers,
         [activeProvider]: {
@@ -64,10 +87,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen = true, onClose })
       codeFontSize,
       lineHeight,
       codeLineHeight,
-      searchApiKey,
     };
 
-    // Update the settings
     updateSettings(newSettings);
     onClose();
   };
@@ -94,12 +115,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen = true, onClose })
         className={`px-4 py-2 text-sm font-medium ${activeTab === 'api' ? 'text-blue-500 border-b-2 border-blue-500' : 'text-gray-400'}`}
       >
         AI Providers
-      </button>
-      <button
-        onClick={() => setActiveTab('search')}
-        className={`px-4 py-2 text-sm font-medium ${activeTab === 'search' ? 'text-blue-500 border-b-2 border-blue-500' : 'text-gray-400'}`}
-      >
-        Search
       </button>
       <button
         onClick={() => setActiveTab('prompts')}
@@ -140,11 +155,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen = true, onClose })
                 </label>
                 <select
                   value={theme}
-                  onChange={(e) => setTheme(e.target.value as 'light' | 'dark')}
+                  onChange={(e) => setTheme(e.target.value as 'light' | 'dark' | 'system')}
                   className="w-full bg-[#2a2a2a] text-[1rem] text-white rounded-md px-3 py-2 border border-[#3a3a3a] focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="light">Light</option>
                   <option value="dark">Dark</option>
+                  <option value="system">System</option>
                 </select>
               </div>
 
@@ -246,54 +262,45 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen = true, onClose })
                   <option value="code-helper">Code Helper</option>
                 </select>
               </div>
-
-              <div>
-                <label className="block text-[1rem] font-medium text-white mb-2">
-                  Show Analysis
-                </label>
-                <div className="switch-container">
-                  <label className="switch">
-                    <input
-                      type="checkbox"
-                      checked={showAnalysis}
-                      onChange={(e) => setShowAnalysis(e.target.checked)}
-                    />
-                    <span className="slider round"></span>
-                  </label>
-                  <span className="switch-label">{showAnalysis ? 'On' : 'Off'}</span>
-                </div>
-                <p className="form-help-text">
-                  Show AI's internal analysis/thinking process in a collapsible section with each response.
-                </p>
-              </div>
             </>
           )}
 
-          {activeTab === 'search' && (
+          {activeTab === 'prompts' && (
             <>
               <div>
-                <div className="block text-[1rem] font-medium text-white mb-2">
-                  Web Search
-                </div>
-                <p className="form-help-text mb-4">
-                  Web search is enabled by default. The AI can search for information on the web to provide up-to-date responses.
-                </p>
+                <label className="block text-[1rem] font-medium text-white mb-2">
+                  Developer Prompt
+                </label>
+                <textarea
+                  value={customPrompts.developer || ''}
+                  onChange={(e) => handlePromptChange('developer', e.target.value)}
+                  placeholder="Enter developer prompt"
+                  className="w-full bg-[#2a2a2a] text-[1rem] text-white rounded-md px-3 py-2 border border-[#3a3a3a] focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
               </div>
 
               <div>
                 <label className="block text-[1rem] font-medium text-white mb-2">
-                  Search API Key
+                  Casual User Prompt
                 </label>
-                <input
-                  type="password"
-                  value={searchApiKey}
-                  onChange={(e) => setSearchApiKey(e.target.value)}
-                  placeholder="Enter your Search API key"
+                <textarea
+                  value={customPrompts.casual || ''}
+                  onChange={(e) => handlePromptChange('casual', e.target.value)}
+                  placeholder="Enter casual user prompt"
                   className="w-full bg-[#2a2a2a] text-[1rem] text-white rounded-md px-3 py-2 border border-[#3a3a3a] focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
-                <p className="form-help-text">
-                  Required for web search functionality. Get a key from SerpApi or similar service. If not provided, the application will use the default API key.
-                </p>
+              </div>
+
+              <div>
+                <label className="block text-[1rem] font-medium text-white mb-2">
+                  Code Helper Prompt
+                </label>
+                <textarea
+                  value={customPrompts['code-helper'] || ''}
+                  onChange={(e) => handlePromptChange('code-helper', e.target.value)}
+                  placeholder="Enter code helper prompt"
+                  className="w-full bg-[#2a2a2a] text-[1rem] text-white rounded-md px-3 py-2 border border-[#3a3a3a] focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
               </div>
             </>
           )}
